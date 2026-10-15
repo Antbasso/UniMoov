@@ -73,8 +73,6 @@ export class AuthService {
     const { repo, clock, secret } = this.deps;
     const email = normalizeEmail(input.universityEmail);
     const now = clock();
-    // Hachage hors transaction : argon2 est volontairement lent.
-    const passwordHash = await hash(input.password);
 
     const userId = await repo.transaction(async (tx) => {
       const stored = await repo.latestCode(email, tx);
@@ -85,6 +83,9 @@ export class AuthService {
         }
         return null;
       }
+      // Hachage (volontairement coûteux) seulement après un code valide : un essai faux ne
+      // coûte rien au serveur.
+      const passwordHash = await hash(input.password);
       await repo.consumeCode(stored!.id, now, tx);
       const id = await repo.createUser(
         {

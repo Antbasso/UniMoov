@@ -173,11 +173,38 @@ describe('contrôle d’accès', () => {
   it('un compte supprimé ne peut plus utiliser son jeton', async () => {
     await ctx.database.pool.query("UPDATE users SET deleted_at = now() WHERE university_email = 'hugo@etu.univ-smb.fr'");
     expect((await call(hugo, 'GET', '/me')).statusCode).toBe(401);
+    expect((await call(hugo, 'GET', '/me/pauses')).statusCode).toBe(401);
+    expect((await call(hugo, 'PUT', '/me/vehicle', { consumptionLPer100km: 5, defaultSeats: 2, maxDetourMinutes: 5 })).statusCode).toBe(401);
     const refresh = await ctx.app.inject({
       method: 'POST',
       url: '/api/v1/auth/refresh',
       payload: { refreshToken: hugo.refreshToken },
     });
     expect(refresh.statusCode).toBe(401);
+  });
+});
+
+describe('robustesse', () => {
+  it('deux étapes d’onboarding validées en même temps sont toutes deux gardées', async () => {
+    ctx.clock.advance(61_000);
+    const user = await signUp(ctx, 'concurrent@etu.univ-smb.fr');
+    await Promise.all([
+      call(user, 'PUT', '/me/onboarding/profile', { status: 'done' }),
+      call(user, 'PUT', '/me/onboarding/vehicle', { status: 'skipped' }),
+      call(user, 'PUT', '/me/onboarding/preferences', { status: 'done' }),
+    ]);
+    expect((await call(user, 'GET', '/me')).json()).toMatchObject({
+      onboarding: { steps: { profile: 'done', vehicle: 'skipped', preferences: 'done' }, nextStep: 'calendar' },
+    });
+  });
+
+  it('le JWT d’accès dure 15 minutes', async () => {
+    ctx.clock.advance(61_000);
+    const user = await signUp(ctx, 'jwt@etu.univ-smb.fr');
+    const payload = JSON.parse(Buffer.from(user.accessToken.split('.')[1]!, 'base64url').toString()) as {
+      iat: number;
+      exp: number;
+    };
+    expect(payload.exp - payload.iat).toBe(15 * 60);
   });
 });

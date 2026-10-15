@@ -61,6 +61,19 @@ export class ProfileRepo {
     await this.db.update(users).set(values).where(eq(users.id, userId));
   }
 
+  /**
+   * Fusion atomique dans le JSON (pas de lecture-modification-écriture) : deux étapes
+   * validées en même temps ne s'écrasent pas.
+   */
+  async setOnboardingStep(userId: string, step: string, status: string): Promise<OnboardingState> {
+    const [row] = await this.db
+      .update(users)
+      .set({ onboardingSteps: sql`${users.onboardingSteps} || jsonb_build_object(${step}::text, ${status}::text)` })
+      .where(eq(users.id, userId))
+      .returning({ steps: users.onboardingSteps });
+    return (row?.steps ?? {});
+  }
+
   async updateHome(userId: string, home: { address: string; lat: number; lon: number; sector: string }) {
     await this.db
       .update(users)

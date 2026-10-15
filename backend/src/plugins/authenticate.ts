@@ -20,8 +20,13 @@ declare module 'fastify' {
   }
 }
 
-export const authenticatePlugin = fp<{ secret: string; accessTokenTtlSeconds: number }>(
-  async (app, { secret, accessTokenTtlSeconds }) => {
+export const authenticatePlugin = fp<{
+  secret: string;
+  accessTokenTtlSeconds: number;
+  /** Compte existant et non supprimé : un JWT encore valide ne survit pas à la suppression. */
+  isActiveUser: (userId: string) => Promise<boolean>;
+}>(
+  async (app, { secret, accessTokenTtlSeconds, isActiveUser }) => {
     await app.register(fastifyJwt, {
       secret,
       sign: { algorithm: 'HS256', expiresIn: accessTokenTtlSeconds },
@@ -29,12 +34,14 @@ export const authenticatePlugin = fp<{ secret: string; accessTokenTtlSeconds: nu
     });
     app.decorateRequest('userId', '');
     app.decorate('authenticate', async (request: FastifyRequest) => {
+      let userId: string;
       try {
-        const payload = await request.jwtVerify<{ sub: string }>();
-        request.userId = payload.sub;
+        userId = (await request.jwtVerify<{ sub: string }>()).sub;
       } catch {
         throw new AppError(401, 'unauthorized', 'Connexion requise');
       }
+      if (!(await isActiveUser(userId))) throw new AppError(401, 'unauthorized', 'Connexion requise');
+      request.userId = userId;
     });
   },
   { name: 'authenticate' },

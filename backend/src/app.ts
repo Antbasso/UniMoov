@@ -105,13 +105,15 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
 
   if (modules) {
     const clock = modules.clock ?? (() => new Date());
+    const authRepo = new AuthRepo(modules.db);
     await app.register(authenticatePlugin, {
       secret: modules.jwtSecret,
       accessTokenTtlSeconds: AUTH_POLICY.accessTokenTtlSeconds,
+      isActiveUser: (userId) => authRepo.isActiveUser(userId),
     });
     const settings = new SettingsService(modules.db);
     const authService = new AuthService({
-      repo: new AuthRepo(modules.db),
+      repo: authRepo,
       mail: modules.mail,
       settings,
       clock,

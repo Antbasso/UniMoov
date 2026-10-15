@@ -126,13 +126,10 @@ export class ProfileService {
   }
 
   async setOnboardingStep(userId: string, step: OnboardingStep, status: StepStatus): Promise<MeResponse> {
-    const user = await this.repo.findUser(userId);
-    if (!user) throw new AppError(401, 'unauthorized', 'Connexion requise');
-    const steps: OnboardingState = { ...(user.onboardingSteps as OnboardingState), [step]: status };
-    await this.repo.updateUser(userId, {
-      onboardingSteps: steps,
-      ...(nextOnboardingStep(steps) === null ? { onboardingCompletedAt: this.clock() } : {}),
-    });
+    const steps = await this.repo.setOnboardingStep(userId, step, status);
+    if (nextOnboardingStep(steps) === null) {
+      await this.repo.updateUser(userId, { onboardingCompletedAt: this.clock() });
+    }
     return this.getMe(userId);
   }
 
