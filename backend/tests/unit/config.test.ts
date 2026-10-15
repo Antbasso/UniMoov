@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from '../../src/config.js';
 
-const base = { DATABASE_URL: 'postgres://u:secret@localhost:5432/db' };
+const base = {
+  DATABASE_URL: 'postgres://u:secret@localhost:5432/db',
+  JWT_SECRET: 'x'.repeat(32),
+};
 
 describe('loadConfig', () => {
   it('applique les valeurs par défaut', () => {
@@ -22,7 +25,7 @@ describe('loadConfig', () => {
   });
 
   it('refuse une URL qui n’est pas PostgreSQL', () => {
-    expect(() => loadConfig({ DATABASE_URL: 'mysql://localhost/db' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...base, DATABASE_URL: 'mysql://localhost/db' })).toThrow(ConfigError);
   });
 
   it('ne divulgue pas les valeurs dans le message d’erreur', () => {
@@ -39,5 +42,19 @@ describe('TRUST_PROXY', () => {
   it('vaut false par défaut et accepte "true"', () => {
     expect(loadConfig(base).TRUST_PROXY).toBe(false);
     expect(loadConfig({ ...base, TRUST_PROXY: 'true' }).TRUST_PROXY).toBe(true);
+  });
+});
+
+describe('secrets et fournisseurs', () => {
+  it('exige un JWT_SECRET de 32 caractères', () => {
+    expect(() => loadConfig({ ...base, JWT_SECRET: 'court' })).toThrow(ConfigError);
+  });
+
+  it('refuse le mail console en production', () => {
+    expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow(/MAIL_PROVIDER/);
+  });
+
+  it('utilise la BAN par défaut', () => {
+    expect(loadConfig(base).GEOCODING_PROVIDER).toBe('ban');
   });
 });

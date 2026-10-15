@@ -6,6 +6,7 @@
 import { sql } from 'drizzle-orm';
 import {
   customType,
+  date,
   jsonb,
   numeric,
   pgEnum,
@@ -56,6 +57,7 @@ export const users = pgTable('users', {
   onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
   reliabilityScore: numeric('reliability_score', { precision: 4, scale: 3 }).notNull().default('0.800'),
   pausedUntil: timestamp('paused_until', { withTimezone: true }),
+  onboardingSteps: jsonb('onboarding_steps').$type<Record<string, 'done' | 'skipped'>>().notNull().default({}),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -68,4 +70,38 @@ export const vehicles = pgTable('vehicles', {
   consumptionLPer100km: numeric('consumption_l_per_100km', { precision: 4, scale: 1 }).notNull(),
   defaultSeats: smallint('default_seats').notNull(),
   maxDetourMinutes: smallint('max_detour_minutes').notNull().default(10),
+});
+
+export const pauses = pgTable('pauses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  startsOn: date('starts_on').notNull(),
+  endsOn: date('ends_on').notNull(),
+  recurrence: text('recurrence').$type<'weekly:2' | 'weekly:3' | 'weekly:4'>(),
+});
+
+export const verificationCodes = pgTable('verification_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull(),
+  codeHash: text('code_hash').notNull(),
+  purpose: text('purpose').notNull().default('signup'),
+  attempts: smallint('attempts').notNull().default(0),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const refreshTokens = pgTable('refresh_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  familyId: uuid('family_id').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
