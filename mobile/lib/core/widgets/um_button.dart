@@ -82,14 +82,15 @@ class _UmButtonState extends State<UmButton> {
           )
         : (widget.icon == null ? null : Icon(widget.icon, size: UmSize.iconMd));
 
+    // Libellé flexible : il passe à la ligne quand le texte est agrandi (200 %).
     final child = leading == null
-        ? Text(widget.label)
+        ? Text(widget.label, textAlign: TextAlign.center)
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               leading,
               const SizedBox(width: UmSpace.s2),
-              Text(widget.label),
+              Flexible(child: Text(widget.label, textAlign: TextAlign.center)),
             ],
           );
 

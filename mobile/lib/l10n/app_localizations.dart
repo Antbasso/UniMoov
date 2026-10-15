@@ -61,7 +61,8 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -69,7 +70,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -443,7 +445,7 @@ abstract class AppLocalizations {
   /// No description provided for @signupCodeBody.
   ///
   /// In fr, this message translates to:
-  /// **'Saisis le code à 6 chiffres envoyé à {email}. Il est valable 10 minutes.'**
+  /// **'Saisis le code à 6 chiffres envoyé à {email}. Il est valable 10 minutes. Pense à regarder dans tes spams.'**
   String signupCodeBody(String email);
 
   /// No description provided for @signupCodeLabel.
@@ -491,7 +493,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Content de te revoir'**
+  /// **'Te revoilà'**
   String get loginTitle;
 
   /// No description provided for @loginAction.
@@ -503,7 +505,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginNoAccount.
   ///
   /// In fr, this message translates to:
-  /// **'Créer un compte'**
+  /// **'Créer mon compte'**
   String get loginNoAccount;
 
   /// No description provided for @splashError.
@@ -563,7 +565,7 @@ abstract class AppLocalizations {
   /// No description provided for @vehicleBody.
   ///
   /// In fr, this message translates to:
-  /// **'Avec une voiture, tu peux conduire et partager les frais avec tes passagers.'**
+  /// **'Avec une voiture, tu peux conduire et partager les frais du trajet.'**
   String get vehicleBody;
 
   /// No description provided for @vehicleYes.
@@ -605,7 +607,7 @@ abstract class AppLocalizations {
   /// No description provided for @vehicleDetourHelp.
   ///
   /// In fr, this message translates to:
-  /// **'On ne te propose que des passagers sous ce détour.'**
+  /// **'Uni-Moov ne te propose que des détours plus courts.'**
   String get vehicleDetourHelp;
 
   /// No description provided for @roleTitle.
@@ -629,25 +631,25 @@ abstract class AppLocalizations {
   /// No description provided for @roleAutoHelp.
   ///
   /// In fr, this message translates to:
-  /// **'Uni-Moov te propose conducteur ou passager selon les besoins de la semaine.'**
+  /// **'Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.'**
   String get roleAutoHelp;
 
   /// No description provided for @roleDriver.
   ///
   /// In fr, this message translates to:
-  /// **'Toujours conducteur'**
+  /// **'Toujours au volant'**
   String get roleDriver;
 
   /// No description provided for @rolePassenger.
   ///
   /// In fr, this message translates to:
-  /// **'Toujours passager'**
+  /// **'Toujours côté passager'**
   String get rolePassenger;
 
   /// No description provided for @roleNoVehicle.
   ///
   /// In fr, this message translates to:
-  /// **'Sans voiture, tu voyages en passager. Tu peux ajouter un véhicule plus tard dans ton profil.'**
+  /// **'Sans voiture, tu voyages côté passager. Tu peux ajouter un véhicule plus tard dans ton profil.'**
   String get roleNoVehicle;
 
   /// No description provided for @calendarTitle.
@@ -843,7 +845,8 @@ abstract class AppLocalizations {
   String get pauseSave;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -852,7 +855,8 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

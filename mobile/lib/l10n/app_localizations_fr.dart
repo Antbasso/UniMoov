@@ -72,7 +72,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcomeTitle => 'Ton emploi du temps organise aussi tes trajets.';
 
   @override
-  String get welcomeSubtitle => 'Covoiturage domicile-campus pour les étudiants d\'Annecy';
+  String get welcomeSubtitle =>
+      'Covoiturage domicile-campus pour les étudiants d\'Annecy';
 
   @override
   String get welcomeNote => 'Inscris-toi en deux minutes !';
@@ -114,34 +115,42 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorGeneric => 'Une erreur est survenue. Réessaie.';
 
   @override
-  String get errorNetwork => 'Connexion impossible pour l\'instant. Vérifie ton réseau.';
+  String get errorNetwork =>
+      'Connexion impossible pour l\'instant. Vérifie ton réseau.';
 
   @override
-  String get errorRateLimited => 'Trop de tentatives. Réessaie dans quelques minutes.';
+  String get errorRateLimited =>
+      'Trop de tentatives. Réessaie dans quelques minutes.';
 
   @override
   String get errorValidation => 'Vérifie les informations saisies.';
 
   @override
-  String get errorSessionExpired => 'Ta session a expiré. Connecte-toi à nouveau.';
+  String get errorSessionExpired =>
+      'Ta session a expiré. Connecte-toi à nouveau.';
 
   @override
-  String get errorEmailDomain => 'Utilise ton adresse mail universitaire (univ-smb.fr).';
+  String get errorEmailDomain =>
+      'Utilise ton adresse mail universitaire (univ-smb.fr).';
 
   @override
-  String get errorCodeCooldown => 'Attends une minute avant de redemander un code.';
+  String get errorCodeCooldown =>
+      'Attends une minute avant de redemander un code.';
 
   @override
-  String get errorCodeInvalid => 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
+  String get errorCodeInvalid =>
+      'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
 
   @override
-  String get errorAccountExists => 'Tu as déjà un compte avec cette adresse. Connecte-toi.';
+  String get errorAccountExists =>
+      'Tu as déjà un compte avec cette adresse. Connecte-toi.';
 
   @override
   String get errorInvalidCredentials => 'Mail ou mot de passe incorrect.';
 
   @override
-  String get errorAddressNotFound => 'Adresse introuvable. Ajoute la ville ou le code postal.';
+  String get errorAddressNotFound =>
+      'Adresse introuvable. Ajoute la ville ou le code postal.';
 
   @override
   String get errorGeocodingUnavailable =>
@@ -208,7 +217,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String signupCodeBody(String email) {
-    return 'Saisis le code à 6 chiffres envoyé à $email. Il est valable 10 minutes.';
+    return 'Saisis le code à 6 chiffres envoyé à $email. Il est valable 10 minutes. Pense à regarder dans tes spams.';
   }
 
   @override
@@ -234,13 +243,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get signupIdentityAction => 'Créer mon compte';
 
   @override
-  String get loginTitle => 'Content de te revoir';
+  String get loginTitle => 'Te revoilà';
 
   @override
   String get loginAction => 'Me connecter';
 
   @override
-  String get loginNoAccount => 'Créer un compte';
+  String get loginNoAccount => 'Créer mon compte';
 
   @override
   String get splashError => 'Impossible de charger ton profil.';
@@ -276,7 +285,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get vehicleBody =>
-      'Avec une voiture, tu peux conduire et partager les frais avec tes passagers.';
+      'Avec une voiture, tu peux conduire et partager les frais du trajet.';
 
   @override
   String get vehicleYes => 'Oui, j\'ai une voiture';
@@ -297,30 +306,32 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vehicleDetourLabel => 'Détour maximal (minutes)';
 
   @override
-  String get vehicleDetourHelp => 'On ne te propose que des passagers sous ce détour.';
+  String get vehicleDetourHelp =>
+      'Uni-Moov ne te propose que des détours plus courts.';
 
   @override
   String get roleTitle => 'Quel rôle préfères-tu ?';
 
   @override
-  String get roleBody => 'Tu pourras le changer quand tu veux depuis ton profil.';
+  String get roleBody =>
+      'Tu pourras le changer quand tu veux depuis ton profil.';
 
   @override
   String get roleAuto => 'Automatique';
 
   @override
   String get roleAutoHelp =>
-      'Uni-Moov te propose conducteur ou passager selon les besoins de la semaine.';
+      'Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.';
 
   @override
-  String get roleDriver => 'Toujours conducteur';
+  String get roleDriver => 'Toujours au volant';
 
   @override
-  String get rolePassenger => 'Toujours passager';
+  String get rolePassenger => 'Toujours côté passager';
 
   @override
   String get roleNoVehicle =>
-      'Sans voiture, tu voyages en passager. Tu peux ajouter un véhicule plus tard dans ton profil.';
+      'Sans voiture, tu voyages côté passager. Tu peux ajouter un véhicule plus tard dans ton profil.';
 
   @override
   String get calendarTitle => 'Ton emploi du temps';
@@ -344,7 +355,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoveryTitle => 'Mode découverte';
 
   @override
-  String get discoveryBody => 'Ajoute ton adresse pour recevoir des propositions de trajets.';
+  String get discoveryBody =>
+      'Ajoute ton adresse pour recevoir des propositions de trajets.';
 
   @override
   String get discoveryAction => 'Compléter mon profil';
