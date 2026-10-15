@@ -5,7 +5,7 @@
 ## 1. Inscription et authentification
 
 - Vérification d'identité obligatoire à l'inscription : l'utilisateur saisit son adresse mail universitaire et reçoit un code de confirmation par mail.
-- Une fois vérifié, choix de la méthode de connexion au quotidien : identifiant (mail universitaire) + mot de passe, ou connexion rapide via Google ou Apple, reliée au compte déjà vérifié.
+- Une fois vérifié, choix de la méthode de connexion au quotidien : identifiant (mail universitaire) + mot de passe, ou connexion rapide via Google ou Apple, reliée au compte déjà vérifié *(reporté en v1.1 pour limiter les coûts, voir `docs/couts.md`)*.
 - Onboarding en plusieurs étapes, chacune avec un bouton « passer / configurer plus tard » : profil (adresse domicile, lieu de cours), véhicule si applicable, connexion de l'emploi du temps, validation des préférences de trajet pour la semaine.
 - Tant que le profil n'est pas complet, l'utilisateur a accès à un mode découverte limité, sans accès au matching complet.
 
@@ -18,7 +18,7 @@
 
 ## 3. Emploi du temps et génération des trajets
 
-- Synchronisation d'agenda via ICS/CalDAV, Google Calendar ou Microsoft Graph ; alternative si refus : saisie manuelle des heures de début/fin de journée.
+- Synchronisation d'agenda via lien ICS/CalDAV en v1 (Google Calendar et Microsoft Graph reportés en v1.1 pour limiter les coûts, voir `docs/couts.md`) ; alternative si refus : saisie manuelle des heures de début/fin de journée.
 - Chaque semaine, l'appli propose automatiquement un trajet par créneau à partir de l'emploi du temps synchronisé ; l'utilisateur accepte ou refuse, avec un bouton pour voir d'autres propositions compatibles.
 - Si l'agenda synchronisé modifie l'heure de début/fin d'une journée, le système relance automatiquement une nouvelle recherche de matching pour ce créneau.
 
@@ -35,7 +35,7 @@
 - Estimation du coût du trajet : consommation du véhicule × distance du trajet × prix moyen du carburant en France (actualisé). Coût total divisé entre toutes les personnes du véhicule (conducteur inclus).
 - Commission UniMoov : petite commission symbolique par passager, valeur à définir dans le business model — implémenter comme variable configurable avec une valeur par défaut, ne pas coder en dur.
 - Le prix affiché avant le trajet est une estimation (basée sur le nombre de passagers prévus). Le prix définitif n'est calculé qu'à la fin du trajet : coût total ÷ nombre réel de personnes ayant validé leur présence. Un passager absent ne fait donc pas payer plus cher les autres ; il est pénalisé sur son score (section 7), pas eux.
-- Le conducteur avance les frais ; chaque passager le rembourse via l'app dès validation individuelle de sa présence (paiement déclenché par passager, pas en bloc).
+- Le conducteur avance les frais ; chaque passager le rembourse via l'app dès validation individuelle de sa présence (paiement déclenché par passager, pas en bloc). *Pilote v1 : pour éviter les frais de transaction, l'app calcule et enregistre la somme due par passager à la validation de présence, le règlement se fait hors de l'app et le conducteur confirme la réception ; le paiement intégré arrive en v1.1 (voir `docs/couts.md`).*
 - V2 (évolution) : QR code pour l'accès aux places réservées.
 
 ## 6. Messagerie intégrée

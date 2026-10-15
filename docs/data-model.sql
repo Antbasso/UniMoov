@@ -123,7 +123,7 @@ CREATE TABLE payments (
   amount_cents integer NOT NULL CHECK (amount_cents >= 0),
   commission_cents integer NOT NULL DEFAULT 0,
   provider_ref text,
-  status text NOT NULL DEFAULT 'pending',   -- pending | paid | failed | refunded
+  status text NOT NULL DEFAULT 'due',       -- v1 : due | settled (confirmé par le conducteur) ; v1.1 : paid | failed | refunded
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

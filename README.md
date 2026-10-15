@@ -31,8 +31,8 @@ UniMoov est une application mobile de covoiturage domicile-campus pour les étud
 | Mobile | Flutter (Android / iOS) |
 | Back-end | Node.js |
 | Base de données | PostgreSQL |
-| Agendas | ICS/CalDAV, Google Calendar, Microsoft Graph |
-| Cartographie | API de géocodage et d'itinéraires |
+| Agendas | lien ICS/CalDAV (Google et Microsoft en v1.1) |
+| Cartographie | OpenStreetMap (PMTiles), Base Adresse Nationale, OpenRouteService |
 | Déploiement | Docker |
 
 Sécurité, consentement lors de la connexion des agendas, minimisation des données et RGPD sont des exigences dès la conception.
@@ -50,6 +50,7 @@ assets/    logo et visuels
 
 - [Cahier des charges fonctionnel](docs/cahier-des-charges.md) : fonctionnalités v1 (pilote) et pistes v2.
 - [Design system](docs/design-system/README.md) : marque, tokens (`tokens.json`), composants et polices.
+- [Contrainte de coût et budget](docs/couts.md) : choix techniques économiques, coûts estimés.
 - [Fiche projet](docs/fiche-projet.md), [étude](docs/etude.md), [présentation](docs/presentation.md).
 
 ## Démarrage (développement)

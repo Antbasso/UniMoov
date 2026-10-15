@@ -1,6 +1,6 @@
 # Architecture technique
 
-Complète `docs/cahier-des-charges.md` (le quoi) par le comment. Un seul back-end modulaire (monolithe) et une app Flutter ; pas de microservices en v1.
+Complète `docs/cahier-des-charges.md` (le quoi) par le comment. Un seul back-end modulaire (monolithe) et une app Flutter ; pas de microservices en v1. Hébergement et choix de services dictés par le budget : voir `docs/couts.md`.
 
 ## 1. Vue d'ensemble
 ```
@@ -14,13 +14,13 @@ Flutter app ──HTTPS REST──▶ API Fastify ──▶ PostgreSQL + PostGIS
 ## 2. Modules back-end (`backend/src/modules/`)
 | Module | Rôle | Cahier |
 |---|---|---|
-| `auth` | code mail universitaire, mot de passe, Google/Apple, JWT + refresh | §1 |
+| `auth` | code mail universitaire, mot de passe, JWT + refresh (Google/Apple en v1.1) | §1 |
 | `profile` | profil, adresses, véhicule, rôle, préférences, pause | §2, §12 |
-| `calendar` | connexion et synchro d'agenda, créneaux | §3 |
+| `calendar` | lien ICS/CalDAV et saisie manuelle, créneaux (Google/Microsoft en v1.1) | §3 |
 | `matching` | propositions hebdomadaires, seuil de détour, départage | §3, §4 |
 | `rides` | trajets, arrêts, statuts, annulations, clôture | §8, §9 |
 | `pricing` | estimation et prix final, commission | §5 |
-| `payments` | paiement par passager via `PaymentProvider` | §5 |
+| `payments` | registre des sommes dues par passager et confirmation de réception ; `PaymentProvider` pour la v1.1 | §5 |
 | `chat` | messages privés, groupes, chat de trajet, rétention | §6 |
 | `trust` | notes croisées, score de fiabilité | §7 |
 | `disputes` | arbitrage automatique puis humain | §10 |
@@ -42,15 +42,15 @@ Schéma de référence : `docs/data-model.sql`. Géométries en WGS84 (`geograph
 5. Le résultat est une proposition à confirmer par chaque partie ; aucune réservation sans accord mutuel.
 
 ## 5. Carte (mobile)
-- Bibliothèque : `flutter_map` avec tuiles d'un fournisseur sous contrat ; clé dans la configuration, jamais dans le code.
+- Bibliothèque : `flutter_map` + `flutter_map_pmtiles` avec un fichier PMTiles OSM de la région hébergé en statique (aucun quota, aucune clé). Attribution OpenStreetMap affichée sur la carte.
 - Écran `RideMapScreen` : tracé (polyline), marqueurs d'arrêts numérotés dans l'ordre de ramassage, marqueur du conducteur animé, destination. Panneau bas : liste des arrêts avec ETA.
 - Visibilité : l'API ne renvoie les coordonnées exactes d'un passager qu'après acceptation mutuelle ; avant, uniquement le centre de son secteur (arrondi à une grille d'environ 500 m, calculé côté serveur).
 - Point de rendez-vous : si défini par le passager, c'est ce point qui remplace son adresse dans toutes les réponses destinées au conducteur.
 
 ## 6. Suivi en direct
 - Connexion WebSocket `wss://…/ws/rides/{rideId}` authentifiée par JWT ; le serveur vérifie que l'utilisateur est participant confirmé.
-- Le conducteur et les passagers envoient `position` (lat, lon, précision, vitesse, horodatage) toutes les 3 à 5 s pendant un trajet en cours ; le serveur diffuse aux autres participants (le passager reçoit celle du conducteur ; le conducteur reçoit celles des passagers non montés) et calcule l'ETA par arrêt.
-- Le trajet passe en `in_progress` au départ déclaré par le conducteur ; la diffusion s'arrête à `completed` ou `cancelled`. Les positions sont gardées en mémoire (dernière valeur) et une trace réduite est stockée uniquement pour l'arbitrage des litiges, avec rétention courte (`app_settings`).
+- Le conducteur et les passagers envoient `position` (lat, lon, précision, vitesse, horodatage) toutes les 3 à 5 s pendant un trajet en cours ; le serveur diffuse aux autres participants (le passager reçoit celle du conducteur ; le conducteur reçoit celles des passagers non montés) et calcule l'ETA par arrêt sans appeler l'API d'itinéraires à chaque position (voir `docs/couts.md`, règles de conception).
+- Le trajet passe en `in_progress` au départ déclaré par le conducteur ; la diffusion s'arrête à `completed` ou `cancelled`. Les positions sont gardées en mémoire (dernière valeur) et une trace réduite (un point toutes les 30 s) est stockée uniquement pour l'arbitrage des litiges, avec rétention courte (7 jours par défaut, `app_settings`).
 - Reconnexion automatique avec backoff côté mobile ; si plus de position reçue depuis 30 s, afficher « dernière position connue ».
 - Mobile : géolocalisation en arrière-plan (service de premier plan sur Android avec notification permanente, mode « location always/when in use » sur iOS) avec écran d'explication avant la demande de permission. Économie de batterie : fréquence réduite à l'arrêt.
 - Validation de présence (cahier §9) : le serveur compare les positions du passager et du conducteur au point de ramassage (rayon configurable, par défaut 150 m) ; succès ⇒ présence validée ⇒ déclenche le paiement du passager.
@@ -82,4 +82,4 @@ FCM pour Android et iOS. Table des préférences par type d'événement ; rappel
 - Modération : signalement d'un utilisateur ou d'un message, accessible depuis le profil et le chat.
 
 ## 10. Environnements et déploiement
-`docker-compose.yml` pour le développement. Image Docker du back-end ; CI (GitHub Actions) : lint, typecheck, tests back et mobile à chaque PR. Configuration par variables d'environnement validées au démarrage (Zod).
+`docker-compose.yml` pour le développement et la production sur un seul VPS (API, PostgreSQL/PostGIS, Caddy pour le HTTPS). Sauvegardes quotidiennes vers le stockage objet. Image Docker du back-end ; CI (GitHub Actions) : lint, typecheck, tests back et mobile à chaque PR. Configuration par variables d'environnement validées au démarrage (Zod).

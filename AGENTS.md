@@ -22,10 +22,13 @@ docs/       spécifications (voir ci-dessus)
 assets/     logo
 ```
 
+## Contrainte de coût (prioritaire)
+Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, paiement intégré, pièces jointes de chat).
+
 ## Stack imposée
-- Mobile : Flutter stable, Dart null-safe, Riverpod (état), go_router, dio, freezed + json_serializable, flutter_secure_storage, geolocator, url_launcher, firebase_messaging, flutter_map (ou MapLibre) pour la carte.
+- Mobile : Flutter stable, Dart null-safe, Riverpod (état), go_router, dio, freezed + json_serializable, flutter_secure_storage, geolocator, url_launcher, firebase_messaging, flutter_map + flutter_map_pmtiles pour la carte (fond OSM en PMTiles statique, voir `docs/couts.md`).
 - Backend : Node.js LTS, TypeScript strict, Fastify, Zod (validation, source des types), Drizzle ORM + migrations SQL, WebSocket (`@fastify/websocket`), jobs avec pg-boss (file dans PostgreSQL, pas de Redis en v1).
-- Données : PostgreSQL 16 + PostGIS.
+- Données : PostgreSQL 16 + PostGIS. Géocodage : Base Adresse Nationale. Itinéraires : OpenRouteService (palier gratuit) derrière `RoutingProvider`, OSRM/Valhalla auto-hébergé en plan B. Mail : palier gratuit derrière `MailProvider`.
 - Dev : Docker Compose (`db`, `api`), `.env` non commité (`.env.example` à jour).
 - Le `backend/src/index.js` actuel est un squelette JavaScript : migre-le en TypeScript au jalon M0.
 
@@ -51,7 +54,7 @@ Avant de déclarer un travail terminé, lance lint, typecheck et tests des parti
 **Argent**
 - Commission, prix du carburant et seuils sont des paramètres de configuration (table `app_settings`), jamais codés en dur.
 - Montants en centimes (entiers), jamais en flottants. Calcul du prix : consommation × distance × prix du carburant, divisé par les personnes réellement présentes (voir cahier, section 5).
-- Les paiements passent par un prestataire (interface `PaymentProvider`, implémentation factice en v1) ; ne manipule jamais de numéro de carte.
+- V1 : pas de paiement intégré. Le prix est calculé, le montant dû par passager est enregistré dans un registre (`payments`, statut `due` puis `settled_by_driver_confirmation`), le règlement se fait hors app. Interface `PaymentProvider` prévue pour la v1.1 ; ne manipule jamais de numéro de carte.
 
 **Sécurité**
 - Toute entrée API est validée par Zod. Toute route (sauf inscription/connexion) exige un JWT valide ; vérifie l'appartenance de l'utilisateur à la ressource (trajet, conversation) à chaque requête.

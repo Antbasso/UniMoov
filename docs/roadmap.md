@@ -10,12 +10,12 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 - **Accepté si** : `docker compose up` démarre API + base ; l'app affiche un écran d'accueil aux couleurs de la marque en thème clair et sombre ; la CI est verte.
 
 ## M1 – Inscription et profil (§1, §2, §12)
-- Code par mail universitaire (fournisseur de mail derrière une interface, journal console en dev), mot de passe, Google/Apple, JWT + refresh.
+- Code par mail universitaire (fournisseur de mail derrière une interface, journal console en dev), mot de passe, JWT + refresh. Pas de connexion Google/Apple (v1.1).
 - Onboarding par étapes avec « passer », mode découverte limité, profil, véhicule, rôle (auto/forcé), pause programmable.
 - **Accepté si** : un utilisateur s'inscrit, passe l'onboarding, quitte et reprend ; tests d'intégration auth et contrôle d'accès.
 
 ## M2 – Agenda et propositions (§3, §4)
-- Import ICS/CalDAV (puis Google, Microsoft Graph) avec consentement ; saisie manuelle de secours ; `schedule_slots`.
+- Import par lien ICS/CalDAV avec consentement (Google et Microsoft en v1.1) ; saisie manuelle de secours ; `schedule_slots`.
 - Génération hebdomadaire des besoins, matching v1 (seuil de détour, départage, rôle automatique) en fonctions pures testées ; écran « ma semaine » avec accepter/refuser/voir d'autres.
 - Relance automatique sur changement d'agenda ; recherche manuelle avec quota ; confidentialité avant acceptation.
 - **Accepté si** : sur le jeu de seed, la semaine d'un étudiant génère les bonnes propositions ; un changement d'horaire les recalcule ; aucun champ sensible dans les réponses avant acceptation (test automatisé).
@@ -28,8 +28,8 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 ## M4 – Départ, suivi en direct et GPS externe (§9, §14, §15)
 - Démarrage du trajet, WebSocket de position, ETA mis à jour, « dernière position connue », géolocalisation en arrière-plan avec écrans d'explication des permissions.
 - Écran conducteur « Départ » : liste ordonnée des arrêts, bouton « Lancer la navigation », détection des apps (Google Maps, Waze, Apple Plans), choix mémorisé, mode arrêt par arrêt pour Waze, bouton « monté ».
-- Validation de présence par proximité, clôture manuelle et automatique, prix final et paiement par passager (`PaymentProvider` factice).
-- **Accepté si** : deux simulateurs (conducteur, passager) montrent la position du conducteur en direct ; le lien Google Maps contient tous les arrêts dans l'ordre ; les liens sont couverts par des tests unitaires ; la présence validée déclenche le paiement ; la diffusion s'arrête à la clôture.
+- Validation de présence par proximité, clôture manuelle et automatique, prix final et registre des sommes dues par passager avec confirmation de réception par le conducteur (pas de paiement intégré, voir `docs/couts.md`).
+- **Accepté si** : deux simulateurs (conducteur, passager) montrent la position du conducteur en direct ; le lien Google Maps contient tous les arrêts dans l'ordre ; les liens sont couverts par des tests unitaires ; la présence validée crée la somme due au registre ; la diffusion s'arrête à la clôture.
 
 ## M5 – Annulations, confiance, litiges (§7, §8, §10)
 - Annulation avec pénalité dégressive, notification, relance de remplaçant ; notes croisées, score de fiabilité utilisé dans le matching ; litiges niveau 1 automatique puis contact humain ; signalements.
@@ -42,6 +42,12 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 ## M7 – Finitions pilote
 - Mode découverte, états vides/erreur, accessibilité, export et suppression de compte, internationalisation, journaux sans données personnelles, tests d'intégration du parcours complet, documentation de déploiement, performances (batterie en suivi, volume de positions).
 - **Accepté si** : parcours inscription → proposition → trajet → clôture → note passe en test d'intégration ; checklist RGPD du cahier remplie.
+
+## Mise en production du pilote
+VPS unique avec Docker Compose et Caddy, sauvegardes quotidiennes, fichier PMTiles de la région, supervision et alertes de quotas, publication Android (puis iOS si le compte Apple est pris en charge). Voir `docs/couts.md`.
+
+## v1.1 (reporté pour le coût)
+Connexion Google/Apple, agenda Google et Microsoft, paiement intégré (portefeuille rechargeable), pièces jointes de chat.
 
 ## Hors périmètre (V2)
 QR code d'accès aux places réservées, matching global, version personnalisable pour partenaires.
