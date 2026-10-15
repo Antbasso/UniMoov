@@ -4,6 +4,7 @@ import { ConfigError, loadConfig } from '../../src/config.js';
 const base = {
   DATABASE_URL: 'postgres://u:secret@localhost:5432/db',
   JWT_SECRET: 'x'.repeat(32),
+  CALENDAR_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
 };
 
 describe('loadConfig', () => {
@@ -56,5 +57,13 @@ describe('secrets et fournisseurs', () => {
 
   it('utilise la BAN par défaut', () => {
     expect(loadConfig(base).GEOCODING_PROVIDER).toBe('ban');
+  });
+});
+
+describe('CALENDAR_ENCRYPTION_KEY', () => {
+  it('exige 32 octets en base64', () => {
+    expect(() => loadConfig({ ...base, CALENDAR_ENCRYPTION_KEY: Buffer.alloc(16).toString('base64') })).toThrow(
+      ConfigError,
+    );
   });
 });

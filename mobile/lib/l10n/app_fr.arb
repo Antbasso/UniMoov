@@ -166,8 +166,6 @@
   "rolePassenger": "Toujours côté passager",
   "roleNoVehicle": "Sans voiture, tu voyages côté passager. Tu peux ajouter un véhicule plus tard dans ton profil.",
   "calendarTitle": "Ton emploi du temps",
-  "calendarBody": "Bientôt, Uni-Moov lira ton emploi du temps pour te proposer tes trajets de la semaine. Tu le connecteras depuis ton profil.",
-  "calendarAction": "Terminer",
   "homeGreeting": "Salut {firstName}",
   "@homeGreeting": {
     "placeholders": {
@@ -184,7 +182,6 @@
   "pauseAction": "Mettre en pause",
   "pauseManage": "Gérer mes pauses",
   "weekTitle": "Ta semaine",
-  "weekEmpty": "Tes propositions de trajets arriveront ici une fois ton emploi du temps connecté.",
   "profileTitle": "Mon profil",
   "profileIdentity": "Identité",
   "profileAddress": "Adresse",
@@ -240,5 +237,165 @@
   "pauseSheetBody": "Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n'est pas touché.",
   "pauseChooseDates": "Choisir les dates",
   "pauseAlternatingToggle": "Une semaine sur deux (alternance)",
-  "pauseSave": "Enregistrer la pause"
+  "pauseSave": "Enregistrer la pause",
+  "rideStatusWaiting": "En attente",
+  "campusName": "Campus d'Annecy",
+  "nearYourHome": "Près de chez toi",
+  "yourHome": "Chez toi",
+  "calendarBody": "Uni-Moov lit ton emploi du temps pour te proposer tes trajets de la semaine. Choisis comment le partager.",
+  "calendarChooseIcs": "Coller mon lien d'agenda (ICS)",
+  "calendarChooseManual": "Saisir mes horaires",
+  "icsTitle": "Ton lien d'agenda",
+  "icsBody": "Copie le lien d'abonnement (ICS) de ton emploi du temps, par exemple depuis ADE, puis colle-le ici.",
+  "icsLabel": "Lien ICS",
+  "icsPlaceholder": "https://…",
+  "icsConsent": "J'accepte qu'Uni-Moov lise cet agenda pour n'en garder que l'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.",
+  "icsConsentRequired": "Coche la case pour autoriser la lecture de ton agenda.",
+  "icsConnect": "Connecter mon agenda",
+  "manualTitle": "Tes horaires de la semaine",
+  "manualBody": "Indique l'heure de ton premier cours et la fin de ton dernier, pour chaque jour.",
+  "manualSave": "Enregistrer mes horaires",
+  "manualStart": "Début",
+  "manualEnd": "Fin",
+  "manualDayOff": "Pas de cours",
+  "manualInvalid": "La fin de journée doit suivre son début.",
+  "manualTimeLabel": "{day}, {which} : {time}",
+  "@manualTimeLabel": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "which": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "weekday1": "Lundi",
+  "weekday2": "Mardi",
+  "weekday3": "Mercredi",
+  "weekday4": "Jeudi",
+  "weekday5": "Vendredi",
+  "weekday6": "Samedi",
+  "weekday7": "Dimanche",
+  "errorCalendarUrl": "Ce lien n'est pas valide. Il doit commencer par https://.",
+  "errorCalendarUnreachable": "Impossible de lire ton agenda. Vérifie le lien ou réessaie plus tard.",
+  "errorCalendarInvalid": "Ce lien ne renvoie pas un agenda. Copie le lien d'abonnement (ICS).",
+  "errorDuplicateWeekday": "Un même jour est saisi deux fois.",
+  "errorProposalExpired": "Cette proposition est passée.",
+  "errorProposalCancelled": "Cette proposition a été annulée.",
+  "errorRideUnavailable": "Cette voiture ne peut plus te prendre. Choisis-en une autre.",
+  "errorAlreadyCommitted": "Tu as déjà un trajet sur ce créneau.",
+  "errorAlreadyDriving": "Tu conduis déjà sur ce créneau.",
+  "errorAlreadyAnswered": "Tu as déjà répondu à cette proposition.",
+  "errorSearchQuota": "Tu as atteint le nombre de recherches du jour. Réessaie demain.",
+  "errorProfileIncomplete": "Ajoute ton adresse pour trouver un trajet.",
+  "errorTimeRequired": "Indique une heure pour ce jour.",
+  "weekThis": "Cette semaine",
+  "weekNext": "La suivante",
+  "weekEmpty": "Pas encore de proposition cette semaine. Vérifie ton emploi du temps ou cherche un trajet.",
+  "weekEmptyNoSchedule": "Ajoute ton emploi du temps pour recevoir tes propositions.",
+  "addSchedule": "Ajouter mon emploi du temps",
+  "searchAction": "Chercher un trajet",
+  "directionTo": "Aller",
+  "directionFrom": "Retour",
+  "rideMetaDriver": "{time} · tu conduis · {count, plural, =0{aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
+  "@rideMetaDriver": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "see": "Voir",
+  "proposalTitleTo": "Aller du {day}",
+  "@proposalTitleTo": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "proposalTitleFrom": "Retour du {day}",
+  "@proposalTitleFrom": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "proposalTime": "Horaire : {time}",
+  "@proposalTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "proposalDriverIntro": "Tu montes avec",
+  "proposalPassengersIntro": "Tes passagers",
+  "proposalNoPassengers": "Personne pour l'instant. Tu recevras une notification si quelqu'un est proposé.",
+  "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min",
+  "@personDetails": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyNote": "Nom et adresse exacte s'affichent seulement une fois le trajet confirmé à deux.",
+  "accept": "Accepter",
+  "decline": "Refuser",
+  "seeOthers": "Voir d'autres voitures",
+  "proposalConfirmed": "Trajet confirmé",
+  "proposalWaiting": "Tu as accepté. On attend la réponse de l'autre.",
+  "proposalDeclined": "Proposition refusée.",
+  "alternativesTitle": "Autres voitures",
+  "alternativesEmpty": "Aucune autre voiture compatible pour ce créneau.",
+  "choose": "Choisir",
+  "joined": "C'est noté : tu as choisi cette voiture.",
+  "searchTitle": "Chercher un trajet",
+  "searchDayLabel": "Jour",
+  "searchTimeOptional": "Heure (facultatif)",
+  "searchNoTime": "Selon mon emploi du temps",
+  "searchEmpty": "Aucune voiture trouvée pour ce créneau.",
+  "searchHint": "Choisis un jour et un sens, puis lance la recherche.",
+  "seatsLeftLabel": "{count, plural, =1{1 place} other{{count} places}}",
+  "@seatsLeftLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSchedule": "Emploi du temps",
+  "scheduleConnected": "Agenda connecté, mis à jour le {date}.",
+  "@scheduleConnected": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleSyncError": "La dernière mise à jour a échoué. Vérifie ton lien.",
+  "scheduleManualSummary": "Horaires saisis pour {count, plural, =1{1 jour} other{{count} jours}}.",
+  "@scheduleManualSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scheduleNone": "Aucun emploi du temps.",
+  "scheduleSync": "Mettre à jour",
+  "scheduleDisconnect": "Déconnecter l'agenda",
+  "scheduleSynced": "Emploi du temps mis à jour."
 }

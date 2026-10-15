@@ -337,13 +337,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get calendarTitle => 'Ton emploi du temps';
 
   @override
-  String get calendarBody =>
-      'Bientôt, Uni-Moov lira ton emploi du temps pour te proposer tes trajets de la semaine. Tu le connecteras depuis ton profil.';
-
-  @override
-  String get calendarAction => 'Terminer';
-
-  @override
   String homeGreeting(String firstName) {
     return 'Salut $firstName';
   }
@@ -372,10 +365,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get weekTitle => 'Ta semaine';
-
-  @override
-  String get weekEmpty =>
-      'Tes propositions de trajets arriveront ici une fois ton emploi du temps connecté.';
 
   @override
   String get profileTitle => 'Mon profil';
@@ -442,4 +431,315 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pauseSave => 'Enregistrer la pause';
+
+  @override
+  String get rideStatusWaiting => 'En attente';
+
+  @override
+  String get campusName => 'Campus d\'Annecy';
+
+  @override
+  String get nearYourHome => 'Près de chez toi';
+
+  @override
+  String get yourHome => 'Chez toi';
+
+  @override
+  String get calendarBody =>
+      'Uni-Moov lit ton emploi du temps pour te proposer tes trajets de la semaine. Choisis comment le partager.';
+
+  @override
+  String get calendarChooseIcs => 'Coller mon lien d\'agenda (ICS)';
+
+  @override
+  String get calendarChooseManual => 'Saisir mes horaires';
+
+  @override
+  String get icsTitle => 'Ton lien d\'agenda';
+
+  @override
+  String get icsBody =>
+      'Copie le lien d\'abonnement (ICS) de ton emploi du temps, par exemple depuis ADE, puis colle-le ici.';
+
+  @override
+  String get icsLabel => 'Lien ICS';
+
+  @override
+  String get icsPlaceholder => 'https://…';
+
+  @override
+  String get icsConsent =>
+      'J\'accepte qu\'Uni-Moov lise cet agenda pour n\'en garder que l\'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.';
+
+  @override
+  String get icsConsentRequired =>
+      'Coche la case pour autoriser la lecture de ton agenda.';
+
+  @override
+  String get icsConnect => 'Connecter mon agenda';
+
+  @override
+  String get manualTitle => 'Tes horaires de la semaine';
+
+  @override
+  String get manualBody =>
+      'Indique l\'heure de ton premier cours et la fin de ton dernier, pour chaque jour.';
+
+  @override
+  String get manualSave => 'Enregistrer mes horaires';
+
+  @override
+  String get manualStart => 'Début';
+
+  @override
+  String get manualEnd => 'Fin';
+
+  @override
+  String get manualDayOff => 'Pas de cours';
+
+  @override
+  String get manualInvalid => 'La fin de journée doit suivre son début.';
+
+  @override
+  String manualTimeLabel(String day, String which, String time) {
+    return '$day, $which : $time';
+  }
+
+  @override
+  String get weekday1 => 'Lundi';
+
+  @override
+  String get weekday2 => 'Mardi';
+
+  @override
+  String get weekday3 => 'Mercredi';
+
+  @override
+  String get weekday4 => 'Jeudi';
+
+  @override
+  String get weekday5 => 'Vendredi';
+
+  @override
+  String get weekday6 => 'Samedi';
+
+  @override
+  String get weekday7 => 'Dimanche';
+
+  @override
+  String get errorCalendarUrl =>
+      'Ce lien n\'est pas valide. Il doit commencer par https://.';
+
+  @override
+  String get errorCalendarUnreachable =>
+      'Impossible de lire ton agenda. Vérifie le lien ou réessaie plus tard.';
+
+  @override
+  String get errorCalendarInvalid =>
+      'Ce lien ne renvoie pas un agenda. Copie le lien d\'abonnement (ICS).';
+
+  @override
+  String get errorDuplicateWeekday => 'Un même jour est saisi deux fois.';
+
+  @override
+  String get errorProposalExpired => 'Cette proposition est passée.';
+
+  @override
+  String get errorProposalCancelled => 'Cette proposition a été annulée.';
+
+  @override
+  String get errorRideUnavailable =>
+      'Cette voiture ne peut plus te prendre. Choisis-en une autre.';
+
+  @override
+  String get errorAlreadyCommitted => 'Tu as déjà un trajet sur ce créneau.';
+
+  @override
+  String get errorAlreadyDriving => 'Tu conduis déjà sur ce créneau.';
+
+  @override
+  String get errorAlreadyAnswered => 'Tu as déjà répondu à cette proposition.';
+
+  @override
+  String get errorSearchQuota =>
+      'Tu as atteint le nombre de recherches du jour. Réessaie demain.';
+
+  @override
+  String get errorProfileIncomplete =>
+      'Ajoute ton adresse pour trouver un trajet.';
+
+  @override
+  String get errorTimeRequired => 'Indique une heure pour ce jour.';
+
+  @override
+  String get weekThis => 'Cette semaine';
+
+  @override
+  String get weekNext => 'La suivante';
+
+  @override
+  String get weekEmpty =>
+      'Pas encore de proposition cette semaine. Vérifie ton emploi du temps ou cherche un trajet.';
+
+  @override
+  String get weekEmptyNoSchedule =>
+      'Ajoute ton emploi du temps pour recevoir tes propositions.';
+
+  @override
+  String get addSchedule => 'Ajouter mon emploi du temps';
+
+  @override
+  String get searchAction => 'Chercher un trajet';
+
+  @override
+  String get directionTo => 'Aller';
+
+  @override
+  String get directionFrom => 'Retour';
+
+  @override
+  String rideMetaDriver(String time, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count passagers',
+      one: '1 passager',
+      zero: 'aucun passager pour l\'instant',
+    );
+    return '$time · tu conduis · $_temp0';
+  }
+
+  @override
+  String get see => 'Voir';
+
+  @override
+  String proposalTitleTo(String day) {
+    return 'Aller du $day';
+  }
+
+  @override
+  String proposalTitleFrom(String day) {
+    return 'Retour du $day';
+  }
+
+  @override
+  String proposalTime(String time) {
+    return 'Horaire : $time';
+  }
+
+  @override
+  String get proposalDriverIntro => 'Tu montes avec';
+
+  @override
+  String get proposalPassengersIntro => 'Tes passagers';
+
+  @override
+  String get proposalNoPassengers =>
+      'Personne pour l\'instant. Tu recevras une notification si quelqu\'un est proposé.';
+
+  @override
+  String personDetails(String score, int minutes) {
+    return 'Fiabilité $score sur 5 · détour $minutes min';
+  }
+
+  @override
+  String get privacyNote =>
+      'Nom et adresse exacte s\'affichent seulement une fois le trajet confirmé à deux.';
+
+  @override
+  String get accept => 'Accepter';
+
+  @override
+  String get decline => 'Refuser';
+
+  @override
+  String get seeOthers => 'Voir d\'autres voitures';
+
+  @override
+  String get proposalConfirmed => 'Trajet confirmé';
+
+  @override
+  String get proposalWaiting =>
+      'Tu as accepté. On attend la réponse de l\'autre.';
+
+  @override
+  String get proposalDeclined => 'Proposition refusée.';
+
+  @override
+  String get alternativesTitle => 'Autres voitures';
+
+  @override
+  String get alternativesEmpty =>
+      'Aucune autre voiture compatible pour ce créneau.';
+
+  @override
+  String get choose => 'Choisir';
+
+  @override
+  String get joined => 'C\'est noté : tu as choisi cette voiture.';
+
+  @override
+  String get searchTitle => 'Chercher un trajet';
+
+  @override
+  String get searchDayLabel => 'Jour';
+
+  @override
+  String get searchTimeOptional => 'Heure (facultatif)';
+
+  @override
+  String get searchNoTime => 'Selon mon emploi du temps';
+
+  @override
+  String get searchEmpty => 'Aucune voiture trouvée pour ce créneau.';
+
+  @override
+  String get searchHint =>
+      'Choisis un jour et un sens, puis lance la recherche.';
+
+  @override
+  String seatsLeftLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count places',
+      one: '1 place',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileSchedule => 'Emploi du temps';
+
+  @override
+  String scheduleConnected(String date) {
+    return 'Agenda connecté, mis à jour le $date.';
+  }
+
+  @override
+  String get scheduleSyncError =>
+      'La dernière mise à jour a échoué. Vérifie ton lien.';
+
+  @override
+  String scheduleManualSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours',
+      one: '1 jour',
+    );
+    return 'Horaires saisis pour $_temp0.';
+  }
+
+  @override
+  String get scheduleNone => 'Aucun emploi du temps.';
+
+  @override
+  String get scheduleSync => 'Mettre à jour';
+
+  @override
+  String get scheduleDisconnect => 'Déconnecter l\'agenda';
+
+  @override
+  String get scheduleSynced => 'Emploi du temps mis à jour.';
 }

@@ -27,8 +27,8 @@ class ProfileFormFrame {
   final PreferredSizeWidget? appBar;
 }
 
-/// Exécute une action avec indicateur et message d'erreur traduit.
-mixin _SubmitState<T extends ConsumerStatefulWidget> on ConsumerState<T> {
+/// Exécute une action avec indicateur et message d’erreur traduit (formulaires de profil).
+mixin SubmitStateMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   bool busy = false;
   String? errorCode;
 
@@ -75,7 +75,7 @@ class AddressForm extends ConsumerStatefulWidget {
   ConsumerState<AddressForm> createState() => _AddressFormState();
 }
 
-class _AddressFormState extends ConsumerState<AddressForm> with _SubmitState {
+class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin {
   late final _address = TextEditingController(text: widget.me.home?.address ?? '');
   bool _showFieldErrors = false;
 
@@ -144,7 +144,7 @@ class VehicleForm extends ConsumerStatefulWidget {
   ConsumerState<VehicleForm> createState() => _VehicleFormState();
 }
 
-class _VehicleFormState extends ConsumerState<VehicleForm> with _SubmitState {
+class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin {
   late bool _hasCar = widget.me.vehicle != null;
   late final _consumption = TextEditingController(
     text: VehicleInput.formatConsumption(widget.me.vehicle?.consumptionLPer100km ?? 6),
@@ -267,7 +267,7 @@ class RoleForm extends ConsumerStatefulWidget {
   ConsumerState<RoleForm> createState() => _RoleFormState();
 }
 
-class _RoleFormState extends ConsumerState<RoleForm> with _SubmitState {
+class _RoleFormState extends ConsumerState<RoleForm> with SubmitStateMixin {
   late RoleMode _mode = widget.me.roleMode;
 
   void _submit() => run(() async {

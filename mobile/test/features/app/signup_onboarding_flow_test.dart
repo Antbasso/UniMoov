@@ -57,7 +57,7 @@ void main() {
     // Fin de l'onboarding puis accueil connecté, hors mode découverte (adresse donnée).
     await tapText(tester, 'Continuer');
     expect(find.text('Ton emploi du temps'), findsOneWidget);
-    await tapText(tester, 'Terminer');
+    await tapText(tester, 'Passer pour l\'instant');
     expect(find.text('Salut Léa'), findsOneWidget);
     expect(find.text('Mode découverte'), findsNothing);
     expect(find.text('Ta semaine'), findsOneWidget);
@@ -68,10 +68,9 @@ void main() {
     backend.resumeSessionFor('lea@etu.univ-smb.fr');
     storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
     await launchApp(tester, backend: backend, storage: storage);
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       await tapText(tester, 'Passer pour l\'instant');
     }
-    await tapText(tester, 'Terminer');
     expect(find.text('Mode découverte'), findsOneWidget);
     await tapText(tester, 'Compléter mon profil');
     expect(find.text('Où habites-tu ?'), findsOneWidget);

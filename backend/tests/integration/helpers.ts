@@ -5,6 +5,7 @@ import { createDatabase, type Database } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { FakeGeocodingProvider } from '../../src/shared/geocoding/fake-geocoding-provider.js';
 import { MemoryMailProvider } from '../../src/shared/mail/memory-mail-provider.js';
+import { FetchFailedError } from '../../src/shared/safe-fetch.js';
 import { prepareTestDatabase } from './test-database.js';
 
 export const testDatabaseUrl = (): string => {
@@ -18,6 +19,8 @@ export interface TestContext {
   database: Database;
   mail: MemoryMailProvider;
   geocoding: FakeGeocodingProvider;
+  /** Faux agendas ICS servis par URL (aucun accès réseau dans les tests). */
+  icsFeeds: Map<string, string>;
   /** Horloge des services (codes, pauses) ; avance avec `advance`. */
   clock: { now: Date; advance: (ms: number) => void };
   close: () => Promise<void>;
@@ -34,6 +37,7 @@ export async function setupTestContext(
   const database = createDatabase(url);
   const mail = new MemoryMailProvider();
   const geocoding = new FakeGeocodingProvider();
+  const icsFeeds = new Map<string, string>();
   const clock = {
     now: start,
     advance(ms: number) {
@@ -48,6 +52,11 @@ export async function setupTestContext(
     modules: {
       db: database.db,
       jwtSecret: 'test-secret-'.padEnd(40, 'x'),
+      calendarKey: Buffer.alloc(32, 3).toString('base64'),
+      fetchIcs: (url) => {
+        const feed = icsFeeds.get(url);
+        return feed === undefined ? Promise.reject(new FetchFailedError('HTTP 404')) : Promise.resolve(feed);
+      },
       mail,
       geocoding,
       clock: () => clock.now,
@@ -59,6 +68,7 @@ export async function setupTestContext(
     database,
     mail,
     geocoding,
+    icsFeeds,
     clock,
     close: async () => {
       await app.close();

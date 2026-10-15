@@ -35,6 +35,8 @@ export class ProfileService {
     private readonly repo: ProfileRepo,
     private readonly geocoding: GeocodingProvider,
     private readonly clock: () => Date,
+    /** Adresse, véhicule, rôle ou pause modifiés : le matching recalcule (cahier §3). */
+    private readonly onMatchingInputsChanged: (userId: string) => Promise<void> = () => Promise.resolve(),
   ) {}
 
   async getMe(userId: string): Promise<MeResponse> {
@@ -91,6 +93,7 @@ export class ProfileService {
     }
     if (!result) throw new AppError(422, 'address_not_found', 'Adresse introuvable');
     await this.repo.updateHome(userId, { address: result.label, lat: result.lat, lon: result.lon, sector: sectorOf(result) });
+    await this.onMatchingInputsChanged(userId);
     return this.getMe(userId);
   }
 
@@ -104,11 +107,13 @@ export class ProfileService {
       defaultSeats: vehicle.defaultSeats,
       maxDetourMinutes: vehicle.maxDetourMinutes,
     });
+    await this.onMatchingInputsChanged(userId);
     return this.getMe(userId);
   }
 
   async removeVehicle(userId: string): Promise<void> {
     if (!(await this.repo.deleteVehicle(userId, 'always_passenger'))) throw notFound();
+    await this.onMatchingInputsChanged(userId);
   }
 
   async setPreferences(
@@ -122,6 +127,7 @@ export class ProfileService {
       throw new AppError(409, 'vehicle_required', 'Déclare un véhicule pour conduire');
     }
     await this.repo.updateUser(userId, withoutUndefined(prefs));
+    if (prefs.roleMode) await this.onMatchingInputsChanged(userId);
     return this.getMe(userId);
   }
 
@@ -147,11 +153,14 @@ export class ProfileService {
     if ((await this.repo.countPauses(userId)) >= MAX_PAUSES) {
       throw new AppError(409, 'too_many_pauses', 'Trop de pauses programmées');
     }
-    return this.repo.insertPause(userId, pause);
+    const created = await this.repo.insertPause(userId, pause);
+    await this.onMatchingInputsChanged(userId);
+    return created;
   }
 
   async removePause(userId: string, pauseId: string): Promise<void> {
     if (!(await this.repo.deletePause(userId, pauseId))) throw notFound();
+    await this.onMatchingInputsChanged(userId);
   }
 
   async getPublicProfile(userId: string) {

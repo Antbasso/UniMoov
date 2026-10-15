@@ -14,6 +14,12 @@ abstract final class AppRoutes {
   static const profileAddress = '/profile/address';
   static const profileVehicle = '/profile/vehicle';
   static const profileRole = '/profile/role';
+  static const profileSchedule = '/profile/schedule';
+  static const profileScheduleIcs = '/profile/schedule/ics';
+  static const profileScheduleManual = '/profile/schedule/manual';
+  static const search = '/search';
+  static String proposal(String week, String id) => '/week/$week/proposals/$id';
+  static String alternatives(String week, String id) => '/week/$week/proposals/$id/alternatives';
 
   static const public = {welcome, login, signup};
   static const entry = {splash, welcome, login, signup, onboarding};

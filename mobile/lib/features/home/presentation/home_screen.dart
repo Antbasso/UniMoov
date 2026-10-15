@@ -8,6 +8,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../profile/presentation/pause_sheet.dart';
+import '../../proposals/presentation/week_section.dart';
 
 /// Écran principal connecté : mode découverte, pause visible (cahier §12), semaine à venir.
 class HomeScreen extends ConsumerWidget {
@@ -63,12 +64,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: UmSpace.s6),
-        Semantics(
-          header: true,
-          child: Text(l10n.weekTitle, style: UmText.h2.copyWith(color: c.ink)),
-        ),
-        const SizedBox(height: UmSpace.s3),
-        Text(l10n.weekEmpty, style: UmText.body.copyWith(color: c.inkMuted)),
+        // Hors mode découverte : le matching a besoin de l'adresse (cahier §1).
+        if (!me.discoveryMode) const WeekSection(),
       ],
     );
   }
