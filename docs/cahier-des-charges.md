@@ -85,8 +85,25 @@ Architecture façon Teams, trois niveaux de conversation :
 
 - Application mobile uniquement (iOS/Android via Flutter), pas de version web — positionnement proche de BlaBlaCar Daily (covoiturage courte distance et récurrent domicile-campus), à l'opposé d'un covoiturage longue distance occasionnel.
 
-## 14. Points encore ouverts à trancher plus tard
+## 14. Carte et suivi en direct
+
+- Carte du trajet, accessible depuis tout trajet confirmé : le tracé de l'itinéraire du conducteur, son point de départ, la destination (campus) et un repère pour chaque passager (adresse ou point de rendez-vous), dans l'ordre de ramassage, avec l'heure de passage estimée à chaque arrêt.
+- Confidentialité : un passager n'apparaît avec son adresse exacte qu'après acceptation mutuelle (voir section 4) ; avant cela, seul le secteur approximatif est montré. Chaque participant ne voit sur la carte que les personnes de son propre trajet.
+- Point de rendez-vous : le passager peut remplacer son adresse par un point de rendez-vous (par exemple un arrêt proche) ; c'est ce point qui est affiché au conducteur à la place de l'adresse.
+- Suivi en direct pendant le trajet : le passager voit la position du conducteur se déplacer en temps réel vers son point de ramassage (heure d'arrivée estimée mise à jour) ; le conducteur voit les passagers pas encore montés. Le partage s'active au départ du trajet et s'arrête à sa clôture (voir section 9) ; il ne fonctionne jamais en dehors d'un trajet confirmé.
+- Si la position d'un participant n'est plus reçue, la carte affiche « dernière position connue » avec l'heure, sans bloquer le trajet.
+
+## 15. Lancement de la navigation GPS externe
+
+- Au moment du départ, le conducteur ouvre le trajet déjà programmé : liste ordonnée des arrêts (adresse ou point de rendez-vous de chaque passager, puis destination).
+- Bouton « Lancer la navigation » : l'app propose les applications GPS installées sur le téléphone (Google Maps, Waze, Apple Plans, et autres si disponibles) ; le choix est mémorisé comme application par défaut, modifiable dans les paramètres.
+- L'itinéraire est transmis à l'application choisie avec tous les arrêts quand elle le permet (Google Maps, Apple Plans). Waze n'accepte qu'une destination : l'app lance alors la navigation arrêt par arrêt, avec un bouton « Arrêt suivant » qui relance Waze vers le point suivant.
+- L'app UniMoov reste utilisable pendant la navigation : le partage de position continue en arrière-plan, et le conducteur peut marquer chaque passager comme « monté ».
+- Si l'ordre des arrêts change (passager retiré, annulation), l'ordre est recalculé et le conducteur est notifié.
+
+## 16. Points encore ouverts à trancher plus tard
 
 - Montant exact de la commission UniMoov (dépend du business model final).
 - Durée exacte de rétention des chats de trajet avant archivage/suppression.
+- Fournisseur de cartes et d'itinéraires (coût, quotas) et fréquence d'envoi de la position en direct.
 - Détail du matching global v2 (optimisation réseau) et du système de QR code v2.

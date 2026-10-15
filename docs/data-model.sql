@@ -1,0 +1,215 @@
+-- Schéma de référence UniMoov (PostgreSQL 16 + PostGIS). À transformer en migrations versionnées.
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TYPE ride_status AS ENUM ('proposed','confirmed','in_progress','completed','cancelled');
+CREATE TYPE participant_role AS ENUM ('driver','passenger');
+CREATE TYPE participant_status AS ENUM ('proposed','accepted','declined','picked_up','absent','cancelled');
+CREATE TYPE role_mode AS ENUM ('auto','always_driver','always_passenger');
+
+CREATE TABLE app_settings (          -- commission, prix carburant, seuils, rétentions
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  university_email text NOT NULL UNIQUE,
+  email_verified_at timestamptz,
+  password_hash text,
+  google_sub text UNIQUE,
+  apple_sub text UNIQUE,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  photo_url text,
+  home_address text,
+  home_location geography(Point,4326),
+  home_sector text,                       -- cellule de grille ~500 m, calculée côté serveur
+  campus_id uuid,
+  role_mode role_mode NOT NULL DEFAULT 'always_passenger',
+  default_nav_app text,                   -- 'google_maps' | 'waze' | 'apple_maps' | null
+  onboarding_completed_at timestamptz,
+  reliability_score numeric(4,3) NOT NULL DEFAULT 0.800,
+  paused_until timestamptz,
+  deleted_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX users_home_location_gix ON users USING gist (home_location);
+
+CREATE TABLE campuses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  location geography(Point,4326) NOT NULL
+);
+
+CREATE TABLE vehicles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  consumption_l_per_100km numeric(4,1) NOT NULL,
+  default_seats smallint NOT NULL CHECK (default_seats BETWEEN 1 AND 8),
+  max_detour_minutes smallint NOT NULL DEFAULT 10
+);
+
+CREATE TABLE pauses (                     -- pause programmée, récurrence optionnelle
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  starts_on date NOT NULL,
+  ends_on date NOT NULL,
+  recurrence text                         -- ex. 'weekly:2' (une semaine sur deux)
+);
+
+CREATE TABLE calendar_connections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider text NOT NULL,                 -- 'ics' | 'caldav' | 'google' | 'microsoft' | 'manual'
+  encrypted_credentials bytea,
+  consented_at timestamptz NOT NULL,
+  last_synced_at timestamptz
+);
+
+CREATE TABLE schedule_slots (             -- uniquement début/fin utiles, pas de titres d'événements
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day date NOT NULL,
+  start_at timestamptz NOT NULL,
+  end_at timestamptz NOT NULL,
+  place_location geography(Point,4326),
+  source text NOT NULL,                   -- 'calendar' | 'manual'
+  UNIQUE (user_id, start_at)
+);
+
+CREATE TABLE rides (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  driver_id uuid NOT NULL REFERENCES users(id),
+  direction text NOT NULL CHECK (direction IN ('to_campus','from_campus')),
+  campus_id uuid NOT NULL REFERENCES campuses(id),
+  target_time timestamptz NOT NULL,       -- arrivée (aller) ou départ (retour)
+  seats_total smallint NOT NULL,
+  status ride_status NOT NULL DEFAULT 'proposed',
+  route geography(LineString,4326),
+  distance_m integer,
+  duration_s integer,
+  started_at timestamptz,
+  ended_at timestamptz,
+  estimated_total_cost_cents integer,
+  final_total_cost_cents integer,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX rides_target_time_idx ON rides (target_time);
+
+CREATE TABLE ride_participants (
+  ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id),
+  role participant_role NOT NULL,
+  status participant_status NOT NULL DEFAULT 'proposed',
+  pickup_label text,                      -- adresse ou point de rendez-vous
+  pickup_location geography(Point,4326),
+  use_meeting_point boolean NOT NULL DEFAULT false,
+  stop_order smallint,
+  eta timestamptz,
+  detour_s integer,
+  presence_validated_at timestamptz,
+  amount_cents integer,
+  cancelled_at timestamptz,
+  PRIMARY KEY (ride_id, user_id)
+);
+
+CREATE TABLE payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ride_id uuid NOT NULL REFERENCES rides(id),
+  payer_id uuid NOT NULL REFERENCES users(id),
+  payee_id uuid NOT NULL REFERENCES users(id),
+  amount_cents integer NOT NULL CHECK (amount_cents >= 0),
+  commission_cents integer NOT NULL DEFAULT 0,
+  provider_ref text,
+  status text NOT NULL DEFAULT 'pending',   -- pending | paid | failed | refunded
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE position_trace (             -- rétention courte, pour les litiges
+  ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id),
+  recorded_at timestamptz NOT NULL,
+  location geography(Point,4326) NOT NULL,
+  PRIMARY KEY (ride_id, user_id, recorded_at)
+);
+
+CREATE TABLE conversations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind text NOT NULL CHECK (kind IN ('direct','group','ride')),
+  ride_id uuid REFERENCES rides(id) ON DELETE SET NULL,
+  title text,
+  archived_at timestamptz,
+  delete_after timestamptz
+);
+CREATE TABLE conversation_members (
+  conversation_id uuid REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (conversation_id, user_id)
+);
+CREATE TABLE messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES users(id),
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX messages_conv_idx ON messages (conversation_id, created_at);
+
+CREATE TABLE ratings (
+  ride_id uuid NOT NULL REFERENCES rides(id),
+  rater_id uuid NOT NULL REFERENCES users(id),
+  rated_id uuid NOT NULL REFERENCES users(id),
+  stars smallint NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  comment text,
+  PRIMARY KEY (ride_id, rater_id, rated_id)
+);
+
+CREATE TABLE reliability_events (         -- annulations, absences, etc. (entrées du score)
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id),
+  ride_id uuid REFERENCES rides(id),
+  kind text NOT NULL,                      -- 'late_cancel' | 'no_show' | 'completed' ...
+  weight numeric(4,3) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE disputes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ride_id uuid NOT NULL REFERENCES rides(id),
+  opened_by uuid NOT NULL REFERENCES users(id),
+  reason text NOT NULL,
+  level smallint NOT NULL DEFAULT 1,       -- 1 automatique, 2 humain
+  resolution text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE notification_preferences (
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  event_type text NOT NULL,
+  push_enabled boolean NOT NULL DEFAULT true,
+  PRIMARY KEY (user_id, event_type)
+);
+CREATE TABLE devices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  platform text NOT NULL,
+  push_token text NOT NULL UNIQUE
+);
+
+CREATE TABLE search_quota (                -- recherche manuelle limitée par jour
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  day date NOT NULL,
+  count integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+CREATE TABLE reports (                     -- signalements
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id uuid NOT NULL REFERENCES users(id),
+  target_user_id uuid REFERENCES users(id),
+  target_message_id uuid REFERENCES messages(id),
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
