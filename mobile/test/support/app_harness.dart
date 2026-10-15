@@ -8,6 +8,7 @@ import 'package:unimoov/core/widgets/widgets.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/profile/data/profile_api.dart';
 import 'package:unimoov/features/proposals/data/proposals_api.dart';
+import 'package:unimoov/features/rides/data/rides_api.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
 
 import 'fake_backend.dart';
@@ -35,6 +36,7 @@ Future<void> launchApp(
         profileApiProvider.overrideWithValue(backend),
         scheduleApiProvider.overrideWithValue(backend),
         proposalsApiProvider.overrideWithValue(backend),
+        ridesApiProvider.overrideWithValue(backend),
         // Date figée : goldens et semaines stables quel que soit le jour du test.
         clockProvider.overrideWithValue(() => now ?? testNow),
       ],

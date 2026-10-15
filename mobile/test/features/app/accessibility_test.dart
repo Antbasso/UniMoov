@@ -154,6 +154,45 @@ void main() {
     });
   }
 
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets('M3 : carte du trajet, point de rendez-vous, suggestions (${mode.name})', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final rides = rideBackend();
+      storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+      await launchApp(tester, backend: rides, storage: storage, themeMode: mode);
+      await tapText(tester, 'Voir', index: 0);
+      await expectAccessible(tester);
+      await tapText(tester, 'Voir la carte');
+      await expectAccessible(tester);
+      await tapText(tester, 'Choisir un point de rendez-vous');
+      await expectAccessible(tester);
+      await launchApp(tester, backend: rides, storage: storage, themeMode: mode);
+      await tapText(tester, 'Voir', index: 1);
+      await tapText(tester, 'Ajouter des passagers');
+      await expectAccessible(tester);
+      handle.dispose();
+    });
+  }
+
+  testWidgets('M3 à 200 % : aucun débordement', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final rides = rideBackend();
+    storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+    await launchApp(tester, backend: rides, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    await tapText(tester, 'Voir la carte');
+    expect(tester.takeException(), isNull);
+    await tapText(tester, 'Choisir un point de rendez-vous');
+    expect(tester.takeException(), isNull);
+    await launchApp(tester, backend: rides, storage: storage);
+    await tapText(tester, 'Voir', index: 1);
+    await tapText(tester, 'Ajouter des passagers');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('texte agrandi à 200 % : aucun débordement', (tester) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);

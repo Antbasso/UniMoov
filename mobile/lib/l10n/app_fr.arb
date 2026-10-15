@@ -397,5 +397,123 @@
   "scheduleNone": "Aucun emploi du temps.",
   "scheduleSync": "Mettre à jour",
   "scheduleDisconnect": "Déconnecter l'agenda",
-  "scheduleSynced": "Emploi du temps mis à jour."
+  "scheduleSynced": "Emploi du temps mis à jour.",
+  "rideMapOpen": "Voir la carte",
+  "rideMapLabel": "Carte du trajet avec {count, plural, =1{1 arrêt} other{{count} arrêts}}",
+  "@rideMapLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rideRouteEstimated": "Tracé approximatif : le calcul d'itinéraire n'était pas disponible.",
+  "rideStopsTitle": "Arrêts",
+  "rideStopAround": "Vers {time}",
+  "@rideStopAround": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "rideStopSemantic": "Arrêt {order} : {name}, {place}, vers {time}",
+  "@rideStopSemantic": {
+    "placeholders": {
+      "order": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "place": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "rideYou": "Toi",
+  "rideMeetingPoint": "Point de rendez-vous",
+  "ridePriceYouPay": "Tu paies {price}",
+  "@ridePriceYouPay": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "ridePriceYouReceive": "Tu reçois {price}",
+  "@ridePriceYouReceive": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "ridePriceDetail": "Estimation : {total} de carburant partagés entre {persons} personnes, plus {commission} de frais de service par passager. Le prix final est calculé à l'arrivée.",
+  "@ridePriceDetail": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "persons": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "String"
+      }
+    }
+  },
+  "ridePriceUnknown": "Prix indisponible : le véhicule du conducteur n'est plus renseigné.",
+  "rideAddPassengers": "Ajouter des passagers",
+  "rideChooseMeetingPoint": "Choisir un point de rendez-vous",
+  "rideChangeMeetingPoint": "Changer de point de rendez-vous",
+  "meetingPointTitle": "Point de rendez-vous",
+  "meetingPointIntro": "Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
+  "meetingPointMapLabel": "Carte : touche pour placer le point de rendez-vous",
+  "meetingPointLabel": "Nom du point",
+  "meetingPointHint": "Ex. arrêt de bus Mairie",
+  "meetingPointSave": "Enregistrer ce point",
+  "meetingPointReset": "Revenir à mon adresse",
+  "meetingPointSaved": "Point de rendez-vous enregistré.",
+  "meetingPointResetDone": "Le conducteur passera à ton adresse.",
+  "suggestionsTitle": "Ajouter des passagers",
+  "suggestionsIntro": "Ces étudiants n'ont pas encore de trajet à cette heure-là. Chaque place prise fait baisser le prix pour tout le monde.",
+  "suggestionsCurrentPrice": "Aujourd'hui, chaque passager paie {price}.",
+  "@suggestionsCurrentPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "suggestionWithin": "Dans ton détour",
+  "suggestionBeyond": "Au-delà de ton détour max",
+  "suggestionPrice": "Avec cette personne : {price} par passager",
+  "@suggestionPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "suggestionInvite": "Proposer une place",
+  "suggestionInvited": "Proposition envoyée à {name}.",
+  "@suggestionInvited": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "suggestionsEmpty": "Personne d'autre ne cherche de trajet à cette heure-là.",
+  "suggestionsFull": "Ta voiture est complète.",
+  "errorForbidden": "Tu n'as pas accès à ce trajet.",
+  "errorRideNotConfirmed": "Ce trajet n'est pas encore confirmé.",
+  "errorMeetingPointTooFar": "Choisis un point plus proche de chez toi.",
+  "errorRideLocked": "Ce trajet ne peut plus être modifié.",
+  "errorSuggestionUnavailable": "Cette personne n'est plus disponible.",
+  "errorAcceptFirst": "Accepte d'abord ce trajet."
 }

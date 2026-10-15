@@ -5,12 +5,14 @@ import 'package:unimoov/features/profile/data/profile_api.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/data/proposals_api.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
+import 'package:unimoov/features/rides/data/rides_api.dart';
+import 'package:unimoov/features/rides/domain/ride.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
 import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 /// Backend en mémoire qui reproduit les règles de l'API (docs/api.md) pour les tests de
 /// parcours. Il survit à un « redémarrage » de l'app, comme le vrai serveur.
-class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi {
+class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -257,6 +259,82 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi {
     return searchResults;
   }
 
+  // --- Trajets confirmés ---
+
+  /// Trajets par identifiant ; suggestions préparées par trajet.
+  final Map<String, RideDetails> rides = {};
+  final Map<String, Suggestions> suggestionsById = {};
+  final List<String> invited = [];
+
+  @override
+  Future<RideDetails> ride(String id) async {
+    _maybeFail();
+    final ride = rides[id];
+    if (ride == null) throw const ApiException('forbidden', '', statusCode: 403);
+    return ride;
+  }
+
+  @override
+  Future<void> setMeetingPoint(String id, MeetingPoint? point) async {
+    _maybeFail();
+    final ride = rides[id]!;
+    final myId = idOf(_me.email);
+    rides[id] = ride.copyWithStops([
+      for (final s in ride.stops)
+        s.userId != myId
+            ? s
+            : RideStop(
+                order: s.order,
+                kind: s.kind,
+                userId: s.userId,
+                firstName: s.firstName,
+                lastName: s.lastName,
+                label: point?.label ?? knownAddress,
+                lat: point?.lat ?? s.lat,
+                lon: point?.lon ?? s.lon,
+                eta: s.eta,
+                isMeetingPoint: point != null,
+              ),
+    ]);
+  }
+
+  @override
+  Future<Suggestions> suggestions(String id) async {
+    _maybeFail();
+    return suggestionsById[id] ?? const Suggestions(seatsLeft: 0, items: []);
+  }
+
+  @override
+  Future<Proposal> invite(String id, String userId) async {
+    _maybeFail();
+    invited.add(userId);
+    final current = suggestionsById[id]!;
+    final person = current.items.firstWhere((s) => s.person.userId == userId).person;
+    suggestionsById[id] = Suggestions(
+      seatsLeft: current.seatsLeft - 1,
+      currentPassengerPaysCents: current.currentPassengerPaysCents,
+      items: current.items.where((s) => s.person.userId != userId).toList(),
+    );
+    return _replace(
+      id,
+      (p) => p.copyWith(
+        passengers: [
+          ...p.passengers,
+          PublicPerson(
+            userId: person.userId,
+            firstName: person.firstName,
+            reliabilityScore: person.reliabilityScore,
+            detourMinutes: person.detourMinutes,
+            status: 'proposed',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Identifiant serveur d'un compte (pour les arrêts « Toi »).
+  String idOf(String email) => 'id-$email';
+
   /// Accès direct pour préparer un état (tests).
   void seedAccount(
     String email, {
@@ -341,18 +419,165 @@ Proposal proposalFixture({
 }
 
 extension ProposalCopy on Proposal {
-  Proposal copyWith({String? myStatus, String? rideStatus}) => Proposal(
+  Proposal copyWith({String? myStatus, String? rideStatus, List<PublicPerson>? passengers}) =>
+      Proposal(
+        id: id,
+        day: day,
+        direction: direction,
+        time: time,
+        isDriver: isDriver,
+        myStatus: myStatus ?? this.myStatus,
+        rideStatus: rideStatus ?? this.rideStatus,
+        seatsTotal: seatsTotal,
+        seatsTaken: seatsTaken,
+        detourMinutes: detourMinutes,
+        driver: driver,
+        passengers: passengers ?? this.passengers,
+      );
+}
+
+extension RideCopy on RideDetails {
+  RideDetails copyWithStops(List<RideStop> stops) => RideDetails(
     id: id,
     day: day,
     direction: direction,
     time: time,
+    status: status,
     isDriver: isDriver,
-    myStatus: myStatus ?? this.myStatus,
-    rideStatus: rideStatus ?? this.rideStatus,
-    seatsTotal: seatsTotal,
-    seatsTaken: seatsTaken,
-    detourMinutes: detourMinutes,
-    driver: driver,
-    passengers: passengers,
+    routeEstimated: routeEstimated,
+    route: [for (final s in stops) (s.lat, s.lon)],
+    stops: stops,
+    distanceM: distanceM,
+    durationS: durationS,
+    price: price,
   );
+}
+
+/// Trajet confirmé de test : Nathan conduit, Léa (l'utilisatrice) et Hugo montent.
+RideDetails rideFixture({
+  String id = 'ride-1',
+  bool isDriver = false,
+  String me = 'id-lea@etu.univ-smb.fr',
+}) {
+  final day = DateTime(2026, 10, 19);
+  final stops = [
+    RideStop(
+      order: 0,
+      kind: StopKind.driver,
+      userId: isDriver ? me : 'driver-1',
+      firstName: isDriver ? 'Léa' : 'Nathan',
+      lastName: isDriver ? 'Martin' : 'Petit',
+      label: 'Centre, 74320 Sévrier',
+      lat: 45.864,
+      lon: 6.141,
+      eta: DateTime.utc(2026, 10, 19, 5, 41),
+      isMeetingPoint: false,
+    ),
+    RideStop(
+      order: 1,
+      kind: StopKind.passenger,
+      userId: isDriver ? 'passenger-2' : me,
+      firstName: isDriver ? 'Inès' : 'Léa',
+      lastName: isDriver ? 'Robert' : 'Martin',
+      label: '12 Rue de la Paix 74000 Annecy',
+      lat: 45.9,
+      lon: 6.12,
+      eta: DateTime.utc(2026, 10, 19, 5, 49),
+      isMeetingPoint: false,
+    ),
+    RideStop(
+      order: 2,
+      kind: StopKind.passenger,
+      userId: 'passenger-3',
+      firstName: 'Hugo',
+      label: 'Centre, 74960 Cran-Gevrier',
+      lat: 45.905,
+      lon: 6.103,
+      eta: DateTime.utc(2026, 10, 19, 5, 53),
+      isMeetingPoint: false,
+    ),
+    RideStop(
+      order: 3,
+      kind: StopKind.campus,
+      label: "Campus d'Annecy (USMB)",
+      lat: 45.9195,
+      lon: 6.158,
+      eta: DateTime.utc(2026, 10, 19, 6),
+      isMeetingPoint: false,
+    ),
+  ];
+  return RideDetails(
+    id: id,
+    day: day,
+    direction: Direction.toCampus,
+    time: DateTime.utc(2026, 10, 19, 6),
+    status: 'confirmed',
+    isDriver: isDriver,
+    routeEstimated: false,
+    route: [for (final s in stops) (s.lat, s.lon)],
+    stops: stops,
+    distanceM: 14200,
+    durationS: 1140,
+    price: RidePrice(
+      totalCostCents: 166,
+      persons: 3,
+      shareCents: 56,
+      commissionCents: 20,
+      youPayCents: isDriver ? null : 76,
+      youReceiveCents: isDriver ? 112 : null,
+    ),
+  );
+}
+
+const _theo = PublicPerson(
+  userId: 'theo',
+  firstName: 'Théo',
+  reliabilityScore: 0.8,
+  detourMinutes: 14,
+  status: 'suggested',
+);
+
+/// Prépare Léa : passagère confirmée le lundi, conductrice confirmée le mardi.
+FakeBackend rideBackend() {
+  final backend = FakeBackend()
+    ..seedAccount(
+      'lea@etu.univ-smb.fr',
+      steps: {for (final s in OnboardingStep.values) s: StepStatus.done},
+      withHome: true,
+    )
+    ..resumeSessionFor('lea@etu.univ-smb.fr');
+  const ines = PublicPerson(
+    userId: 'passenger-2',
+    firstName: 'Inès',
+    reliabilityScore: 0.9,
+    detourMinutes: 3,
+    status: 'accepted',
+  );
+  // Semaine de la date de référence des tests (jeudi 15 octobre 2026).
+  backend.weeks['2026-W42'] = [
+    proposalFixture(
+      id: 'ride-1',
+      day: DateTime(2026, 10, 12),
+      myStatus: 'accepted',
+      rideStatus: 'confirmed',
+    ),
+    proposalFixture(
+      id: 'ride-2',
+      day: DateTime(2026, 10, 13),
+      isDriver: true,
+      myStatus: 'accepted',
+      rideStatus: 'confirmed',
+      passengers: const [ines],
+    ),
+  ];
+  backend.rides['ride-1'] = rideFixture();
+  backend.rides['ride-2'] = rideFixture(id: 'ride-2', isDriver: true);
+  backend.suggestionsById['ride-2'] = const Suggestions(
+    seatsLeft: 2,
+    currentPassengerPaysCents: 76,
+    items: [
+      Suggestion(person: _theo, withinDetourLimit: false, shareCents: 48, passengerPaysCents: 68),
+    ],
+  );
+  return backend;
 }

@@ -116,6 +116,22 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                 : () => _run(() => controller.decline(proposal.id), popAfter: true),
           ),
         ],
+        if (proposal.state == ProposalState.confirmed)
+          UmButton(
+            label: l10n.rideMapOpen,
+            expand: true,
+            onPressed: () => context.push(AppRoutes.ride(proposal.id)),
+          ),
+        // Le conducteur engagé peut proposer des places, même avant la confirmation.
+        if (proposal.isDriver &&
+            proposal.myStatus == 'accepted' &&
+            proposal.state != ProposalState.cancelled)
+          UmButton(
+            label: l10n.rideAddPassengers,
+            variant: UmButtonVariant.secondary,
+            expand: true,
+            onPressed: () => context.push(AppRoutes.rideSuggestions(proposal.id)),
+          ),
       ],
       children: [
         if (status != null) ...[

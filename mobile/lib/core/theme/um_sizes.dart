@@ -25,6 +25,15 @@ abstract final class UmSize {
   static const double routeDot = 12;
   static const double routeRing = 3;
 
+  /// Carte du trajet : hauteur, repères d'arrêt, épaisseur du tracé, zoom maximal au cadrage.
+  static const double mapHeight = 300;
+  static const double mapMarker = 36;
+  static const double routeStroke = 5;
+  static const double mapMaxZoom = 16;
+
+  /// Pastille numérotée d'un arrêt dans la liste.
+  static const double stopBadge = 32;
+
   /// Logo complet : largeur affichée (minimum 120 px, logo.md).
   static const double logoWidth = 160;
 

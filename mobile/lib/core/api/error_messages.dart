@@ -30,5 +30,12 @@ String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'search_quota_exceeded' => l10n.errorSearchQuota,
   'profile_incomplete' => l10n.errorProfileIncomplete,
   'time_required' => l10n.errorTimeRequired,
+  'forbidden' => l10n.errorForbidden,
+  'ride_not_confirmed' => l10n.errorRideNotConfirmed,
+  'meeting_point_too_far' => l10n.errorMeetingPointTooFar,
+  'ride_locked' => l10n.errorRideLocked,
+  'ride_full' => l10n.suggestionsFull,
+  'suggestion_unavailable' => l10n.errorSuggestionUnavailable,
+  'accept_first' => l10n.errorAcceptFirst,
   _ => l10n.errorGeneric,
 };

@@ -742,4 +742,156 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get scheduleSynced => 'Emploi du temps mis à jour.';
+
+  @override
+  String get rideMapOpen => 'Voir la carte';
+
+  @override
+  String rideMapLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arrêts',
+      one: '1 arrêt',
+    );
+    return 'Carte du trajet avec $_temp0';
+  }
+
+  @override
+  String get rideRouteEstimated =>
+      'Tracé approximatif : le calcul d\'itinéraire n\'était pas disponible.';
+
+  @override
+  String get rideStopsTitle => 'Arrêts';
+
+  @override
+  String rideStopAround(String time) {
+    return 'Vers $time';
+  }
+
+  @override
+  String rideStopSemantic(int order, String name, String place, String time) {
+    return 'Arrêt $order : $name, $place, vers $time';
+  }
+
+  @override
+  String get rideYou => 'Toi';
+
+  @override
+  String get rideMeetingPoint => 'Point de rendez-vous';
+
+  @override
+  String ridePriceYouPay(String price) {
+    return 'Tu paies $price';
+  }
+
+  @override
+  String ridePriceYouReceive(String price) {
+    return 'Tu reçois $price';
+  }
+
+  @override
+  String ridePriceDetail(String total, int persons, String commission) {
+    return 'Estimation : $total de carburant partagés entre $persons personnes, plus $commission de frais de service par passager. Le prix final est calculé à l\'arrivée.';
+  }
+
+  @override
+  String get ridePriceUnknown =>
+      'Prix indisponible : le véhicule du conducteur n\'est plus renseigné.';
+
+  @override
+  String get rideAddPassengers => 'Ajouter des passagers';
+
+  @override
+  String get rideChooseMeetingPoint => 'Choisir un point de rendez-vous';
+
+  @override
+  String get rideChangeMeetingPoint => 'Changer de point de rendez-vous';
+
+  @override
+  String get meetingPointTitle => 'Point de rendez-vous';
+
+  @override
+  String get meetingPointIntro =>
+      'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
+
+  @override
+  String get meetingPointMapLabel =>
+      'Carte : touche pour placer le point de rendez-vous';
+
+  @override
+  String get meetingPointLabel => 'Nom du point';
+
+  @override
+  String get meetingPointHint => 'Ex. arrêt de bus Mairie';
+
+  @override
+  String get meetingPointSave => 'Enregistrer ce point';
+
+  @override
+  String get meetingPointReset => 'Revenir à mon adresse';
+
+  @override
+  String get meetingPointSaved => 'Point de rendez-vous enregistré.';
+
+  @override
+  String get meetingPointResetDone => 'Le conducteur passera à ton adresse.';
+
+  @override
+  String get suggestionsTitle => 'Ajouter des passagers';
+
+  @override
+  String get suggestionsIntro =>
+      'Ces étudiants n\'ont pas encore de trajet à cette heure-là. Chaque place prise fait baisser le prix pour tout le monde.';
+
+  @override
+  String suggestionsCurrentPrice(String price) {
+    return 'Aujourd\'hui, chaque passager paie $price.';
+  }
+
+  @override
+  String get suggestionWithin => 'Dans ton détour';
+
+  @override
+  String get suggestionBeyond => 'Au-delà de ton détour max';
+
+  @override
+  String suggestionPrice(String price) {
+    return 'Avec cette personne : $price par passager';
+  }
+
+  @override
+  String get suggestionInvite => 'Proposer une place';
+
+  @override
+  String suggestionInvited(String name) {
+    return 'Proposition envoyée à $name.';
+  }
+
+  @override
+  String get suggestionsEmpty =>
+      'Personne d\'autre ne cherche de trajet à cette heure-là.';
+
+  @override
+  String get suggestionsFull => 'Ta voiture est complète.';
+
+  @override
+  String get errorForbidden => 'Tu n\'as pas accès à ce trajet.';
+
+  @override
+  String get errorRideNotConfirmed => 'Ce trajet n\'est pas encore confirmé.';
+
+  @override
+  String get errorMeetingPointTooFar =>
+      'Choisis un point plus proche de chez toi.';
+
+  @override
+  String get errorRideLocked => 'Ce trajet ne peut plus être modifié.';
+
+  @override
+  String get errorSuggestionUnavailable =>
+      'Cette personne n\'est plus disponible.';
+
+  @override
+  String get errorAcceptFirst => 'Accepte d\'abord ce trajet.';
 }
