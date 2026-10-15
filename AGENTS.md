@@ -23,7 +23,7 @@ assets/     logo
 ```
 
 ## Contrainte de coût (prioritaire)
-Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, paiement intégré, pièces jointes de chat).
+Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, pièces jointes de chat).
 
 ## Stack imposée
 - Mobile : Flutter stable, Dart null-safe, Riverpod (état), go_router, dio, freezed + json_serializable, flutter_secure_storage, geolocator, url_launcher, firebase_messaging, flutter_map + flutter_map_pmtiles pour la carte (fond OSM en PMTiles statique, voir `docs/couts.md`).
@@ -54,7 +54,7 @@ Avant de déclarer un travail terminé, lance lint, typecheck et tests des parti
 **Argent**
 - Commission, prix du carburant et seuils sont des paramètres de configuration (table `app_settings`), jamais codés en dur.
 - Montants en centimes (entiers), jamais en flottants. Calcul du prix : consommation × distance × prix du carburant, divisé par les personnes réellement présentes (voir cahier, section 5).
-- V1 : pas de paiement intégré. Le prix est calculé, le montant dû par passager est enregistré dans un registre (`payments`, statut `due` puis `settled_by_driver_confirmation`), le règlement se fait hors app. Interface `PaymentProvider` prévue pour la v1.1 ; ne manipule jamais de numéro de carte.
+- Paiement dans l'app via un portefeuille prépayé (cahier §5, `docs/couts.md`). Registre comptable en écriture seule (`wallet_ledger`, solde = somme des écritures, jamais de mise à jour d'une écriture), opérations idempotentes (clé d'idempotence), transactions SQL. UniMoov ne détient pas les fonds : tout passe par l'interface `PaymentProvider` ; commence par `FakePaymentProvider` complet (recharge, débit, retrait, échec), puis le vrai prestataire quand l'équipe fournit compte et clés. Ne manipule jamais de numéro de carte.
 
 **Sécurité**
 - Toute entrée API est validée par Zod. Toute route (sauf inscription/connexion) exige un JWT valide ; vérifie l'appartenance de l'utilisateur à la ressource (trajet, conversation) à chaque requête.

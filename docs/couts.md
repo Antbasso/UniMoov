@@ -31,16 +31,17 @@ Total de fonctionnement visé : environ 5 à 7 €/mois, plus les frais uniques 
 ## Ce qui est reporté en v1.1 pour économiser du temps et de l'argent
 - Connexion Google/Apple (l'e-mail universitaire + mot de passe suffit) : évite deux intégrations et la revue des comptes OAuth.
 - Agenda Google Calendar et Microsoft Graph (vérification des applications OAuth, consentement administrateur de l'université) : le pilote utilise le **lien ICS** (les universités publient en général un lien ICS) et la saisie manuelle.
-- Paiement intégré (voir ci-dessous).
 - Pièces jointes dans le chat : messages texte uniquement.
 - Messagerie en groupes personnalisés si le temps manque (les messages privés et le chat de trajet restent en v1).
 
-## Paiement : la décision qui pèse le plus sur l'économie du projet
-Un prestataire de paiement prélève un fixe par transaction (de l'ordre de 0,25 € en plus d'un pourcentage). Sur un trajet étudiant de 2 à 4 €, cela peut représenter 10 % du montant, soit plus que la commission prévue. Encaisser de l'argent pour le compte d'autres personnes peut aussi imposer de passer par un prestataire agréé.
-
-**Choix pour le pilote** : l'app calcule le montant exact dû par chaque passager à la validation de sa présence (cahier §5), l'affiche, tient un **registre des sommes dues**, et le passager règle hors de l'app (espèces ou application de paiement de son choix, avec ouverture directe de l'application si possible) ; le conducteur confirme la réception. Aucun frais de transaction, aucune détention de fonds. La commission n'est alors **pas collectée** pendant le pilote : le financement vient des partenariats (cahier, modèle B2B2C). `PaymentProvider` permet d'ajouter plus tard un portefeuille rechargeable (un seul prélèvement par recharge, donc un seul frais fixe pour plusieurs trajets).
-
-Cette décision change le cahier §5 pour la v1 ; elle est à valider par l'équipe (voir `docs/decisions.md`).
+## Paiement dans l'app : portefeuille prépayé pour réduire les frais
+Un prestataire de paiement prélève un fixe par transaction (de l'ordre de 0,25 € en plus d'un pourcentage, à vérifier) : sur un trajet de 2 à 4 €, un paiement par carte à chaque trajet mangerait une grande part de la commission. Le paiement reste donc **dans l'app**, mais organisé pour que les frais fixes soient dilués :
+- **Portefeuille prépayé** : le passager recharge au moins 10 € (réglable) ; chaque trajet est ensuite débité du solde, sans frais de transaction. Un seul frais fixe pour plusieurs trajets.
+- **Retraits groupés** : le conducteur retire son solde à partir de 10 € (réglable), au plus une fois par semaine, pour limiter les frais de virement.
+- **Prestataire agréé** : la détention de fonds pour le compte de tiers relève de la réglementation des services de paiement. UniMoov ne tient pas les fonds ; un prestataire agréé (par exemple Stripe Connect ou Mangopay, à comparer sur devis : frais par transaction, frais mensuels par compte actif, frais de virement, vérification d'identité des conducteurs) les détient. La comparaison et la création du compte prestataire sont des décisions de l'équipe.
+- **Les frais sont à intégrer à la commission** : avec une recharge de 10 € et un tarif de l'ordre de 1,5 % + 0,25 €, le coût est d'environ 4 % du montant rechargé. À vérifier, puis à régler dans `app_settings` (commission, recharge minimale, seuil de retrait).
+- **Développement en deux temps** : l'agent construit d'abord le portefeuille, le registre comptable et `PaymentProvider` avec un fournisseur factice complet (aucune clé requise, tests inclus) ; l'intégration du vrai prestataire vient quand l'équipe a ouvert un compte et fourni les clés de test.
+- Les boutiques d'applications n'imposent pas leur commission sur le paiement de services réels comme le covoiturage ; vérifier les règles en vigueur avant publication.
 
 ## Règles de conception pour limiter les coûts
 - **Itinéraires** : (1) présélection SQL avec `ST_DWithin` autour de la route de base du conducteur, (2) estimation du détour par distance à vol d'oiseau × 1,3, (3) appel à l'API uniquement pour les 3 à 5 meilleurs candidats, (4) cache des itinéraires par coordonnées arrondies (~100 m) et créneau, (5) tracé des arrêts calculé une seule fois à la confirmation et recalculé seulement si les arrêts changent.

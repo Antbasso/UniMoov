@@ -28,8 +28,15 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 ## M4 – Départ, suivi en direct et GPS externe (§9, §14, §15)
 - Démarrage du trajet, WebSocket de position, ETA mis à jour, « dernière position connue », géolocalisation en arrière-plan avec écrans d'explication des permissions.
 - Écran conducteur « Départ » : liste ordonnée des arrêts, bouton « Lancer la navigation », détection des apps (Google Maps, Waze, Apple Plans), choix mémorisé, mode arrêt par arrêt pour Waze, bouton « monté ».
-- Validation de présence par proximité, clôture manuelle et automatique, prix final et registre des sommes dues par passager avec confirmation de réception par le conducteur (pas de paiement intégré, voir `docs/couts.md`).
-- **Accepté si** : deux simulateurs (conducteur, passager) montrent la position du conducteur en direct ; le lien Google Maps contient tous les arrêts dans l'ordre ; les liens sont couverts par des tests unitaires ; la présence validée crée la somme due au registre ; la diffusion s'arrête à la clôture.
+- Validation de présence par proximité, clôture manuelle et automatique, prix final, commission, paiement du passager depuis son portefeuille à la validation de présence, libération de la marge retenue ; `FakePaymentProvider` (voir M4b).
+- **Accepté si** : deux simulateurs (conducteur, passager) montrent la position du conducteur en direct ; le lien Google Maps contient tous les arrêts dans l'ordre ; les liens sont couverts par des tests unitaires ; la présence validée débite le passager, crédite le conducteur et la commission, avec écritures équilibrées au registre ; la diffusion s'arrête à la clôture.
+
+## M4b – Portefeuille et vrai prestataire (§5)
+- Portefeuille : recharge (minimum configurable), solde, historique, retenue à la confirmation d'un trajet (prix estimé + marge), blocage de réservation si solde insuffisant, retrait du conducteur (seuil et fréquence configurables), vérification d'identité du conducteur via le prestataire.
+- Registre `wallet_ledger` (voir `docs/data-model.sql`) avec test d'invariants : la somme de toutes les écritures d'un trajet vaut zéro, aucun solde négatif non autorisé, aucune double écriture (idempotence).
+- Intégration du prestataire choisi par l'équipe derrière `PaymentProvider` (webhooks signés, rejouables), en mode test.
+- **Accepté si** : parcours recharge → trajet → paiement → retrait réussi en mode test ; webhooks rejoués sans effet double ; tests des invariants du registre.
+- Cette étape nécessite un compte prestataire et des clés de test fournis par l'équipe ; sans eux, M4 reste complet avec le fournisseur factice.
 
 ## M5 – Annulations, confiance, litiges (§7, §8, §10)
 - Annulation avec pénalité dégressive, notification, relance de remplaçant ; notes croisées, score de fiabilité utilisé dans le matching ; litiges niveau 1 automatique puis contact humain ; signalements.
@@ -47,7 +54,7 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 VPS unique avec Docker Compose et Caddy, sauvegardes quotidiennes, fichier PMTiles de la région, supervision et alertes de quotas, publication Android (puis iOS si le compte Apple est pris en charge). Voir `docs/couts.md`.
 
 ## v1.1 (reporté pour le coût)
-Connexion Google/Apple, agenda Google et Microsoft, paiement intégré (portefeuille rechargeable), pièces jointes de chat.
+Connexion Google/Apple, agenda Google et Microsoft, pièces jointes de chat.
 
 ## Hors périmètre (V2)
 QR code d'accès aux places réservées, matching global, version personnalisable pour partenaires.

@@ -20,7 +20,7 @@ Flutter app ──HTTPS REST──▶ API Fastify ──▶ PostgreSQL + PostGIS
 | `matching` | propositions hebdomadaires, seuil de détour, départage | §3, §4 |
 | `rides` | trajets, arrêts, statuts, annulations, clôture | §8, §9 |
 | `pricing` | estimation et prix final, commission | §5 |
-| `payments` | registre des sommes dues par passager et confirmation de réception ; `PaymentProvider` pour la v1.1 | §5 |
+| `payments` | portefeuille prépayé, registre `wallet_ledger`, recharges, retraits, commission ; `PaymentProvider` (fournisseur factice puis prestataire agréé) | §5 |
 | `chat` | messages privés, groupes, chat de trajet, rétention | §6 |
 | `trust` | notes croisées, score de fiabilité | §7 |
 | `disputes` | arbitrage automatique puis humain | §10 |

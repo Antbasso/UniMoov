@@ -115,16 +115,56 @@ CREATE TABLE ride_participants (
   PRIMARY KEY (ride_id, user_id)
 );
 
-CREATE TABLE payments (
+CREATE TABLE wallets (
+  user_id uuid PRIMARY KEY REFERENCES users(id),
+  balance_cents integer NOT NULL DEFAULT 0,       -- cache de SUM(wallet_ledger), recalculable
+  held_cents integer NOT NULL DEFAULT 0,          -- retenues en attente de clôture
+  provider_account_ref text,                      -- compte chez le prestataire agréé
+  identity_verified_at timestamptz                -- requis pour retirer (conducteur)
+);
+
+-- Registre en écriture seule : on n'UPDATE ni ne DELETE jamais une écriture.
+CREATE TABLE wallet_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  idempotency_key text NOT NULL UNIQUE,
+  account text NOT NULL,                          -- 'user:<uuid>' | 'platform:commission' | 'provider:clearing'
+  ride_id uuid REFERENCES rides(id),
+  kind text NOT NULL,       -- topup | hold | hold_release | ride_charge | ride_credit | commission | payout | refund
+  amount_cents integer NOT NULL,                  -- signé ; la somme des écritures d'une opération vaut 0
+  operation_id uuid NOT NULL,                     -- regroupe les écritures équilibrées
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX wallet_ledger_account_idx ON wallet_ledger (account, created_at);
+CREATE INDEX wallet_ledger_ride_idx ON wallet_ledger (ride_id);
+
+CREATE TABLE topups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id),
+  amount_cents integer NOT NULL CHECK (amount_cents > 0),
+  provider_ref text UNIQUE,
+  status text NOT NULL DEFAULT 'pending',        -- pending | succeeded | failed
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE payouts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id),
+  amount_cents integer NOT NULL CHECK (amount_cents > 0),
+  provider_ref text UNIQUE,
+  status text NOT NULL DEFAULT 'pending',        -- pending | paid | failed
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE payments (                          -- un enregistrement par passager et par trajet
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ride_id uuid NOT NULL REFERENCES rides(id),
   payer_id uuid NOT NULL REFERENCES users(id),
   payee_id uuid NOT NULL REFERENCES users(id),
-  amount_cents integer NOT NULL CHECK (amount_cents >= 0),
-  commission_cents integer NOT NULL DEFAULT 0,
-  provider_ref text,
-  status text NOT NULL DEFAULT 'due',       -- v1 : due | settled (confirmé par le conducteur) ; v1.1 : paid | failed | refunded
-  created_at timestamptz NOT NULL DEFAULT now()
+  share_cents integer NOT NULL CHECK (share_cents >= 0),       -- part des frais, versée au conducteur
+  commission_cents integer NOT NULL DEFAULT 0,                  -- ajoutée au prix, versée à UniMoov
+  status text NOT NULL DEFAULT 'held',           -- held | paid | failed | refunded
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (ride_id, payer_id)
 );
 
 CREATE TABLE position_trace (             -- rétention courte, pour les litiges

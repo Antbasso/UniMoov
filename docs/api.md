@@ -62,6 +62,14 @@ Le serveur n'inclut ce corps que pour le conducteur d'un trajet `confirmed` ou `
 - Serveur → client : `{ "type": "position", "userId": "…", "lat": …, "lon": …, "ts": "…" }`, `{ "type": "eta", "userId": "…", "eta": "…" }`, `{ "type": "stop_picked_up", "userId": "…" }`, `{ "type": "ride_status", "status": "in_progress" }`, `{ "type": "stops_reordered", "stops": [...] }`.
 - Règles : refus (code 4403) si l'utilisateur n'est pas un participant confirmé ; fermeture à la clôture ; limite de 1 message de position toutes les 2 s par client.
 
+## Portefeuille et paiements
+- `GET /wallet` : solde, montant retenu, historique paginé.
+- `POST /wallet/topups` `{ amountCents }` (minimum `app_settings.wallet.minTopupCents`) → renvoie la session de paiement du prestataire ; confirmation par webhook.
+- `POST /wallet/payouts` (conducteur, solde au-dessus du seuil, limite hebdomadaire) ; `GET /wallet/payouts`.
+- `POST /webhooks/payments` : webhooks du prestataire, signature vérifiée, idempotents.
+- Réservation d'un trajet : refus `402 insufficient_funds` si le solde ne couvre pas le prix estimé plus la marge.
+- Montants toujours en centimes (entiers).
+
 ## Messagerie
 - `GET /conversations`, `POST /conversations` (direct ou groupe), `GET /conversations/{id}/messages?before=`, `POST /conversations/{id}/messages`.
 - Le chat de trajet est créé automatiquement à la confirmation.
