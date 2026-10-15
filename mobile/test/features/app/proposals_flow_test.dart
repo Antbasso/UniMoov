@@ -56,7 +56,7 @@ void main() {
     await tapText(tester, 'Voir', index: 0);
     expect(find.text('Tu montes avec'), findsOneWidget);
     expect(find.text('Nathan'), findsOneWidget);
-    expect(find.textContaining('secteur approximatif'), findsOneWidget);
+    expect(find.textContaining('Fiabilité 4,5 sur 5'), findsOneWidget);
     expect(find.textContaining('Nom et adresse exacte'), findsOneWidget);
 
     await tapText(tester, 'Accepter');

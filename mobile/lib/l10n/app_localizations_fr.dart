@@ -620,7 +620,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String personDetails(String score, int minutes) {
-    return 'Fiabilité $score sur 5 · détour $minutes min · secteur approximatif';
+    return 'Fiabilité $score sur 5 · détour $minutes min';
   }
 
   @override

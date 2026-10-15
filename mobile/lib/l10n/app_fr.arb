@@ -340,7 +340,7 @@
   "proposalDriverIntro": "Tu montes avec",
   "proposalPassengersIntro": "Tes passagers",
   "proposalNoPassengers": "Personne pour l'instant. Tu recevras une notification si quelqu'un est proposé.",
-  "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min · secteur approximatif",
+  "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min",
   "@personDetails": {
     "placeholders": {
       "score": {

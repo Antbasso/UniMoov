@@ -122,6 +122,7 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
             status: rideStatusOf(p),
             metaText: p.isDriver ? l10n.rideMetaDriver(time, p.seatsTaken) : null,
             actionLabel: l10n.see,
+            actionVariant: UmButtonVariant.secondary,
             onAction: () => context.push(AppRoutes.proposal(week, p.id)),
           ),
         ),

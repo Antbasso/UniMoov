@@ -1175,7 +1175,7 @@ abstract class AppLocalizations {
   /// No description provided for @personDetails.
   ///
   /// In fr, this message translates to:
-  /// **'Fiabilité {score} sur 5 · détour {minutes} min · secteur approximatif'**
+  /// **'Fiabilité {score} sur 5 · détour {minutes} min'**
   String personDetails(String score, int minutes);
 
   /// No description provided for @privacyNote.

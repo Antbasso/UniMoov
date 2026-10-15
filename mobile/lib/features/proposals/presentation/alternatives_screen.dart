@@ -71,6 +71,7 @@ class _JoinableListState extends ConsumerState<JoinableList> {
                 metaText:
                     '${l10n.rideMeta(time, ride.driver.firstName)} · ${l10n.personDetails(ride.driver.scoreOutOfFive, ride.driver.detourMinutes)}',
                 actionLabel: l10n.choose,
+                actionVariant: UmButtonVariant.secondary,
                 onAction: _busyId == null ? () => _join(ride) : null,
               );
             }(),

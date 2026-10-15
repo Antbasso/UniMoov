@@ -23,6 +23,7 @@ class UmRideCard extends StatelessWidget {
     this.metaText,
     this.actionLabel,
     this.onAction,
+    this.actionVariant = UmButtonVariant.primary,
   });
 
   final String from;
@@ -39,6 +40,9 @@ class UmRideCard extends StatelessWidget {
   final UmRideStatus status;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// Dans une liste de cartes, `secondary` : un seul bouton principal par écran.
+  final UmButtonVariant actionVariant;
 
   static String formatPrice(int cents, String locale) =>
       NumberFormat.currency(locale: locale, symbol: '€', decimalDigits: 2).format(cents / 100);
@@ -111,7 +115,8 @@ class UmRideCard extends StatelessWidget {
             children: [
               chip,
               const Spacer(),
-              if (actionLabel != null) UmButton(label: actionLabel!, onPressed: onAction),
+              if (actionLabel != null)
+                UmButton(label: actionLabel!, variant: actionVariant, onPressed: onAction),
             ],
           ),
         ],
