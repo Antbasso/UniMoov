@@ -76,6 +76,15 @@ describe('assignRoles', () => {
     expect(roles.get('small')).toBe('passenger');
   });
 
+  it('automatique : conduit si l’offre égale tout juste la demande (marge de places)', () => {
+    const roles = assignRoles([
+      driver('d', 'seynod', 1),
+      need('p', 'annecy'),
+      need('a', 'meythet', { roleMode: 'auto', vehicle: { seats: 3, maxDetourMinutes: 10 } }),
+    ]);
+    expect(roles.get('a')).toBe('driver');
+  });
+
   it('automatique : ne conduit pas si les conducteurs forcés suffisent', () => {
     const roles = assignRoles([
       driver('d', 'seynod', 4),
@@ -147,6 +156,13 @@ describe('rankCandidates', () => {
 });
 
 describe('matchSlot', () => {
+  it('un conducteur sans passager garde un trajet vide', () => {
+    const { rides } = matchSlot([driver('d', 'seynod', 3, 10, { time: at('07:30') })], 'to_campus', params);
+    expect(rides).toEqual([
+      { driverId: 'd', passengers: [], totalDetourSeconds: 0, seats: 3, targetTime: at('07:30') },
+    ]);
+  });
+
   it('cas vide et sans conducteur', () => {
     expect(matchSlot([], 'to_campus', params)).toEqual({ rides: [], unmatched: [] });
     expect(matchSlot([need('p', 'annecy')], 'to_campus', params)).toEqual({ rides: [], unmatched: ['p'] });
@@ -199,7 +215,7 @@ describe('matchSlot', () => {
         .map((d) => ({ id: d.userId, detour: detourSeconds(d.home, [places[home]], params) }))
         .sort((a, b) => a.detour - b.detour)[0]!.id;
       const { rides } = matchSlot([...drivers, need('p', home)], 'to_campus', params);
-      expect(rides.map((r) => r.driverId)).toEqual([best]);
+      expect(rides.filter((r) => r.passengers.length > 0).map((r) => r.driverId)).toEqual([best]);
     },
   );
 

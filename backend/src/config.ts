@@ -17,6 +17,12 @@ const envSchema = z
   GEOCODING_PROVIDER: z.enum(['ban', 'fake']).default('ban'),
   /** Géoplateforme (successeur de api-adresse.data.gouv.fr), gratuite pour la France. */
   GEOCODING_URL: z.url().default('https://data.geopf.fr/geocodage/search'),
+  /** Clé AES-256 (32 octets en base64) des liens d'agenda privés, jamais commitée. */
+  CALENDAR_ENCRYPTION_KEY: z
+    .base64()
+    .refine((value) => Buffer.from(value, 'base64').length === 32, '32 octets attendus'),
+  /** Tâches planifiées (synchronisation des agendas, génération hebdomadaire). */
+  JOBS_ENABLED: z.stringbool().default(true),
 })
   .refine((env) => env.NODE_ENV !== 'production' || env.MAIL_PROVIDER !== 'console', {
     path: ['MAIL_PROVIDER'],

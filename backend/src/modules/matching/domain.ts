@@ -46,9 +46,9 @@ const byId = (a: { userId: string }, b: { userId: string }) => a.userId.localeCo
 
 /**
  * Rôle de chacun pour un créneau (fonction `assignRole` de l'architecture §4).
- * Sans véhicule : passager. Mode forcé : respecté. Mode automatique : on ne fait conduire
- * que si l'offre de places des conducteurs ne couvre pas la demande, en commençant par
- * les voitures les plus grandes.
+ * Sans véhicule : passager. Mode forcé : respecté. Mode automatique : on fait conduire tant
+ * que l'offre de places ne dépasse pas la demande (une marge est nécessaire, car le détour
+ * limite qui peut monter avec qui), en commençant par les voitures les plus grandes.
  */
 export function assignRoles(needs: readonly Need[]): Map<string, Role> {
   const roles = new Map<string, Role>();
@@ -70,7 +70,7 @@ export function assignRoles(needs: readonly Need[]): Map<string, Role> {
 
   autos.sort((a, b) => b.vehicle!.seats - a.vehicle!.seats || b.reliability - a.reliability || byId(a, b));
   for (const need of autos) {
-    if (seatsOffered < passengers) {
+    if (seatsOffered <= passengers) {
       roles.set(need.userId, 'driver');
       seatsOffered += need.vehicle!.seats;
     } else {
@@ -151,7 +151,7 @@ export function rankCandidates(
 }
 
 /**
- * Propositions d'un créneau (jour + sens). Conflit sur les places : on garde le plus court
+ * Propositions d'un créneau (jour + sens), un trajet par conducteur. Conflit sur les places : on garde le plus court
  * détour, départagé par le score de fiabilité du passager (cahier §4). Chaque ajout est
  * revérifié contre le seuil du conducteur avec tous ses passagers.
  */
@@ -187,10 +187,11 @@ export function matchSlot(
     placed.add(passenger.userId);
   }
 
+  // Un trajet par conducteur, même sans passager : il sait qu'il conduit et sa voiture
+  // reste visible pour « voir d'autres propositions » et la recherche manuelle.
   const rides: PlannedRide[] = [];
   for (const driver of drivers) {
     const riders = assigned.get(driver.userId)!;
-    if (riders.length === 0) continue;
     // Détour propre à chaque passager : coût marginal de l'ajouter aux autres.
     const total = detourSeconds(driver.home, riders.map((p) => p.home), params);
     const passengersPlanned = riders.map((p) => ({

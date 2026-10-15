@@ -12,6 +12,12 @@ import {
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import { AuthRepo } from './modules/auth/repo.js';
+import { CalendarRepo } from './modules/calendar/repo.js';
+import { calendarRoutes } from './modules/calendar/routes.js';
+import { CalendarService } from './modules/calendar/service.js';
+import { MatchingRepo } from './modules/matching/repo.js';
+import { matchingRoutes } from './modules/matching/routes.js';
+import { MatchingService } from './modules/matching/service.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { AuthService } from './modules/auth/service.js';
 import { AUTH_POLICY } from './modules/auth/policy.js';
@@ -22,9 +28,18 @@ import { profileRoutes } from './modules/profile/routes.js';
 import { ProfileService } from './modules/profile/service.js';
 import { SettingsService } from './modules/settings/service.js';
 import { authenticatePlugin } from './plugins/authenticate.js';
+import { SecretBox } from './shared/crypto.js';
 import { AppError, errorBody } from './shared/errors.js';
+import { fetchPublicText } from './shared/safe-fetch.js';
 import type { GeocodingProvider } from './shared/geocoding/geocoding-provider.js';
 import type { MailProvider } from './shared/mail/mail-provider.js';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Services utilisés par les tâches planifiées (présents si les modules sont montés). */
+    services?: { calendar: CalendarService; matching: MatchingService };
+  }
+}
 
 /** Dépendances des modules métier ; absentes, seule la route /health est montée. */
 export interface AppModules {
@@ -32,6 +47,10 @@ export interface AppModules {
   jwtSecret: string;
   mail: MailProvider;
   geocoding: GeocodingProvider;
+  /** Clé AES-256 (base64) des liens d'agenda. */
+  calendarKey: string;
+  /** Lecture d'un lien ICS ; par défaut téléchargement protégé contre le SSRF. */
+  fetchIcs?: (url: string) => Promise<string>;
   clock?: () => Date;
   /** Limites de débit (désactivables pour les tests d'intégration hors test dédié). */
   rateLimit?: boolean;
@@ -120,12 +139,26 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       secret: modules.jwtSecret,
       signAccessToken: (userId) => app.jwt.sign({ sub: userId }),
     });
-    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock);
+    const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock);
+    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, (userId) =>
+      matchingService.onProfileChanged(userId),
+    );
+    const calendarService = new CalendarService({
+      repo: new CalendarRepo(modules.db),
+      box: new SecretBox(modules.calendarKey),
+      fetchIcs: modules.fetchIcs ?? ((url) => fetchPublicText(url)),
+      settings,
+      clock,
+      onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
+    });
+    app.decorate('services', { calendar: calendarService, matching: matchingService });
 
     await app.register(
       async (api) => {
         await api.register(authRoutes, { service: authService });
         await api.register(profileRoutes, { service: profileService });
+        await api.register(calendarRoutes, { service: calendarService });
+        await api.register(matchingRoutes, { service: matchingService });
       },
       { prefix: '/api/v1' },
     );

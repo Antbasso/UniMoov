@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
+import { startJobs } from './jobs.js';
 import { BanGeocodingProvider } from './shared/geocoding/ban-geocoding-provider.js';
 import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-provider.js';
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
@@ -24,6 +25,7 @@ const app = await buildApp({
   modules: {
     db: database.db,
     jwtSecret: config.JWT_SECRET,
+    calendarKey: config.CALENDAR_ENCRYPTION_KEY,
     // Développement uniquement (refusé en production par la config).
     mail: new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
@@ -31,7 +33,13 @@ const app = await buildApp({
 });
 logIdleError = (error) => app.log.error({ err: error }, 'idle database connection error');
 
+const stopJobs =
+  config.JOBS_ENABLED && app.services
+    ? await startJobs(config.DATABASE_URL, app.services, app.log)
+    : () => Promise.resolve();
+
 const shutdown = async () => {
+  await stopJobs();
   await app.close();
   await database.close();
   process.exit(0);
