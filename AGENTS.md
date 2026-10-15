@@ -37,7 +37,8 @@ cp .env.example .env                          # une fois
 docker compose up -d                          # base PostGIS + API (migrations au démarrage) sur :3000
 docker compose up -d db                       # base seule, pour développer l'API hors Docker
 cd backend && npm ci
-cd backend && npm run dev                     # API :3000 (lit ../.env)
+cd backend && npm run dev                     # API :3000 (lit ../.env), OpenAPI sur /docs
+docker compose logs -f api                    # code d'inscription (mail console de dev)
 cd backend && npm run db:migrate && npm run db:seed   # schéma + étudiants de démonstration
 cd backend && npm run db:new-migration -- nom_en_snake_case
 cd backend && npm run lint && npm run typecheck

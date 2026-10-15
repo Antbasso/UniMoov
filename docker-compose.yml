@@ -18,9 +18,12 @@ services:
   api:
     build: ./backend
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      JWT_SECRET: ${JWT_SECRET:?définis JWT_SECRET dans .env}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-ban}
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
     ports:

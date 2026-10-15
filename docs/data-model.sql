@@ -32,6 +32,7 @@ CREATE TABLE users (
   onboarding_completed_at timestamptz,
   reliability_score numeric(4,3) NOT NULL DEFAULT 0.800,
   paused_until timestamptz,
+  onboarding_steps jsonb NOT NULL DEFAULT '{}'::jsonb, -- { "profile": "done" | "skipped", ... }
   deleted_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -50,6 +51,7 @@ CREATE TABLE vehicles (
   default_seats smallint NOT NULL CHECK (default_seats BETWEEN 1 AND 8),
   max_detour_minutes smallint NOT NULL DEFAULT 10
 );
+CREATE UNIQUE INDEX vehicles_user_id_key ON vehicles (user_id);   -- un véhicule par personne
 
 CREATE TABLE pauses (                     -- pause programmée, récurrence optionnelle
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,6 +60,32 @@ CREATE TABLE pauses (                     -- pause programmée, récurrence opti
   ends_on date NOT NULL,
   recurrence text                         -- ex. 'weekly:2' (une semaine sur deux)
 );
+CREATE INDEX pauses_user_idx ON pauses (user_id);
+
+CREATE TABLE verification_codes (         -- code d'inscription : haché (HMAC), usage unique, durée courte
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  code_hash text NOT NULL,
+  purpose text NOT NULL DEFAULT 'signup' CHECK (purpose IN ('signup')),
+  attempts smallint NOT NULL DEFAULT 0,
+  expires_at timestamptz NOT NULL,
+  consumed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX verification_codes_email_idx ON verification_codes (email, created_at DESC);
+
+CREATE TABLE refresh_tokens (             -- rotation ; famille révoquée si un jeton est réutilisé
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  family_id uuid NOT NULL,
+  token_hash text NOT NULL UNIQUE,
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX refresh_tokens_family_idx ON refresh_tokens (family_id);
+CREATE INDEX refresh_tokens_user_idx ON refresh_tokens (user_id);
 
 CREATE TABLE calendar_connections (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

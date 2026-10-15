@@ -115,7 +115,8 @@ ThemeData buildUmTheme(Brightness brightness) {
     scaffoldBackgroundColor: c.surface,
     fontFamily: UmFontFamily.sans,
     textTheme: textTheme,
-    focusColor: c.focus.withValues(alpha: 0.12),
+    // Surbrillance de focus des composants Material (listes, icônes, interrupteurs) bien visible.
+    focusColor: c.focus.withValues(alpha: 0.24),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     extensions: [ext],
   );
