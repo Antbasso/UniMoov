@@ -74,7 +74,7 @@ class _Logo extends StatelessWidget {
       ),
       child: Image.asset(
         'assets/images/logo.png',
-        width: 160,
+        width: UmSize.logoWidth,
         semanticLabel: AppLocalizations.of(context).logoLabel,
       ),
     );
@@ -104,7 +104,7 @@ class _ApiStatus extends ConsumerWidget {
         children: [
           UmChip(
             label: l10n.apiStatusError,
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.error_outline_rounded,
             tone: UmChipTone.danger,
           ),
           const SizedBox(height: UmSpace.s2),

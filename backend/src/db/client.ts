@@ -10,8 +10,16 @@ export interface Database {
   close: () => Promise<void>;
 }
 
-export function createDatabase(url: string): Database {
+export interface DatabaseOptions {
+  /** Erreur d'une connexion inactive (base redémarrée, réseau coupé). */
+  onIdleError?: (error: Error) => void;
+}
+
+export function createDatabase(url: string, { onIdleError }: DatabaseOptions = {}): Database {
   const pool = new pg.Pool({ connectionString: url, max: 10 });
+  // Sans écouteur, une erreur sur une connexion inactive arrêterait le processus ;
+  // le pool remplace la connexion fautive à la requête suivante.
+  pool.on('error', (error) => onIdleError?.(error));
   const db = drizzle(pool, { schema });
   return { db, pool, close: () => pool.end() };
 }

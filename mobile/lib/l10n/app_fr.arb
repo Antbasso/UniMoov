@@ -7,25 +7,60 @@
   "homeNote": "Bientôt sur ton campus !",
   "homeBenefitSchedule": "Trajets calés sur tes cours",
   "homeBenefitPrice": "Frais partagés au juste prix",
-  "homeBenefitConfirm": "Rien sans votre accord à deux",
+  "homeBenefitConfirm": "Confirmé à deux, toujours",
   "homeStart": "Commencer",
   "homeStartSoon": "L'inscription arrive très vite.",
-  "apiStatusLoading": "Connexion au serveur…",
-  "apiStatusOk": "Serveur connecté",
-  "apiStatusDegraded": "Serveur dégradé",
-  "apiStatusError": "Serveur injoignable",
+  "apiStatusLoading": "Connexion en cours…",
+  "apiStatusOk": "Connexion établie",
+  "apiStatusDegraded": "Service perturbé pour l'instant",
+  "apiStatusError": "Connexion impossible pour l'instant",
   "retry": "Réessayer",
   "fieldErrorPrefix": "Erreur",
+  "fieldShowPassword": "Afficher le mot de passe",
+  "fieldHidePassword": "Masquer le mot de passe",
   "rideFrom": "Départ : {place}",
-  "@rideFrom": { "placeholders": { "place": { "type": "String" } } },
+  "@rideFrom": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
   "rideTo": "Arrivée : {place}",
-  "@rideTo": { "placeholders": { "place": { "type": "String" } } },
+  "@rideTo": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
   "rideMeta": "{time} · avec {driver}",
-  "@rideMeta": { "placeholders": { "time": { "type": "String" }, "driver": { "type": "String" } } },
+  "@rideMeta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
   "rideSeats": "{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}",
-  "@rideSeats": { "placeholders": { "count": { "type": "int" } } },
+  "@rideSeats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ridePriceLabel": "Prix estimé : {price}",
-  "@ridePriceLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@ridePriceLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "rideStatusProposed": "Proposé",
   "rideStatusConfirmed": "Confirmé",
   "rideStatusCancelled": "Annulé"

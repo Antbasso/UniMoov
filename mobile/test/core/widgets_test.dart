@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:unimoov/core/theme/um_theme.dart';
 import 'package:unimoov/core/widgets/widgets.dart';
@@ -24,21 +25,34 @@ void main() {
       });
     }
 
-    testWidgets('affiche un anneau de focus de 3 px', (tester) async {
-      final focusNode = FocusNode();
-      await tester.pumpWidget(
-        wrap(
-          Focus(
-            focusNode: focusNode,
-            child: UmButton(label: 'Valider', onPressed: () {}),
-          ),
+    testWidgets('anneau de focus de 3 px hors du bouton, sans changer sa taille', (tester) async {
+      await tester.pumpWidget(wrap(UmButton(label: 'Valider', onPressed: () {})));
+      final before = tester.getSize(find.byType(TextButton));
+      FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(tester.getSize(find.byType(TextButton)), before);
+      final ring = find.descendant(
+        of: find.byType(UmButton),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is CustomPaint && w.foregroundPainter.runtimeType.toString() == '_FocusRingPainter',
         ),
       );
-      final button = tester.widget<TextButton>(find.byType(TextButton));
-      final side = button.style!.side!.resolve({WidgetState.focused});
-      expect(side!.width, 3);
-      expect(side.color, UmColorTokens.light.focus);
-      focusNode.dispose();
+      expect(ring, findsOneWidget);
+      // Le peintre dessine un trait de 3 px dans la couleur `focus`, décalé de 2 px.
+      expect(ring, paints..rrect(color: UmColorTokens.light.focus, strokeWidth: UmSize.focusRing));
+    });
+
+    testWidgets('chargement : indicateur, appuis ignorés, libellé conservé', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        wrap(UmButton(label: 'Envoyer', loading: true, onPressed: () => taps++)),
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Envoyer'), findsOneWidget);
+      await tester.tap(find.text('Envoyer'));
+      expect(taps, 0);
     });
   });
 
@@ -57,18 +71,40 @@ void main() {
   });
 
   group('UmField', () {
-    testWidgets('préfixe l’erreur par le mot « Erreur »', (tester) async {
+    testWidgets('préfixe l’erreur par « Erreur » et l’annonce avec le champ', (tester) async {
+      final handle = tester.ensureSemantics();
       await tester.pumpWidget(
         wrap(const UmField(label: 'Mail universitaire', error: 'adresse invalide')),
       );
-      expect(find.text('Mail universitaire'), findsOneWidget);
       expect(find.text('Erreur : adresse invalide'), findsOneWidget);
+      final semantics = tester.getSemantics(find.byType(EditableText));
+      final announced = '${semantics.label} ${semantics.hint} ${semantics.value}';
+      expect(announced, contains('Mail universitaire'));
+      expect(announced, contains('Erreur : adresse invalide'));
+      // Le libellé visible n'est pas lu une seconde fois.
+      expect(find.bySemanticsLabel('Mail universitaire'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('affiche l’aide sans erreur et respecte 48 px', (tester) async {
       await tester.pumpWidget(wrap(const UmField(label: 'Prénom', help: 'Visible par les autres')));
       expect(find.text('Visible par les autres'), findsOneWidget);
-      expect(tester.getSize(find.byType(TextField)).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(find.byType(TextField)).height, greaterThanOrEqualTo(UmSize.tapTarget));
+    });
+
+    testWidgets('mot de passe : masqué, puis affiché à la demande', (tester) async {
+      await tester.pumpWidget(wrap(const UmField(label: 'Mot de passe', obscureText: true)));
+      EditableText editable() => tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable().obscureText, isTrue);
+      await tester.tap(find.byTooltip('Afficher le mot de passe'));
+      await tester.pump();
+      expect(editable().obscureText, isFalse);
+      expect(find.byTooltip('Masquer le mot de passe'), findsOneWidget);
+    });
+
+    testWidgets('désactivé : saisie impossible', (tester) async {
+      await tester.pumpWidget(wrap(const UmField(label: 'Ville', enabled: false)));
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
     });
   });
 
@@ -83,6 +119,15 @@ void main() {
           )
           .first;
       expect((inner.decoration! as BoxDecoration).color, UmColorTokens.light.surfaceRaised);
+    });
+
+    testWidgets('titre en h3 annoncé comme en-tête, texte en ink-muted', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(wrap(const UmCard(title: 'Ton trajet', body: 'Départ à 8h15')));
+      final body = tester.widget<Text>(find.text('Départ à 8h15'));
+      expect(body.style!.color, UmColorTokens.light.inkMuted);
+      expect(tester.getSemantics(find.text('Ton trajet')).flagsCollection.isHeader, isTrue);
+      handle.dispose();
     });
 
     test('les bénéfices vont par trois', () {

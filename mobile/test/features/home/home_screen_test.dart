@@ -39,7 +39,7 @@ void main() {
     final pending = Completer<ApiHealth>();
     await pumpHome(tester, () => pending.future);
     await tester.pump();
-    expect(find.text('Connexion au serveur…'), findsOneWidget);
+    expect(find.text('Connexion en cours…'), findsOneWidget);
     pending.complete(ApiHealth.ok);
     await tester.pumpAndSettle();
   });
@@ -48,7 +48,7 @@ void main() {
     await pumpHome(tester, () async => ApiHealth.ok);
     await tester.pumpAndSettle();
     expect(find.text('Ton emploi du temps organise aussi tes trajets.'), findsOneWidget);
-    expect(find.text('Serveur connecté'), findsOneWidget);
+    expect(find.text('Connexion établie'), findsOneWidget);
     expect(find.bySemanticsLabel('Logo Uni-Moov'), findsOneWidget);
   });
 
@@ -56,15 +56,17 @@ void main() {
     var calls = 0;
     await pumpHome(tester, () async {
       calls++;
-      if (calls == 1) throw const ApiException('network_error', 'Serveur injoignable');
+      if (calls == 1) {
+        throw const ApiException('network_error', 'Connexion impossible pour l\'instant');
+      }
       return ApiHealth.ok;
     });
     await tester.pumpAndSettle();
-    expect(find.text('Serveur injoignable'), findsOneWidget);
+    expect(find.text('Connexion impossible pour l\'instant'), findsOneWidget);
     await tester.ensureVisible(find.text('Réessayer'));
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
-    expect(find.text('Serveur connecté'), findsOneWidget);
+    expect(find.text('Connexion établie'), findsOneWidget);
   });
 
   testWidgets('une seule exclamation à l’écran', (tester) async {

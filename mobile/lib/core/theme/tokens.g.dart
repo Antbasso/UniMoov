@@ -250,7 +250,7 @@ abstract final class UmTypeTokens {
     fontWeight: FontWeight.w400,
   );
 
-  /// Libellés de champs et de boutons.
+  /// Libellés de champs et puces. Les boutons utilisent `body` en 600 (16/24 px, voir components.css `.um-btn`).
   static const label = UmTypeToken(
     family: UmFontFamily.sans,
     fontSize: 14,

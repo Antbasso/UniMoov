@@ -32,7 +32,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeBenefitPrice => 'Frais partagés au juste prix';
 
   @override
-  String get homeBenefitConfirm => 'Rien sans votre accord à deux';
+  String get homeBenefitConfirm => 'Confirmé à deux, toujours';
 
   @override
   String get homeStart => 'Commencer';
@@ -41,22 +41,28 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeStartSoon => 'L\'inscription arrive très vite.';
 
   @override
-  String get apiStatusLoading => 'Connexion au serveur…';
+  String get apiStatusLoading => 'Connexion en cours…';
 
   @override
-  String get apiStatusOk => 'Serveur connecté';
+  String get apiStatusOk => 'Connexion établie';
 
   @override
-  String get apiStatusDegraded => 'Serveur dégradé';
+  String get apiStatusDegraded => 'Service perturbé pour l\'instant';
 
   @override
-  String get apiStatusError => 'Serveur injoignable';
+  String get apiStatusError => 'Connexion impossible pour l\'instant';
 
   @override
   String get retry => 'Réessayer';
 
   @override
   String get fieldErrorPrefix => 'Erreur';
+
+  @override
+  String get fieldShowPassword => 'Afficher le mot de passe';
+
+  @override
+  String get fieldHidePassword => 'Masquer le mot de passe';
 
   @override
   String rideFrom(String place) {

@@ -5,6 +5,7 @@ import { createDatabase, type Database } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { runSeed } from '../../src/db/seed.js';
 import { seedUsers } from '../../src/db/seed-data.js';
+import { prepareTestDatabase } from './test-database.js';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url) throw new Error('TEST_DATABASE_URL requis pour les tests d’intégration (voir README)');
@@ -12,14 +13,21 @@ if (!url) throw new Error('TEST_DATABASE_URL requis pour les tests d’intégrat
 let database: Database;
 
 beforeAll(async () => {
+  await prepareTestDatabase(url);
   database = createDatabase(url);
-  // Base de test repartie de zéro à chaque exécution.
-  await database.pool.query('DROP SCHEMA IF EXISTS public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public;');
   await runMigrations(url);
 });
 
 afterAll(async () => {
   await database.close();
+});
+
+describe('protection de la base de test', () => {
+  it('refuse une base dont le nom ne finit pas par _test', async () => {
+    const devUrl = new URL(url);
+    devUrl.pathname = '/unimoov';
+    await expect(prepareTestDatabase(devUrl.toString())).rejects.toThrow(/_test/);
+  });
 });
 
 describe('migrations et seed', () => {

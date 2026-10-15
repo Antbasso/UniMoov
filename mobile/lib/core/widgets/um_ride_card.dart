@@ -58,7 +58,7 @@ class UmRideCard extends StatelessWidget {
     };
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 420),
+      constraints: const BoxConstraints(maxWidth: UmSize.rideCardMaxWidth),
       padding: const EdgeInsets.all(UmSpace.s4),
       decoration: BoxDecoration(
         color: c.surfaceRaised,
@@ -124,12 +124,12 @@ class _Stop extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 12,
-            height: 12,
+            width: UmSize.routeDot,
+            height: UmSize.routeDot,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isEnd ? null : c.brand,
-              border: isEnd ? Border.all(color: c.brandStrong, width: 3) : null,
+              border: isEnd ? Border.all(color: c.brandStrong, width: UmSize.routeRing) : null,
             ),
           ),
           const SizedBox(width: UmSpace.s2),

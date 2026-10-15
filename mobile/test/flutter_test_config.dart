@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,5 +33,33 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
       await loader.load();
     }
   }
+  // Tolère d'infimes écarts d'anticrénelage entre machines (CI) ; un vrai changement visuel
+  // touche bien plus que 0,5 % des pixels.
+  if (goldenFileComparator is LocalFileComparator) {
+    goldenFileComparator = _TolerantComparator(
+      (goldenFileComparator as LocalFileComparator).basedir.resolve('placeholder_test.dart'),
+    );
+  }
   await testMain();
+}
+
+class _TolerantComparator extends LocalFileComparator {
+  _TolerantComparator(super.testFile);
+
+  static const _maxDiffRate = 0.005;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    if (result.passed || result.diffPercent <= _maxDiffRate) {
+      result.dispose();
+      return true;
+    }
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
+  }
 }

@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { sectorOf } from '../shared/geo.js';
 import { createDatabase, type Db } from './client.js';
 import { pointSql, users, vehicles } from './schema.js';
-import { PILOT_CAMPUS_ID, seedUsers } from './seed-data.js';
+import { PILOT_CAMPUS_ID, seedUsers, vehicleId } from './seed-data.js';
 
 /** Insère les utilisateurs de démonstration ; idempotent (ré-exécutable sans doublon). */
 export async function runSeed(db: Db): Promise<void> {
@@ -29,7 +29,7 @@ export async function runSeed(db: Db): Promise<void> {
       if (user.vehicle) {
         await tx
           .insert(vehicles)
-          .values({ id: user.id, userId: user.id, ...user.vehicle })
+          .values({ id: vehicleId(user.id), userId: user.id, ...user.vehicle })
           .onConflictDoNothing({ target: vehicles.id });
       }
     }

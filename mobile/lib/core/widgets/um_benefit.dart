@@ -19,7 +19,7 @@ class UmBenefit extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 48, color: c.brandStrong),
+          Icon(icon, size: UmSize.iconLg, color: c.brandStrong),
           const SizedBox(height: UmSpace.s2),
           Text(
             label,

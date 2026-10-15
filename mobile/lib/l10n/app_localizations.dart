@@ -139,7 +139,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeBenefitConfirm.
   ///
   /// In fr, this message translates to:
-  /// **'Rien sans votre accord à deux'**
+  /// **'Confirmé à deux, toujours'**
   String get homeBenefitConfirm;
 
   /// No description provided for @homeStart.
@@ -157,25 +157,25 @@ abstract class AppLocalizations {
   /// No description provided for @apiStatusLoading.
   ///
   /// In fr, this message translates to:
-  /// **'Connexion au serveur…'**
+  /// **'Connexion en cours…'**
   String get apiStatusLoading;
 
   /// No description provided for @apiStatusOk.
   ///
   /// In fr, this message translates to:
-  /// **'Serveur connecté'**
+  /// **'Connexion établie'**
   String get apiStatusOk;
 
   /// No description provided for @apiStatusDegraded.
   ///
   /// In fr, this message translates to:
-  /// **'Serveur dégradé'**
+  /// **'Service perturbé pour l\'instant'**
   String get apiStatusDegraded;
 
   /// No description provided for @apiStatusError.
   ///
   /// In fr, this message translates to:
-  /// **'Serveur injoignable'**
+  /// **'Connexion impossible pour l\'instant'**
   String get apiStatusError;
 
   /// No description provided for @retry.
@@ -189,6 +189,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Erreur'**
   String get fieldErrorPrefix;
+
+  /// No description provided for @fieldShowPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher le mot de passe'**
+  String get fieldShowPassword;
+
+  /// No description provided for @fieldHidePassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Masquer le mot de passe'**
+  String get fieldHidePassword;
 
   /// No description provided for @rideFrom.
   ///

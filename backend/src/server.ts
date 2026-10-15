@@ -3,13 +3,16 @@ import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 
 const config = loadConfig();
-const database = createDatabase(config.DATABASE_URL);
+// Le logger n'existe qu'une fois l'app construite ; le pool en a besoin dès sa création.
+let logIdleError: (error: Error) => void = () => undefined;
+const database = createDatabase(config.DATABASE_URL, { onIdleError: (error) => logIdleError(error) });
 const app = await buildApp({
   config,
   pingDb: async () => {
     await database.pool.query('SELECT 1');
   },
 });
+logIdleError = (error) => app.log.error({ err: error }, 'idle database connection error');
 
 const shutdown = async () => {
   await app.close();

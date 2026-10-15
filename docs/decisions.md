@@ -28,3 +28,13 @@ Une ligne par décision : `date | décision | raison`.
 2026-10-15 | M0 mobile : pas de réessai automatique Riverpod pour l'état de l'API ; bouton « Réessayer » | l'état d'erreur doit rester visible
 2026-10-15 | M0 mobile : URL de l'API par `--dart-define=API_BASE_URL` (défaut http://10.0.2.2:3000) ; HTTP en clair autorisé seulement dans le manifeste Android de debug | pas de secret dans l'app, HTTPS en production
 2026-10-15 | M0 : goldens de l'accueil (clair, sombre) générés avec Flutter 3.47.7, version figée en CI | rendu reproductible
+2026-10-15 | Revue M0 : les erreurs client de Fastify (JSON mal formé, type de contenu, corps trop gros) répondent 4xx au format standard au lieu de 500 | une requête invalide n'est pas une erreur serveur
+2026-10-15 | Revue M0 : écouteur d'erreur sur le pool PostgreSQL, journalisé par l'API | une coupure de base ne doit pas arrêter le processus
+2026-10-15 | Revue M0 : la base de test est créée automatiquement et doit finir par `_test`, sinon les tests refusent de s'exécuter | évite d'effacer une base de dev par erreur
+2026-10-15 | Revue M0 : `TRUST_PROXY` (faux par défaut) pour lire l'IP réelle derrière Caddy | nécessaire à la limite de débit de M1 ; l'IP ne va jamais dans les journaux
+2026-10-15 | Revue M0 : iOS autorise seulement le réseau local en HTTP (`NSAllowsLocalNetworking`) | API de dev joignable depuis le simulateur, HTTPS partout ailleurs
+2026-10-15 | Revue M0 : dimensions de composants (48 px, anneau 3 px, icônes 16/24/48…) centralisées dans `UmSize`, textes de bouton en `body` 600 (16 px), les 15 styles Material reliés à l'échelle | aucune taille en dur dans les widgets, aucun style hors échelle
+2026-10-15 | Revue M0 : anneau de focus dessiné hors du bouton (décalé de 2 px, comme l'outline CSS) ; aide et erreur des champs rattachées au champ pour les lecteurs d'écran | conformité au design system et accessibilité
+2026-10-15 | Revue M0 : textes revus (« Confirmé à deux, toujours », « Connexion impossible pour l'instant ») | tutoiement et pas de jargon technique
+2026-10-15 | Revue M0 : goldens comparés avec une tolérance de 0,5 % des pixels | écarts d'anticrénelage entre machines ; un vrai changement visuel dépasse largement ce seuil
+2026-10-15 | Revue M0 : corrections d'erreurs évidentes dans docs/design-system (chemin `components.css`, logo `assets/logo.png`, icône seule à fournir, usage du style `label` aligné sur `components.css`) | la documentation citait des fichiers absents et se contredisait

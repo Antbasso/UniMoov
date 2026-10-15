@@ -1,4 +1,4 @@
-Logos officiels Uni-Moov, copiés tels quels (jamais redessinés).
+Logos officiels Uni-Moov, copiés tels quels (jamais redessinés). Dans le dépôt, le logo complet est `assets/logo.png` ; l'icône seule reste à fournir.
 
 - `uni-moov-logo.png` : logo complet (tache violette avec voiture blanche, mot-symbole « Uni-Moov », « Uni- » en violet dégradé, « Moov » en noir). Fond blanc opaque : le poser sur `surface` ou `surface-raised` en thème clair, jamais directement sur un fond sombre.
 - `uni-moov-icon.png` : la tache violette et sa voiture seules, fond transparent. Pour avatars, icône d'app, favicon. Elle se lit aussi bien sur `surface` en thème clair que sombre, sans plaque.

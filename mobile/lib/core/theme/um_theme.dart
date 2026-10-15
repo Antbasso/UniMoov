@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'tokens.g.dart';
 
 export 'tokens.g.dart';
+export 'um_sizes.dart';
 
 /// Couleurs du thème courant, accessibles via `context.umColors`.
 class UmColors extends ThemeExtension<UmColors> {
@@ -48,6 +49,9 @@ abstract final class UmText {
   static final label = of(UmTypeTokens.label);
   static final caption = of(UmTypeTokens.caption);
   static final note = of(UmTypeTokens.note);
+
+  /// Libellé de bouton : texte courant en 600 (16/24, components.css `.um-btn`).
+  static final button = body.copyWith(fontWeight: FontWeight.w600);
 }
 
 extension UmThemeContext on BuildContext {
@@ -84,16 +88,23 @@ ThemeData buildUmTheme(Brightness brightness) {
     onErrorContainer: c.danger,
   );
 
+  // Les 15 styles Material pointent vers l'échelle du design system : aucun widget Material
+  // (dialogue, menu, barre d'app) ne peut afficher une taille hors échelle.
   final textTheme = TextTheme(
     displayLarge: UmText.display,
+    displayMedium: UmText.h1,
+    displaySmall: UmText.h1,
     headlineLarge: UmText.h1,
     headlineMedium: UmText.h2,
+    headlineSmall: UmText.h2,
     titleLarge: UmText.h3,
     titleMedium: UmText.h3,
+    titleSmall: UmText.label,
     bodyLarge: UmText.body,
     bodyMedium: UmText.bodySm,
-    labelLarge: UmText.label,
     bodySmall: UmText.caption,
+    labelLarge: UmText.button,
+    labelMedium: UmText.label,
     labelSmall: UmText.caption,
   ).apply(bodyColor: c.ink, displayColor: c.ink);
 

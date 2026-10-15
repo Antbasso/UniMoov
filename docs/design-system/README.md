@@ -26,9 +26,9 @@ Uni-Moov est une application de covoiturage étudiant. Sa marque est ronde, viol
 
 ## Logo et images
 
-- Utilise `assets/Logos/uni-moov-logo.png` sur fond clair, et `assets/Logos/uni-moov-icon.png` quand la place manque. Ne redessine, ne recolore et ne déforme jamais ces fichiers ; mêmes règles dans `assets/Logos/README.md`.
-- `assets/Reference/affiche-sondage.png` montre la composition type d'une affiche : logo en tête, titre `display`, sous-titre `h2` en `brand-strong`, carte QR en cadre `lavender` avec sticker manuscrit, trois bénéfices `Benefit`, collines en pied.
+- Utilise le logo complet `assets/logo.png` sur fond clair, et l'icône seule (`uni-moov-icon.png`, fond transparent, **pas encore fournie dans le dépôt**) quand la place manque. Ne redessine, ne recolore et ne déforme jamais ces fichiers ; règles détaillées dans `logo.md`.
+- L'affiche de sondage (non versionnée dans le dépôt) montre la composition type d'une affiche : logo en tête, titre `display`, sous-titre `h2` en `brand-strong`, carte QR en cadre `lavender` avec sticker manuscrit, trois bénéfices `Benefit`, collines en pied.
 
 ## Composants
 
-`Button` (principal, secondaire, discret), `Chip` (puces et sticker `note`), `Field` (saisie), `Card` (carte flottante et cadre QR), `Benefit` (icône + légende), `RideCard` (trajet). Chaque composant utilise uniquement les tokens ; les classes `um-*` vivent dans `components/bundle.css`.
+`Button` (principal, secondaire, discret), `Chip` (puces et sticker `note`), `Field` (saisie), `Card` (carte flottante et cadre QR), `Benefit` (icône + légende), `RideCard` (trajet). Chaque composant utilise uniquement les tokens ; les classes `um-*` vivent dans `components.css`.

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/um_theme.dart';
@@ -36,7 +38,7 @@ class UmChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: foreground),
+              Icon(icon, size: UmSize.iconSm, color: foreground),
               const SizedBox(width: UmSpace.s1),
             ],
             Flexible(
@@ -59,7 +61,7 @@ class UmNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.umColors;
     return Transform.rotate(
-      angle: -4 * 3.141592653589793 / 180,
+      angle: UmSize.noteAngleDegrees * math.pi / 180,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: UmSpace.s5, vertical: UmSpace.s3),
         decoration: BoxDecoration(

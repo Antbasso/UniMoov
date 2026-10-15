@@ -56,6 +56,44 @@ void main() {
     expect(light.textTheme.bodyLarge!.fontFamily, UmFontFamily.sans);
   });
 
+  test('les 15 styles Material sont dans l’échelle du design system', () {
+    final scale = {
+      for (final t in [
+        UmText.display,
+        UmText.h1,
+        UmText.h2,
+        UmText.h3,
+        UmText.body,
+        UmText.bodySm,
+        UmText.label,
+        UmText.caption,
+        UmText.button,
+      ])
+        (t.fontFamily, t.fontSize, t.fontWeight),
+    };
+    final theme = buildUmTheme(Brightness.light).textTheme;
+    final styles = [
+      theme.displayLarge,
+      theme.displayMedium,
+      theme.displaySmall,
+      theme.headlineLarge,
+      theme.headlineMedium,
+      theme.headlineSmall,
+      theme.titleLarge,
+      theme.titleMedium,
+      theme.titleSmall,
+      theme.bodyLarge,
+      theme.bodyMedium,
+      theme.bodySmall,
+      theme.labelLarge,
+      theme.labelMedium,
+      theme.labelSmall,
+    ];
+    for (final style in styles) {
+      expect(scale, contains((style!.fontFamily, style.fontSize, style.fontWeight)));
+    }
+  });
+
   test('styles de texte : taille et interligne des tokens', () {
     expect(UmText.h1.fontSize, 36);
     expect(UmText.h1.height! * UmText.h1.fontSize!, closeTo(42, 0.001));

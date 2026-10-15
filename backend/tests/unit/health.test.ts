@@ -51,3 +51,22 @@ describe('journaux', () => {
     expect(output).not.toMatch(/secret-jwt|203\.0\.113\.7|45\.9/);
   });
 });
+
+describe('erreurs client de Fastify', () => {
+  it.each([
+    ['application/json', '{bad', 400, 'bad_request'],
+    ['text/xml', '<a/>', 415, 'unsupported_media_type'],
+  ])('%s mal formé → %i %s (pas 500)', async (contentType, payload, status, code) => {
+    const app = await buildApp({ config, pingDb: () => Promise.resolve() });
+    app.post('/probe', () => ({ ok: true }));
+    const response = await app.inject({
+      method: 'POST',
+      url: '/probe',
+      headers: { 'content-type': contentType },
+      payload,
+    });
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toEqual({ error: { code, message: 'Requête invalide' } });
+    await app.close();
+  });
+});

@@ -14,6 +14,8 @@ export interface SeedUser {
 }
 
 const id = (n: number) => `00000000-0000-4000-8000-1000000000${String(n).padStart(2, '0')}`;
+/** Identifiant fixe du véhicule de l'étudiant n (distinct de celui de l'utilisateur). */
+export const vehicleId = (userId: string) => userId.replace('-1000000000', '-2000000000');
 
 // Adresses au niveau du quartier : aucune donnée réelle.
 export const seedUsers: SeedUser[] = [

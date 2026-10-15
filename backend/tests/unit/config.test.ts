@@ -34,3 +34,10 @@ describe('loadConfig', () => {
     }
   });
 });
+
+describe('TRUST_PROXY', () => {
+  it('vaut false par défaut et accepte "true"', () => {
+    expect(loadConfig(base).TRUST_PROXY).toBe(false);
+    expect(loadConfig({ ...base, TRUST_PROXY: 'true' }).TRUST_PROXY).toBe(true);
+  });
+});
