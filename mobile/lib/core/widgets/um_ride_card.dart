@@ -6,7 +6,8 @@ import '../theme/um_theme.dart';
 import 'um_button.dart';
 import 'um_chip.dart';
 
-enum UmRideStatus { proposed, confirmed, cancelled }
+/// `waiting` : tu as accepté, l'autre partie pas encore (confirmation à deux).
+enum UmRideStatus { proposed, waiting, confirmed, cancelled }
 
 /// Carte de trajet (docs/design-system/components/RideCard.md). Une seule action.
 class UmRideCard extends StatelessWidget {
@@ -17,8 +18,9 @@ class UmRideCard extends StatelessWidget {
     required this.time,
     required this.driverFirstName,
     required this.seatsLeft,
-    required this.priceCents,
+    this.priceCents,
     required this.status,
+    this.metaText,
     this.actionLabel,
     this.onAction,
   });
@@ -29,8 +31,11 @@ class UmRideCard extends StatelessWidget {
   final String driverFirstName;
   final int seatsLeft;
 
-  /// Montant en centimes (entier, jamais de flottant).
-  final int priceCents;
+  /// Montant en centimes (entier, jamais de flottant) ; absent tant qu'il n'est pas calculé.
+  final int? priceCents;
+
+  /// Remplace la ligne « horaire · avec … · places » (ex. côté conducteur).
+  final String? metaText;
   final UmRideStatus status;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -42,9 +47,13 @@ class UmRideCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.umColors;
     final l10n = AppLocalizations.of(context);
-    final price = formatPrice(priceCents, l10n.localeName);
+    final price = priceCents == null ? null : formatPrice(priceCents!, l10n.localeName);
     final chip = switch (status) {
       UmRideStatus.proposed => UmChip(label: l10n.rideStatusProposed, icon: Icons.schedule_rounded),
+      UmRideStatus.waiting => UmChip(
+        label: l10n.rideStatusWaiting,
+        icon: Icons.hourglass_empty_rounded,
+      ),
       UmRideStatus.confirmed => UmChip(
         label: l10n.rideStatusConfirmed,
         icon: Icons.check_circle_outline_rounded,
@@ -80,18 +89,21 @@ class UmRideCard extends StatelessWidget {
                     _Stop(label: to, semantic: l10n.rideTo(to), isEnd: true),
                     const SizedBox(height: UmSpace.s1),
                     Text(
-                      '${l10n.rideMeta(time, driverFirstName)} · ${l10n.rideSeats(seatsLeft)}',
+                      metaText ??
+                          '${l10n.rideMeta(time, driverFirstName)} · ${l10n.rideSeats(seatsLeft)}',
                       style: UmText.bodySm.copyWith(color: c.inkMuted),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: UmSpace.s4),
-              Semantics(
-                label: l10n.ridePriceLabel(price),
-                excludeSemantics: true,
-                child: Text(price, style: UmText.h2.copyWith(color: c.brandStrong)),
-              ),
+              if (price != null) ...[
+                const SizedBox(width: UmSpace.s4),
+                Semantics(
+                  label: l10n.ridePriceLabel(price),
+                  excludeSemantics: true,
+                  child: Text(price, style: UmText.h2.copyWith(color: c.brandStrong)),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: UmSpace.s3),

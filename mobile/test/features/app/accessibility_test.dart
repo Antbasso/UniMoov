@@ -4,6 +4,8 @@ import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 
+import 'package:unimoov/features/proposals/domain/proposal.dart';
+
 import '../../support/app_harness.dart';
 import '../../support/fake_backend.dart';
 
@@ -86,6 +88,72 @@ void main() {
     });
   }
 
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets('M2 : semaine, détail, autres voitures, recherche (${mode.name})', (tester) async {
+      final handle = tester.ensureSemantics();
+      final monday = DateTime(2026, 10, 12);
+      backend.weeks[isoWeekOf(testNow)] = [proposalFixture(id: 'p1', day: monday)];
+      backend.alternativesById['p1'] = [
+        JoinableRide(
+          rideId: 'r2',
+          day: monday,
+          direction: Direction.toCampus,
+          time: DateTime(2026, 10, 12, 8),
+          seatsLeft: 2,
+          driver: const PublicPerson(
+            userId: 'd2',
+            firstName: 'Chloé',
+            reliabilityScore: 0.9,
+            detourMinutes: 6,
+            status: 'proposed',
+          ),
+        ),
+      ];
+      backend.seedAccount(
+        'lea@etu.univ-smb.fr',
+        steps: {for (final s in OnboardingStep.values) s: StepStatus.done},
+        withHome: true,
+      );
+      backend.resumeSessionFor('lea@etu.univ-smb.fr');
+      storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+      await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
+      await expectAccessible(tester);
+      await tapText(tester, 'Voir');
+      await expectAccessible(tester);
+      await tapText(tester, 'Voir d\'autres voitures');
+      await expectAccessible(tester);
+      await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
+      await tapText(tester, 'Chercher un trajet');
+      await expectAccessible(tester);
+      handle.dispose();
+    });
+
+    testWidgets('M2 : emploi du temps, lien ICS et horaires (${mode.name})', (tester) async {
+      final handle = tester.ensureSemantics();
+      backend.seedAccount(
+        'lea@etu.univ-smb.fr',
+        steps: {
+          OnboardingStep.profile: StepStatus.done,
+          OnboardingStep.vehicle: StepStatus.done,
+          OnboardingStep.preferences: StepStatus.done,
+        },
+        withHome: true,
+      );
+      backend.resumeSessionFor('lea@etu.univ-smb.fr');
+      storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+      await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
+      await expectAccessible(tester);
+      await tapText(tester, 'Coller mon lien d\'agenda (ICS)');
+      await tapText(tester, 'Continuer'); // erreurs affichées
+      await expectAccessible(tester);
+      await tester.tap(find.byTooltip('Retour'));
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Saisir mes horaires');
+      await expectAccessible(tester);
+      handle.dispose();
+    });
+  }
+
   testWidgets('texte agrandi à 200 % : aucun débordement', (tester) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
@@ -97,9 +165,20 @@ void main() {
     await tapText(tester, 'Oui, j\'ai une voiture');
     await tapText(tester, 'Passer pour l\'instant');
     await tapText(tester, 'Passer pour l\'instant');
-    await tapText(tester, 'Terminer');
+    await tapText(tester, 'Passer pour l\'instant');
     await tester.tap(find.byTooltip('Mon profil'));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // Semaine avec propositions et détail, toujours à 200 %.
+    backend.weeks[isoWeekOf(testNow)] = [proposalFixture(id: 'p1', day: DateTime(2026, 10, 12))];
+    backend.seedAccount(
+      'lea@etu.univ-smb.fr',
+      steps: {for (final s in OnboardingStep.values) s: StepStatus.done},
+      withHome: true,
+    );
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir');
     expect(tester.takeException(), isNull);
   });
 }

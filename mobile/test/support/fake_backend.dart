@@ -3,10 +3,14 @@ import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/data/profile_api.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
+import 'package:unimoov/features/proposals/data/proposals_api.dart';
+import 'package:unimoov/features/proposals/domain/proposal.dart';
+import 'package:unimoov/features/schedule/data/schedule_api.dart';
+import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 /// Backend en mémoire qui reproduit les règles de l'API (docs/api.md) pour les tests de
 /// parcours. Il survit à un « redémarrage » de l'app, comme le vrai serveur.
-class FakeBackend implements AuthApi, ProfileApi {
+class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -165,14 +169,106 @@ class FakeBackend implements AuthApi, ProfileApi {
   @override
   Future<void> removePause(String id) async => _me.pauses.removeWhere((p) => p.id == id);
 
+  // --- Emploi du temps ---
+
+  static const validIcs = 'https://ade.univ-smb.fr/cal.ics';
+  CalendarConnection? connection;
+  List<ManualDay> manualDays = [];
+
+  @override
+  Future<CalendarConnection?> getConnection() async => connection;
+
+  @override
+  Future<CalendarConnection> connectIcs(String url) async {
+    _maybeFail();
+    if (!url.startsWith('https://')) {
+      throw const ApiException('calendar_url_invalid', '', statusCode: 400);
+    }
+    if (url != validIcs) throw const ApiException('calendar_unreachable', '', statusCode: 422);
+    return connection = CalendarConnection(id: 'conn-1', consentedAt: DateTime(2026, 10, 18));
+  }
+
+  @override
+  Future<CalendarConnection> sync() async => connection!;
+
+  @override
+  Future<void> disconnect(String id) async => connection = null;
+
+  @override
+  Future<List<ManualDay>> getManual() async => manualDays;
+
+  @override
+  Future<List<ManualDay>> setManual(List<ManualDay> days) async {
+    _maybeFail();
+    return manualDays = days;
+  }
+
+  // --- Propositions ---
+
+  /// Propositions par semaine ISO ; alternatives et résultats de recherche préparés.
+  final Map<String, List<Proposal>> weeks = {};
+  final Map<String, List<JoinableRide>> alternativesById = {};
+  List<JoinableRide> searchResults = [];
+  final List<String> joined = [];
+
+  @override
+  Future<List<Proposal>> week(String week) async {
+    _maybeFail();
+    return List.of(weeks[week] ?? const []);
+  }
+
+  Proposal _replace(String id, Proposal Function(Proposal) change) {
+    for (final entry in weeks.entries) {
+      final index = entry.value.indexWhere((p) => p.id == id);
+      if (index >= 0) return entry.value[index] = change(entry.value[index]);
+    }
+    throw const ApiException('not_found', '', statusCode: 404);
+  }
+
+  @override
+  Future<Proposal> accept(String id) async {
+    _maybeFail();
+    final isJoin = weeks.values.every((list) => list.every((p) => p.id != id));
+    if (isJoin) {
+      joined.add(id);
+      return proposalFixture(id: id, myStatus: 'accepted');
+    }
+    return _replace(id, (p) => p.copyWith(myStatus: 'accepted'));
+  }
+
+  @override
+  Future<void> decline(String id) async {
+    _maybeFail();
+    for (final list in weeks.values) {
+      list.removeWhere((p) => p.id == id);
+    }
+  }
+
+  @override
+  Future<List<JoinableRide>> alternatives(String id) async => alternativesById[id] ?? const [];
+
+  @override
+  Future<List<JoinableRide>> search({
+    required DateTime day,
+    required Direction direction,
+    String? time,
+  }) async {
+    _maybeFail();
+    return searchResults;
+  }
+
   /// Accès direct pour préparer un état (tests).
   void seedAccount(
     String email, {
     String firstName = 'Léa',
     Map<OnboardingStep, StepStatus>? steps,
+    bool withHome = false,
   }) {
     _accounts[email] = _Account(email, firstName, 'Martin', 'motdepasse-solide')
-      ..steps.addAll(steps ?? {});
+      ..steps.addAll(steps ?? {})
+      ..home = withHome
+          ? const Home(address: '12 Rue de la Paix 74000 Annecy', lat: 45.9, lon: 6.12)
+          : null;
   }
 }
 
@@ -207,4 +303,56 @@ class _Account {
       pausedToday: pauses.any((p) => !today.isBefore(p.startsOn) && !today.isAfter(p.endsOn)),
     );
   }
+}
+
+const _driver = PublicPerson(
+  userId: 'driver-1',
+  firstName: 'Nathan',
+  reliabilityScore: 0.9,
+  detourMinutes: 4,
+  status: 'proposed',
+);
+
+/// Proposition de test (passager par défaut), au format renvoyé par l'API.
+Proposal proposalFixture({
+  String id = 'ride-1',
+  DateTime? day,
+  Direction direction = Direction.toCampus,
+  bool isDriver = false,
+  String myStatus = 'proposed',
+  String rideStatus = 'proposed',
+  List<PublicPerson> passengers = const [],
+}) {
+  final date = day ?? DateTime(2026, 10, 19);
+  return Proposal(
+    id: id,
+    day: date,
+    direction: direction,
+    time: DateTime(date.year, date.month, date.day, 8),
+    isDriver: isDriver,
+    myStatus: myStatus,
+    rideStatus: rideStatus,
+    seatsTotal: 3,
+    seatsTaken: isDriver ? passengers.length : 1,
+    detourMinutes: 4,
+    driver: isDriver ? null : _driver,
+    passengers: passengers,
+  );
+}
+
+extension ProposalCopy on Proposal {
+  Proposal copyWith({String? myStatus, String? rideStatus}) => Proposal(
+    id: id,
+    day: day,
+    direction: direction,
+    time: time,
+    isDriver: isDriver,
+    myStatus: myStatus ?? this.myStatus,
+    rideStatus: rideStatus ?? this.rideStatus,
+    seatsTotal: seatsTotal,
+    seatsTaken: seatsTaken,
+    detourMinutes: detourMinutes,
+    driver: driver,
+    passengers: passengers,
+  );
 }

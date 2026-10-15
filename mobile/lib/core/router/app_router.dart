@@ -12,6 +12,10 @@ import '../../features/profile/presentation/me_controller.dart';
 import '../../features/profile/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_edit_screens.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/proposals/presentation/alternatives_screen.dart';
+import '../../features/proposals/presentation/proposal_screen.dart';
+import '../../features/proposals/presentation/search_screen.dart';
+import '../../features/schedule/presentation/schedule_screen.dart';
 import 'redirect.dart';
 
 export 'redirect.dart' show AppRoutes;
@@ -50,6 +54,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'address', builder: (_, _) => const EditAddressScreen()),
           GoRoute(path: 'vehicle', builder: (_, _) => const EditVehicleScreen()),
           GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
+          GoRoute(
+            path: 'schedule',
+            builder: (_, _) => const ScheduleScreen(),
+            routes: [
+              GoRoute(path: 'ics', builder: (_, _) => const EditIcsScreen()),
+              GoRoute(path: 'manual', builder: (_, _) => const EditManualScheduleScreen()),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
+      GoRoute(
+        path: '/week/:week/proposals/:id',
+        builder: (_, state) =>
+            ProposalScreen(week: state.pathParameters['week']!, id: state.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'alternatives',
+            builder: (_, state) => AlternativesScreen(id: state.pathParameters['id']!),
+          ),
         ],
       ),
     ],

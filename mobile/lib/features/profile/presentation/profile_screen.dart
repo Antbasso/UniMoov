@@ -67,6 +67,11 @@ class ProfileScreen extends ConsumerWidget {
           body: roleLabel,
           onEdit: () => context.push(AppRoutes.profileRole),
         ),
+        _Section(
+          title: l10n.profileSchedule,
+          body: l10n.calendarBody,
+          onEdit: () => context.push(AppRoutes.profileSchedule),
+        ),
         const _PausesSection(),
       ],
     );
