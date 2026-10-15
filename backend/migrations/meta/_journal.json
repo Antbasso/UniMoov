@@ -22,6 +22,13 @@
       "when": 1792092681030,
       "tag": "0002_auth_and_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792098799955,
+      "tag": "0003_schedule_and_matching",
+      "breakpoints": true
     }
   ]
 }
