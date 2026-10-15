@@ -5,6 +5,7 @@
  */
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   customType,
   date,
   integer,
@@ -171,6 +172,11 @@ export const rides = pgTable('rides', {
   targetTime: timestamp('target_time', { withTimezone: true }).notNull(),
   seatsTotal: smallint('seats_total').notNull(),
   status: rideStatus('status').notNull().default('proposed'),
+  distanceM: integer('distance_m'),
+  durationS: integer('duration_s'),
+  routeEstimated: boolean('route_estimated').notNull().default(false),
+  plannedAt: timestamp('planned_at', { withTimezone: true }),
+  estimatedTotalCostCents: integer('estimated_total_cost_cents'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -186,6 +192,10 @@ export const rideParticipants = pgTable(
     role: participantRole('role').notNull(),
     status: participantStatus('status').notNull().default('proposed'),
     detourS: integer('detour_s'),
+    pickupLabel: text('pickup_label'),
+    useMeetingPoint: boolean('use_meeting_point').notNull().default(false),
+    stopOrder: smallint('stop_order'),
+    eta: timestamp('eta', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.rideId, t.userId] })],

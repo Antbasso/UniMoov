@@ -67,3 +67,15 @@ describe('CALENDAR_ENCRYPTION_KEY', () => {
     );
   });
 });
+
+describe('ROUTING_PROVIDER', () => {
+  it('estimation locale par défaut, sans clé ; une clé vide est tolérée', () => {
+    expect(loadConfig(base).ROUTING_PROVIDER).toBe('estimate');
+    expect(loadConfig({ ...base, ORS_API_KEY: '' }).ROUTING_DAILY_QUOTA).toBe(2000);
+  });
+
+  it('OpenRouteService exige une clé', () => {
+    expect(() => loadConfig({ ...base, ROUTING_PROVIDER: 'ors', ORS_API_KEY: '' })).toThrow(/ORS_API_KEY/);
+    expect(loadConfig({ ...base, ROUTING_PROVIDER: 'ors', ORS_API_KEY: 'k' }).ROUTING_PROVIDER).toBe('ors');
+  });
+});
