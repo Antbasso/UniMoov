@@ -72,7 +72,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcomeTitle => 'Ton emploi du temps organise aussi tes trajets.';
 
   @override
-  String get welcomeSubtitle => 'Covoiturage domicile-campus pour les étudiants d\'Annecy';
+  String get welcomeSubtitle =>
+      'Covoiturage domicile-campus pour les étudiants d\'Annecy';
 
   @override
   String get welcomeNote => 'Inscris-toi en deux minutes !';
@@ -114,34 +115,42 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorGeneric => 'Une erreur est survenue. Réessaie.';
 
   @override
-  String get errorNetwork => 'Connexion impossible pour l\'instant. Vérifie ton réseau.';
+  String get errorNetwork =>
+      'Connexion impossible pour l\'instant. Vérifie ton réseau.';
 
   @override
-  String get errorRateLimited => 'Trop de tentatives. Réessaie dans quelques minutes.';
+  String get errorRateLimited =>
+      'Trop de tentatives. Réessaie dans quelques minutes.';
 
   @override
   String get errorValidation => 'Vérifie les informations saisies.';
 
   @override
-  String get errorSessionExpired => 'Ta session a expiré. Connecte-toi à nouveau.';
+  String get errorSessionExpired =>
+      'Ta session a expiré. Connecte-toi à nouveau.';
 
   @override
-  String get errorEmailDomain => 'Utilise ton adresse mail universitaire (univ-smb.fr).';
+  String get errorEmailDomain =>
+      'Utilise ton adresse mail universitaire (univ-smb.fr).';
 
   @override
-  String get errorCodeCooldown => 'Attends une minute avant de redemander un code.';
+  String get errorCodeCooldown =>
+      'Attends une minute avant de redemander un code.';
 
   @override
-  String get errorCodeInvalid => 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
+  String get errorCodeInvalid =>
+      'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
 
   @override
-  String get errorAccountExists => 'Tu as déjà un compte avec cette adresse. Connecte-toi.';
+  String get errorAccountExists =>
+      'Tu as déjà un compte avec cette adresse. Connecte-toi.';
 
   @override
   String get errorInvalidCredentials => 'Mail ou mot de passe incorrect.';
 
   @override
-  String get errorAddressNotFound => 'Adresse introuvable. Ajoute la ville ou le code postal.';
+  String get errorAddressNotFound =>
+      'Adresse introuvable. Ajoute la ville ou le code postal.';
 
   @override
   String get errorGeocodingUnavailable =>
@@ -275,7 +284,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vehicleTitle => 'As-tu une voiture ?';
 
   @override
-  String get vehicleBody => 'Avec une voiture, tu peux conduire et partager les frais du trajet.';
+  String get vehicleBody =>
+      'Avec une voiture, tu peux conduire et partager les frais du trajet.';
 
   @override
   String get vehicleYes => 'Oui, j\'ai une voiture';
@@ -296,13 +306,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vehicleDetourLabel => 'Détour maximal (minutes)';
 
   @override
-  String get vehicleDetourHelp => 'Uni-Moov ne te propose que des détours plus courts.';
+  String get vehicleDetourHelp =>
+      'Uni-Moov ne te propose que des détours plus courts.';
 
   @override
   String get roleTitle => 'Quel rôle préfères-tu ?';
 
   @override
-  String get roleBody => 'Tu pourras le changer quand tu veux depuis ton profil.';
+  String get roleBody =>
+      'Tu pourras le changer quand tu veux depuis ton profil.';
 
   @override
   String get roleAuto => 'Automatique';
@@ -336,7 +348,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoveryTitle => 'Mode découverte';
 
   @override
-  String get discoveryBody => 'Ajoute ton adresse pour recevoir des propositions de trajets.';
+  String get discoveryBody =>
+      'Ajoute ton adresse pour recevoir des propositions de trajets.';
 
   @override
   String get discoveryAction => 'Compléter mon profil';
@@ -459,7 +472,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'J\'accepte qu\'Uni-Moov lise cet agenda pour n\'en garder que l\'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.';
 
   @override
-  String get icsConsentRequired => 'Coche la case pour autoriser la lecture de ton agenda.';
+  String get icsConsentRequired =>
+      'Coche la case pour autoriser la lecture de ton agenda.';
 
   @override
   String get icsConnect => 'Connecter mon agenda';
@@ -513,7 +527,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get weekday7 => 'Dimanche';
 
   @override
-  String get errorCalendarUrl => 'Ce lien n\'est pas valide. Il doit commencer par https://.';
+  String get errorCalendarUrl =>
+      'Ce lien n\'est pas valide. Il doit commencer par https://.';
 
   @override
   String get errorCalendarUnreachable =>
@@ -533,7 +548,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorProposalCancelled => 'Cette proposition a été annulée.';
 
   @override
-  String get errorRideUnavailable => 'Cette voiture ne peut plus te prendre. Choisis-en une autre.';
+  String get errorRideUnavailable =>
+      'Cette voiture ne peut plus te prendre. Choisis-en une autre.';
 
   @override
   String get errorAlreadyCommitted => 'Tu as déjà un trajet sur ce créneau.';
@@ -545,10 +561,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorAlreadyAnswered => 'Tu as déjà répondu à cette proposition.';
 
   @override
-  String get errorSearchQuota => 'Tu as atteint le nombre de recherches du jour. Réessaie demain.';
+  String get errorSearchQuota =>
+      'Tu as atteint le nombre de recherches du jour. Réessaie demain.';
 
   @override
-  String get errorProfileIncomplete => 'Ajoute ton adresse pour trouver un trajet.';
+  String get errorProfileIncomplete =>
+      'Ajoute ton adresse pour trouver un trajet.';
 
   @override
   String get errorTimeRequired => 'Indique une heure pour ce jour.';
@@ -564,7 +582,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Pas encore de proposition cette semaine. Vérifie ton emploi du temps ou cherche un trajet.';
 
   @override
-  String get weekEmptyNoSchedule => 'Ajoute ton emploi du temps pour recevoir tes propositions.';
+  String get weekEmptyNoSchedule =>
+      'Ajoute ton emploi du temps pour recevoir tes propositions.';
 
   @override
   String get addSchedule => 'Ajouter mon emploi du temps';
@@ -640,7 +659,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get proposalConfirmed => 'Trajet confirmé';
 
   @override
-  String get proposalWaiting => 'Tu as accepté. On attend la réponse de l\'autre.';
+  String get proposalWaiting =>
+      'Tu as accepté. On attend la réponse de l\'autre.';
 
   @override
   String get proposalDeclined => 'Proposition refusée.';
@@ -649,7 +669,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get alternativesTitle => 'Autres voitures';
 
   @override
-  String get alternativesEmpty => 'Aucune autre voiture compatible pour ce créneau.';
+  String get alternativesEmpty =>
+      'Aucune autre voiture compatible pour ce créneau.';
 
   @override
   String get choose => 'Choisir';
@@ -673,7 +694,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get searchEmpty => 'Aucune voiture trouvée pour ce créneau.';
 
   @override
-  String get searchHint => 'Choisis un jour et un sens, puis lance la recherche.';
+  String get searchHint =>
+      'Choisis un jour et un sens, puis lance la recherche.';
 
   @override
   String seatsLeftLabel(int count) {
@@ -695,7 +717,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get scheduleSyncError => 'La dernière mise à jour a échoué. Vérifie ton lien.';
+  String get scheduleSyncError =>
+      'La dernière mise à jour a échoué. Vérifie ton lien.';
 
   @override
   String scheduleManualSummary(int count) {

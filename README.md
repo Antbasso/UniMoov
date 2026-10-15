@@ -74,6 +74,8 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 
 Créer un compte en local : l'app (ou `POST /api/v1/auth/signup/request-code`) envoie le code par le fournisseur de mail « console », qui l'écrit dans le journal de l'API (`docker compose logs -f api`). Le contrat de l'API est consultable sur http://localhost:3000/docs en développement. Avec `GEOCODING_PROVIDER=fake`, l'adresse « 12 rue de la Paix, Annecy » est reconnue sans accès réseau.
 
+Après `npm run db:seed`, les comptes de démonstration (par exemple `lea.martin@etu.univ-smb.fr`, conductrice, ou `ines.robert@etu.univ-smb.fr`, passagère) se connectent avec le mot de passe `unimoov-demo` ; leur semaine type est saisie et l'écran d'accueil affiche les propositions de la semaine. Les tâches planifiées (lecture des agendas chaque nuit, génération des propositions le vendredi soir) tournent dans l'API ; `JOBS_ENABLED=false` les coupe en développement.
+
 Pour développer l'API avec rechargement : `docker compose up -d db` puis `cd backend && npm run dev`. Toutes les commandes sont listées dans [AGENTS.md](AGENTS.md) ; l'avancement suit la [feuille de route](docs/roadmap.md) et les choix sont tracés dans le [journal des décisions](docs/decisions.md).
 
 ## Modèle économique

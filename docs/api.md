@@ -22,16 +22,21 @@ Base : `/api/v1`, JSON, UTF-8. Authentification `Authorization: Bearer <jwt>` sa
 - `GET /users/{id}/public` : prénom, photo, score uniquement.
 
 ## Agenda
-- `POST /calendar/connections` (ICS, CalDAV, Google, Microsoft) avec `consent: true` ; `DELETE /calendar/connections/{id}` ; `POST /calendar/sync`.
-- `PUT /schedule/manual` `{ days: [{ day, startTime, endTime }] }`.
-- `GET /schedule?from=&to=`.
+- `POST /calendar/connections` `{ provider: "ics", url, consent: true }` → `201` `{ connection, changedDays }` : le lien (ICS ou `webcal://`) est lu tout de suite ; `400 calendar_url_invalid` (HTTPS sur le port 443 uniquement, aucune adresse interne), `422 calendar_unreachable` ou `calendar_invalid` ; rien n'est enregistré en cas d'échec. Le lien est chiffré en base et n'est jamais renvoyé. Une seule connexion par utilisateur. CalDAV : via le lien d'abonnement ICS que les serveurs CalDAV publient ; Google et Microsoft : v1.1.
+- `GET /calendar/connections` → `{ connection: { id, provider, consentedAt, lastSyncedAt, lastError } | null }`.
+- `POST /calendar/sync` → `{ connection, changedDays }` ; également chaque nuit (tâche planifiée). `DELETE /calendar/connections/{id}` : lien et créneaux de l'agenda supprimés, la semaine type reprend.
+- `GET/PUT /schedule/manual` `{ days: [{ weekday: 1..7, startTime: "HH:MM", endTime: "HH:MM" }] }` (semaine type, heure de Paris) → `{ days, changedDays }`.
+- `GET /schedule?from=AAAA-MM-JJ&to=AAAA-MM-JJ` → `{ slots: [{ day, start, end }] }` : créneaux effectifs (agenda connecté, sinon semaine type). Seuls le début et la fin de chaque journée sont stockés, jamais les titres ni les lieux.
+- Tout changement de créneau relance les propositions des jours concernés (cahier §3).
 
 ## Propositions et recherche
-- `GET /proposals?week=YYYY-Www` : propositions de trajets de la semaine.
-- `POST /proposals/{id}/accept` ; `POST /proposals/{id}/decline` ; `GET /proposals/{id}/alternatives`.
-- `GET /search/rides?from=&to=&time=&maxDistance=` : recherche manuelle (quota quotidien, 429 au-delà).
-- Avant acceptation mutuelle, les personnes sont représentées par : `firstName`, `photoUrl`, `sector` (centre de grille), `time`, `reliabilityScore`, `detourMinutes`. Jamais d'adresse exacte ni de nom de famille.
-- Conducteur uniquement : `GET /rides/{id}/suggestions` (passagers supplémentaires, y compris hors seuil, avec `estimatedPricePerPerson` simulé).
+- `GET /proposals?week=AAAA-Www` → `{ week, proposals: [...] }`. La semaine est générée une fois (à la première lecture ou par la tâche du vendredi), puis seulement relancée sur changement d'horaire, de pause ou de profil. Chaque proposition : `{ id, day, direction, time, role, myStatus, rideStatus, seatsTotal, seatsTaken, detourMinutes, driver, passengers }` ; un conducteur sans passager reçoit aussi sa proposition.
+- `POST /proposals/{id}/accept` → la proposition à jour. Le trajet passe `confirmed` quand le conducteur et au moins un passager ont accepté. Accepter un trajet où l'on n'est pas (trouvé par « voir d'autres » ou la recherche) y ajoute l'utilisateur après revérification des places, de l'horaire et du détour (`409 ride_unavailable`) ; sa proposition précédente sur le même créneau est retirée.
+- `POST /proposals/{id}/decline` → `204` ; seulement avant d'avoir accepté (`409 already_answered` ; l'annulation après acceptation arrive en M5). Un passager qui refuse n'est plus proposé à ce conducteur ce jour-là ; un conducteur qui refuse annule le trajet et ses passagers sont relancés.
+- `GET /proposals/{id}/alternatives` → `{ rides: [{ rideId, day, direction, time, seatsLeft, driver }] }` : autres voitures compatibles, classées par détour puis fiabilité (passagers ; liste vide pour un conducteur, les suggestions avec simulation de prix arrivent en M3).
+- `GET /search/rides?day=AAAA-MM-JJ&direction=to_campus|from_campus&time=HH:MM` (heure facultative si un créneau existe ce jour-là) : même format ; quota quotidien `app_settings.search.dailyQuota` (`429 search_quota_exceeded`) et limite de débit par IP.
+- Avant acceptation mutuelle, les personnes sont représentées par : `userId`, `firstName`, `photoUrl`, `sector` (centre de la cellule de 500 m, arrondi), `reliabilityScore`, `detourMinutes`, `status`. Les schémas de réponse sont stricts : nom de famille, adresse et coordonnées exactes ne peuvent pas sortir de l'API.
+- Conducteur uniquement : `GET /rides/{id}/suggestions` (passagers supplémentaires, y compris hors seuil, avec `estimatedPricePerPerson` simulé) : M3.
 
 ## Trajets
 - `GET /rides?status=` ; `GET /rides/{id}` : participants, arrêts ordonnés, `eta`, prix estimé ; coordonnées exactes selon les droits (voir ci-dessus).

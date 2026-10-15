@@ -39,7 +39,7 @@ docker compose up -d db                       # base seule, pour développer l'A
 cd backend && npm ci
 cd backend && npm run dev                     # API :3000 (lit ../.env), OpenAPI sur /docs
 docker compose logs -f api                    # code d'inscription (mail console de dev)
-cd backend && npm run db:migrate && npm run db:seed   # schéma + étudiants de démonstration
+cd backend && npm run db:migrate && npm run db:seed   # schéma + étudiants de démonstration (mot de passe unimoov-demo)
 cd backend && npm run db:new-migration -- nom_en_snake_case
 cd backend && npm run lint && npm run typecheck
 cd backend && npm test                        # unitaires (vitest, sans base)

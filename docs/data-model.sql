@@ -93,7 +93,17 @@ CREATE TABLE calendar_connections (
   provider text NOT NULL,                 -- 'ics' | 'caldav' | 'google' | 'microsoft' | 'manual'
   encrypted_credentials bytea,
   consented_at timestamptz NOT NULL,
-  last_synced_at timestamptz
+  last_synced_at timestamptz,
+  last_error text                         -- code de la dernière erreur de lecture
+);
+CREATE UNIQUE INDEX calendar_connections_user_key ON calendar_connections (user_id);
+
+CREATE TABLE manual_schedule_days (       -- semaine type saisie à la main (secours sans agenda)
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  weekday smallint NOT NULL CHECK (weekday BETWEEN 1 AND 7),   -- 1 = lundi
+  start_time time NOT NULL,
+  end_time time NOT NULL CHECK (end_time > start_time),
+  PRIMARY KEY (user_id, weekday)
 );
 
 CREATE TABLE schedule_slots (             -- uniquement début/fin utiles, pas de titres d'événements
@@ -104,14 +114,16 @@ CREATE TABLE schedule_slots (             -- uniquement début/fin utiles, pas d
   end_at timestamptz NOT NULL,
   place_location geography(Point,4326),
   source text NOT NULL,                   -- 'calendar' | 'manual'
-  UNIQUE (user_id, start_at)
+  UNIQUE (user_id, day, source)
 );
+CREATE INDEX schedule_slots_day_idx ON schedule_slots (day);
 
 CREATE TABLE rides (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   driver_id uuid NOT NULL REFERENCES users(id),
   direction text NOT NULL CHECK (direction IN ('to_campus','from_campus')),
   campus_id uuid NOT NULL REFERENCES campuses(id),
+  day date,                               -- jour du trajet (Paris)
   target_time timestamptz NOT NULL,       -- arrivée (aller) ou départ (retour)
   seats_total smallint NOT NULL,
   status ride_status NOT NULL DEFAULT 'proposed',
@@ -125,6 +137,7 @@ CREATE TABLE rides (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX rides_target_time_idx ON rides (target_time);
+CREATE INDEX rides_day_direction_idx ON rides (day, direction);
 
 CREATE TABLE ride_participants (
   ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
@@ -141,6 +154,21 @@ CREATE TABLE ride_participants (
   amount_cents integer,
   cancelled_at timestamptz,
   PRIMARY KEY (ride_id, user_id)
+);
+CREATE INDEX ride_participants_user_idx ON ride_participants (user_id);
+
+CREATE TABLE proposal_declines (          -- paire refusée : plus reproposée ce jour-là
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  other_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day date NOT NULL,
+  direction text NOT NULL CHECK (direction IN ('to_campus','from_campus')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, other_user_id, day, direction)
+);
+
+CREATE TABLE matching_runs (              -- semaines déjà générées
+  week text PRIMARY KEY,
+  generated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE wallets (
