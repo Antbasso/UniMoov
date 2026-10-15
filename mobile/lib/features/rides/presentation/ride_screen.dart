@@ -129,8 +129,7 @@ class _RideContent extends ConsumerWidget {
                         style: UmText.caption.copyWith(color: c.inkMuted),
                       ),
                     ],
-                    const SizedBox(height: UmSpace.s5),
-                    _PriceCard(price: ride.price, isDriver: ride.isDriver),
+                    // Arrêts d'abord : qui, où et à quelle heure est l'information principale.
                     const SizedBox(height: UmSpace.s5),
                     Semantics(
                       header: true,
@@ -138,6 +137,8 @@ class _RideContent extends ConsumerWidget {
                     ),
                     const SizedBox(height: UmSpace.s3),
                     for (final stop in ride.stops) _StopRow(stop: stop, isMe: stop.userId == myId),
+                    const SizedBox(height: UmSpace.s3),
+                    _PriceCard(price: ride.price, isDriver: ride.isDriver),
                   ],
                 ),
               ),
@@ -165,13 +166,35 @@ class _PriceCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final p = price;
     if (p == null) return UmCard(body: l10n.ridePriceUnknown);
+    final c = context.umColors;
     String euros(int cents) => UmRideCard.formatPrice(cents, l10n.localeName);
-    final headline = isDriver
-        ? l10n.ridePriceYouReceive(euros(p.youReceiveCents ?? 0))
-        : l10n.ridePriceYouPay(euros(p.youPayCents ?? 0));
+    final amount = euros((isDriver ? p.youReceiveCents : p.youPayCents) ?? 0);
     return UmCard(
-      title: headline,
-      body: l10n.ridePriceDetail(euros(p.totalCostCents), p.persons, euros(p.commissionCents)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Prix en UniMoov Display, comme sur la carte de trajet.
+          Semantics(
+            label: isDriver ? l10n.ridePriceYouReceive(amount) : l10n.ridePriceYouPay(amount),
+            excludeSemantics: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isDriver ? l10n.ridePriceReceiveLabel : l10n.ridePricePayLabel,
+                  style: UmText.label.copyWith(color: c.inkMuted),
+                ),
+                Text(amount, style: UmText.h2.copyWith(color: c.brandStrong)),
+              ],
+            ),
+          ),
+          const SizedBox(height: UmSpace.s2),
+          Text(
+            l10n.ridePriceDetail(euros(p.totalCostCents), p.persons, euros(p.commissionCents)),
+            style: UmText.bodySm.copyWith(color: c.inkMuted),
+          ),
+        ],
+      ),
     );
   }
 }

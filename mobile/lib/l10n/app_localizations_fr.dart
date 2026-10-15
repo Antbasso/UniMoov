@@ -894,4 +894,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorAcceptFirst => 'Accepte d\'abord ce trajet.';
+
+  @override
+  String get ridePricePayLabel => 'Tu paies';
+
+  @override
+  String get ridePriceReceiveLabel => 'Tu reçois';
+
+  @override
+  String suggestionPriceCompared(String price, String current) {
+    return 'Avec cette personne : $price par passager au lieu de $current';
+  }
 }

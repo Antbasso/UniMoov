@@ -88,7 +88,12 @@ class _SuggestionsScreenState extends ConsumerState<SuggestionsScreen> {
                           : UmChip(label: l10n.suggestionBeyond, icon: Icons.alt_route_rounded),
                       const SizedBox(height: UmSpace.s3),
                       Text(
-                        l10n.suggestionPrice(euros(s.passengerPaysCents)),
+                        value.currentPassengerPaysCents == null
+                            ? l10n.suggestionPrice(euros(s.passengerPaysCents))
+                            : l10n.suggestionPriceCompared(
+                                euros(s.passengerPaysCents),
+                                euros(value.currentPassengerPaysCents!),
+                              ),
                         style: UmText.body.copyWith(color: c.ink),
                       ),
                       const SizedBox(height: UmSpace.s3),

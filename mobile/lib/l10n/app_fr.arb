@@ -515,5 +515,18 @@
   "errorMeetingPointTooFar": "Choisis un point plus proche de chez toi.",
   "errorRideLocked": "Ce trajet ne peut plus être modifié.",
   "errorSuggestionUnavailable": "Cette personne n'est plus disponible.",
-  "errorAcceptFirst": "Accepte d'abord ce trajet."
+  "errorAcceptFirst": "Accepte d'abord ce trajet.",
+  "ridePricePayLabel": "Tu paies",
+  "ridePriceReceiveLabel": "Tu reçois",
+  "suggestionPriceCompared": "Avec cette personne : {price} par passager au lieu de {current}",
+  "@suggestionPriceCompared": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -33,7 +33,8 @@ void main() {
     expect(find.text('Toi'), findsOneWidget);
     expect(find.text('Hugo'), findsOneWidget); // autre passager : prénom seulement
     expect(find.text("Campus d'Annecy (USMB)"), findsOneWidget);
-    expect(find.textContaining('Tu paies 0,76'), findsOneWidget);
+    expect(find.text('Tu paies'), findsOneWidget);
+    expect(find.textContaining('0,76'), findsOneWidget);
     expect(find.textContaining('partagés entre 3 personnes'), findsOneWidget);
     expect(find.textContaining('Vers '), findsNWidgets(4));
     expect(find.text('Ajouter des passagers'), findsNothing);
@@ -76,14 +77,15 @@ void main() {
 
   testWidgets('conducteur : ajouter un passager écarté, avec le prix simulé', (tester) async {
     await openRide(tester, index: 1);
-    expect(find.textContaining('Tu reçois 1,12'), findsOneWidget);
+    expect(find.text('Tu reçois'), findsOneWidget);
+    expect(find.textContaining('1,12'), findsOneWidget);
     expect(find.text('Inès Robert'), findsOneWidget);
     await tapText(tester, 'Ajouter des passagers');
 
     expect(find.textContaining('chaque passager paie 0,76'), findsOneWidget);
     expect(find.text('Théo'), findsOneWidget);
     expect(find.text('Au-delà de ton détour max'), findsOneWidget);
-    expect(find.textContaining('Avec cette personne : 0,68'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'0,68.€ par passager au lieu de 0,76')), findsOneWidget);
     await tapText(tester, 'Proposer une place');
 
     expect(backend.invited, ['theo']);

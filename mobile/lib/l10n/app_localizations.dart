@@ -1575,6 +1575,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Accepte d\'abord ce trajet.'**
   String get errorAcceptFirst;
+
+  /// No description provided for @ridePricePayLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu paies'**
+  String get ridePricePayLabel;
+
+  /// No description provided for @ridePriceReceiveLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois'**
+  String get ridePriceReceiveLabel;
+
+  /// No description provided for @suggestionPriceCompared.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec cette personne : {price} par passager au lieu de {current}'**
+  String suggestionPriceCompared(String price, String current);
 }
 
 class _AppLocalizationsDelegate
