@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
-import '../domain/api_health.dart';
-import 'api_health_provider.dart';
+import '../../profile/presentation/me_controller.dart';
+import '../../profile/presentation/pause_sheet.dart';
 
-/// Écran d'accueil du pilote (jalon M0).
+/// Écran principal connecté : mode découverte, pause visible (cahier §12), semaine à venir.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -15,107 +17,59 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
+    final me = ref.watch(meProvider).value;
+    if (me == null) return const SizedBox.shrink();
 
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(UmSpace.s6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Center(child: _Logo()),
-              const SizedBox(height: UmSpace.s6),
-              Semantics(
-                header: true,
-                child: Text(l10n.homeTitle, style: UmText.h1.copyWith(color: c.ink)),
-              ),
-              const SizedBox(height: UmSpace.s3),
-              Text(l10n.homeSubtitle, style: UmText.h3.copyWith(color: c.brandStrong)),
-              const SizedBox(height: UmSpace.s6),
-              UmBenefitRow(
-                benefits: [
-                  UmBenefit(icon: Icons.schedule_rounded, label: l10n.homeBenefitSchedule),
-                  UmBenefit(icon: Icons.savings_outlined, label: l10n.homeBenefitPrice),
-                  UmBenefit(icon: Icons.handshake_outlined, label: l10n.homeBenefitConfirm),
-                ],
-              ),
-              const SizedBox(height: UmSpace.s6),
-              Center(child: UmNote(text: l10n.homeNote)),
-              const SizedBox(height: UmSpace.s6),
-              UmButton(
-                label: l10n.homeStart,
-                expand: true,
-                onPressed: () => ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(l10n.homeStartSoon))),
-              ),
-              const SizedBox(height: UmSpace.s5),
-              const Center(child: _ApiStatus()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) {
-    // Le logo a un fond blanc opaque : jamais directement sur un fond sombre (logo.md).
-    // On le pose sur la plaque claire `surface-raised` du thème clair dans les deux thèmes.
-    return Container(
-      padding: const EdgeInsets.all(UmSpace.s3),
-      decoration: BoxDecoration(
-        color: UmColorTokens.light.surfaceRaised,
-        borderRadius: BorderRadius.circular(UmRadius.lg),
-      ),
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: UmSize.logoWidth,
-        semanticLabel: AppLocalizations.of(context).logoLabel,
-      ),
-    );
-  }
-}
-
-class _ApiStatus extends ConsumerWidget {
-  const _ApiStatus();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final health = ref.watch(apiHealthProvider);
-
-    return switch (health) {
-      AsyncData(value: ApiHealth.ok) => UmChip(
-        label: l10n.apiStatusOk,
-        icon: Icons.check_circle_outline_rounded,
-        tone: UmChipTone.success,
-      ),
-      AsyncData(value: ApiHealth.degraded) => UmChip(
-        label: l10n.apiStatusDegraded,
-        icon: Icons.warning_amber_rounded,
-        tone: UmChipTone.danger,
-      ),
-      AsyncError() => Column(
-        children: [
-          UmChip(
-            label: l10n.apiStatusError,
-            icon: Icons.error_outline_rounded,
-            tone: UmChipTone.danger,
-          ),
-          const SizedBox(height: UmSpace.s2),
-          UmButton(
-            label: l10n.retry,
-            variant: UmButtonVariant.ghost,
-            onPressed: () => ref.invalidate(apiHealthProvider),
+    return UmPage(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: l10n.homeProfileTooltip,
+            icon: Icon(Icons.account_circle_outlined, color: c.brandStrong),
+            onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
       ),
-      _ => UmChip(label: l10n.apiStatusLoading, icon: Icons.sync_rounded),
-    };
+      title: l10n.homeGreeting(me.firstName),
+      children: [
+        Wrap(
+          spacing: UmSpace.s3,
+          runSpacing: UmSpace.s3,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (me.pausedToday)
+              UmChip(label: l10n.pausedToday, icon: Icons.pause_circle_outline_rounded),
+            UmButton(
+              label: me.pausedToday ? l10n.pauseManage : l10n.pauseAction,
+              icon: Icons.pause_circle_outline_rounded,
+              variant: UmButtonVariant.secondary,
+              onPressed: () =>
+                  me.pausedToday ? context.push(AppRoutes.profile) : showPauseSheet(context),
+            ),
+          ],
+        ),
+        if (me.discoveryMode) ...[
+          const SizedBox(height: UmSpace.s5),
+          UmCard(
+            title: l10n.discoveryTitle,
+            body: l10n.discoveryBody,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: UmButton(
+                label: l10n.discoveryAction,
+                onPressed: () => context.push(AppRoutes.profileAddress),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: UmSpace.s6),
+        Semantics(
+          header: true,
+          child: Text(l10n.weekTitle, style: UmText.h2.copyWith(color: c.ink)),
+        ),
+        const SizedBox(height: UmSpace.s3),
+        Text(l10n.weekEmpty, style: UmText.body.copyWith(color: c.inkMuted)),
+      ],
+    );
   }
 }

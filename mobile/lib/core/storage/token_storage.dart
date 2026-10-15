@@ -1,0 +1,57 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../features/auth/domain/auth_tokens.dart';
+
+/// Stockage des jetons de session ; jamais en clair hors du trousseau du système.
+abstract interface class TokenStorage {
+  Future<AuthTokens?> read();
+  Future<void> write(AuthTokens tokens);
+  Future<void> clear();
+}
+
+/// Keychain iOS / Keystore Android via flutter_secure_storage.
+class SecureTokenStorage implements TokenStorage {
+  SecureTokenStorage([FlutterSecureStorage? storage])
+    : _storage = storage ?? const FlutterSecureStorage();
+
+  final FlutterSecureStorage _storage;
+  static const _accessKey = 'auth.accessToken';
+  static const _refreshKey = 'auth.refreshToken';
+
+  @override
+  Future<AuthTokens?> read() async {
+    final access = await _storage.read(key: _accessKey);
+    final refresh = await _storage.read(key: _refreshKey);
+    if (access == null || refresh == null) return null;
+    return AuthTokens(accessToken: access, refreshToken: refresh);
+  }
+
+  @override
+  Future<void> write(AuthTokens tokens) async {
+    await _storage.write(key: _accessKey, value: tokens.accessToken);
+    await _storage.write(key: _refreshKey, value: tokens.refreshToken);
+  }
+
+  @override
+  Future<void> clear() async {
+    await _storage.delete(key: _accessKey);
+    await _storage.delete(key: _refreshKey);
+  }
+}
+
+/// Tests : stockage en mémoire, partageable entre deux lancements simulés de l'app.
+class MemoryTokenStorage implements TokenStorage {
+  AuthTokens? tokens;
+
+  @override
+  Future<AuthTokens?> read() async => tokens;
+
+  @override
+  Future<void> write(AuthTokens value) async => tokens = value;
+
+  @override
+  Future<void> clear() async => tokens = null;
+}
+
+final tokenStorageProvider = Provider<TokenStorage>((ref) => SecureTokenStorage());

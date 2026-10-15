@@ -42,5 +42,14 @@ Dio createDio({String baseUrl = apiBaseUrl}) => Dio(
   ),
 );
 
-/// Remplaçable dans les tests (`overrides`).
-final dioProvider = Provider<Dio>((ref) => createDio());
+/// Exécute un appel et convertit les erreurs dio en [ApiException].
+Future<T> guardApi<T>(Future<T> Function() call) async {
+  try {
+    return await call();
+  } on DioException catch (error) {
+    throw ApiException.fromDio(error);
+  }
+}
+
+/// Client sans jeton : routes d'authentification et rejeu des requêtes.
+final publicDioProvider = Provider<Dio>((ref) => createDio());

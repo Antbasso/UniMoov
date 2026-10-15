@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/api/api_client.dart';
+import '../../../core/api/error_messages.dart';
+import '../../../core/theme/um_theme.dart';
+import '../../../core/widgets/widgets.dart';
+import '../../../l10n/app_localizations.dart';
+import '../domain/me.dart';
+import '../domain/vehicle_input.dart';
+import 'me_controller.dart';
+
+/// Habillage commun : étape d'onboarding (avec « Passer ») ou modification depuis le profil.
+class ProfileFormFrame {
+  const ProfileFormFrame({
+    required this.primaryLabel,
+    required this.onDone,
+    this.onSkip,
+    this.overline,
+    this.appBar,
+  });
+
+  final String primaryLabel;
+  final Future<void> Function() onDone;
+  final Future<void> Function()? onSkip;
+  final String? overline;
+  final PreferredSizeWidget? appBar;
+}
+
+/// Exécute une action avec indicateur et message d'erreur traduit.
+mixin _SubmitState<T extends ConsumerStatefulWidget> on ConsumerState<T> {
+  bool busy = false;
+  String? errorCode;
+
+  Future<void> run(Future<void> Function() action) async {
+    setState(() {
+      busy = true;
+      errorCode = null;
+    });
+    try {
+      await action();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => errorCode = error.code);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  List<Widget> footerFor(ProfileFormFrame frame, AppLocalizations l10n, VoidCallback submit) => [
+    UmButton(label: frame.primaryLabel, expand: true, loading: busy, onPressed: submit),
+    if (frame.onSkip != null)
+      UmButton(
+        label: l10n.skipForNow,
+        variant: UmButtonVariant.ghost,
+        expand: true,
+        onPressed: busy ? null : () => run(frame.onSkip!),
+      ),
+  ];
+
+  List<Widget> errorFor(AppLocalizations l10n) => [
+    if (errorCode != null) ...[
+      const SizedBox(height: UmSpace.s4),
+      UmErrorText(apiErrorMessage(l10n, errorCode)),
+    ],
+  ];
+}
+
+class AddressForm extends ConsumerStatefulWidget {
+  const AddressForm({super.key, required this.me, required this.frame});
+
+  final Me me;
+  final ProfileFormFrame frame;
+
+  @override
+  ConsumerState<AddressForm> createState() => _AddressFormState();
+}
+
+class _AddressFormState extends ConsumerState<AddressForm> with _SubmitState {
+  late final _address = TextEditingController(text: widget.me.home?.address ?? '');
+  bool _showFieldErrors = false;
+
+  @override
+  void dispose() {
+    _address.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    setState(() => _showFieldErrors = true);
+    final text = _address.text.trim();
+    if (text.length < 5) return;
+    run(() async {
+      // Adresse inchangée : rien à géocoder.
+      if (text != widget.me.home?.address) {
+        await ref.read(meProvider.notifier).setAddress(text);
+      }
+      await widget.frame.onDone();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final home = widget.me.home;
+    return UmPage(
+      appBar: widget.frame.appBar,
+      overline: widget.frame.overline,
+      title: l10n.addressTitle,
+      intro: l10n.addressBody,
+      footer: footerFor(widget.frame, l10n, _submit),
+      children: [
+        UmField(
+          label: l10n.addressLabel,
+          controller: _address,
+          placeholder: l10n.addressPlaceholder,
+          keyboardType: TextInputType.streetAddress,
+          autofillHints: const [AutofillHints.fullStreetAddress],
+          error: _showFieldErrors && _address.text.trim().length < 5 ? l10n.fieldRequired : null,
+        ),
+        if (home != null) ...[
+          const SizedBox(height: UmSpace.s3),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: UmChip(
+              label: l10n.addressFound(home.address),
+              icon: Icons.check_circle_outline_rounded,
+              tone: UmChipTone.success,
+            ),
+          ),
+        ],
+        ...errorFor(l10n),
+      ],
+    );
+  }
+}
+
+class VehicleForm extends ConsumerStatefulWidget {
+  const VehicleForm({super.key, required this.me, required this.frame});
+
+  final Me me;
+  final ProfileFormFrame frame;
+
+  @override
+  ConsumerState<VehicleForm> createState() => _VehicleFormState();
+}
+
+class _VehicleFormState extends ConsumerState<VehicleForm> with _SubmitState {
+  late bool _hasCar = widget.me.vehicle != null;
+  late final _consumption = TextEditingController(
+    text: VehicleInput.formatConsumption(widget.me.vehicle?.consumptionLPer100km ?? 6),
+  );
+  late final _seats = TextEditingController(text: '${widget.me.vehicle?.defaultSeats ?? 3}');
+  late final _detour = TextEditingController(text: '${widget.me.vehicle?.maxDetourMinutes ?? 10}');
+  bool _showFieldErrors = false;
+
+  @override
+  void dispose() {
+    for (final c in [_consumption, _seats, _detour]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _submit() {
+    setState(() => _showFieldErrors = true);
+    final controller = ref.read(meProvider.notifier);
+    if (!_hasCar) {
+      run(() async {
+        if (widget.me.vehicle != null) await controller.removeVehicle();
+        await widget.frame.onDone();
+      });
+      return;
+    }
+    final consumption = VehicleInput.consumption(_consumption.text);
+    final seats = VehicleInput.seats(_seats.text);
+    final detour = VehicleInput.detour(_detour.text);
+    if (consumption == null || seats == null || detour == null) return;
+    run(() async {
+      await controller.setVehicle(
+        Vehicle(consumptionLPer100km: consumption, defaultSeats: seats, maxDetourMinutes: detour),
+      );
+      await widget.frame.onDone();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    String? check(Object? parsed, num min, num max) =>
+        _showFieldErrors && parsed == null ? l10n.fieldNumberInvalid(min, max) : null;
+
+    return UmPage(
+      appBar: widget.frame.appBar,
+      overline: widget.frame.overline,
+      title: l10n.vehicleTitle,
+      intro: l10n.vehicleBody,
+      footer: footerFor(widget.frame, l10n, _submit),
+      children: [
+        RadioGroup<bool>(
+          groupValue: _hasCar,
+          onChanged: (value) => setState(() => _hasCar = value ?? false),
+          child: Column(
+            children: [
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                value: true,
+                title: Text(l10n.vehicleYes),
+              ),
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                value: false,
+                title: Text(l10n.vehicleNo),
+              ),
+            ],
+          ),
+        ),
+        if (_hasCar) ...[
+          const SizedBox(height: UmSpace.s4),
+          UmField(
+            label: l10n.vehicleConsumptionLabel,
+            controller: _consumption,
+            help: l10n.vehicleConsumptionHelp,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            error: check(
+              VehicleInput.consumption(_consumption.text),
+              VehicleInput.consumptionMin,
+              VehicleInput.consumptionMax,
+            ),
+          ),
+          const SizedBox(height: UmSpace.s4),
+          UmField(
+            label: l10n.vehicleSeatsLabel,
+            controller: _seats,
+            keyboardType: TextInputType.number,
+            error: check(
+              VehicleInput.seats(_seats.text),
+              VehicleInput.seatsMin,
+              VehicleInput.seatsMax,
+            ),
+          ),
+          const SizedBox(height: UmSpace.s4),
+          UmField(
+            label: l10n.vehicleDetourLabel,
+            controller: _detour,
+            help: l10n.vehicleDetourHelp,
+            keyboardType: TextInputType.number,
+            error: check(
+              VehicleInput.detour(_detour.text),
+              VehicleInput.detourMin,
+              VehicleInput.detourMax,
+            ),
+          ),
+        ],
+        ...errorFor(l10n),
+      ],
+    );
+  }
+}
+
+class RoleForm extends ConsumerStatefulWidget {
+  const RoleForm({super.key, required this.me, required this.frame});
+
+  final Me me;
+  final ProfileFormFrame frame;
+
+  @override
+  ConsumerState<RoleForm> createState() => _RoleFormState();
+}
+
+class _RoleFormState extends ConsumerState<RoleForm> with _SubmitState {
+  late RoleMode _mode = widget.me.roleMode;
+
+  void _submit() => run(() async {
+    if (widget.me.vehicle != null && _mode != widget.me.roleMode) {
+      await ref.read(meProvider.notifier).setRoleMode(_mode);
+    }
+    await widget.frame.onDone();
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final hasVehicle = widget.me.vehicle != null;
+
+    return UmPage(
+      appBar: widget.frame.appBar,
+      overline: widget.frame.overline,
+      title: l10n.roleTitle,
+      intro: hasVehicle ? l10n.roleBody : null,
+      footer: footerFor(widget.frame, l10n, _submit),
+      children: [
+        if (hasVehicle)
+          RadioGroup<RoleMode>(
+            groupValue: _mode,
+            onChanged: (value) => setState(() => _mode = value ?? _mode),
+            child: Column(
+              children: [
+                RadioListTile<RoleMode>(
+                  contentPadding: EdgeInsets.zero,
+                  value: RoleMode.auto,
+                  title: Text(l10n.roleAuto),
+                  subtitle: Text(l10n.roleAutoHelp),
+                ),
+                RadioListTile<RoleMode>(
+                  contentPadding: EdgeInsets.zero,
+                  value: RoleMode.alwaysDriver,
+                  title: Text(l10n.roleDriver),
+                ),
+                RadioListTile<RoleMode>(
+                  contentPadding: EdgeInsets.zero,
+                  value: RoleMode.alwaysPassenger,
+                  title: Text(l10n.rolePassenger),
+                ),
+              ],
+            ),
+          )
+        else
+          UmCard(body: l10n.roleNoVehicle),
+        ...errorFor(l10n),
+      ],
+    );
+  }
+}

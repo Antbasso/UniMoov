@@ -2,18 +2,6 @@
   "@@locale": "fr",
   "appTitle": "Uni-Moov",
   "logoLabel": "Logo Uni-Moov",
-  "homeTitle": "Ton emploi du temps organise aussi tes trajets.",
-  "homeSubtitle": "Covoiturage domicile-campus pour les étudiants d'Annecy",
-  "homeNote": "Bientôt sur ton campus !",
-  "homeBenefitSchedule": "Trajets calés sur tes cours",
-  "homeBenefitPrice": "Frais partagés au juste prix",
-  "homeBenefitConfirm": "Confirmé à deux, toujours",
-  "homeStart": "Commencer",
-  "homeStartSoon": "L'inscription arrive très vite.",
-  "apiStatusLoading": "Connexion en cours…",
-  "apiStatusOk": "Connexion établie",
-  "apiStatusDegraded": "Service perturbé pour l'instant",
-  "apiStatusError": "Connexion impossible pour l'instant",
   "retry": "Réessayer",
   "fieldErrorPrefix": "Erreur",
   "fieldShowPassword": "Afficher le mot de passe",
@@ -63,5 +51,194 @@
   },
   "rideStatusProposed": "Proposé",
   "rideStatusConfirmed": "Confirmé",
-  "rideStatusCancelled": "Annulé"
+  "rideStatusCancelled": "Annulé",
+  "welcomeTitle": "Ton emploi du temps organise aussi tes trajets.",
+  "welcomeSubtitle": "Covoiturage domicile-campus pour les étudiants d'Annecy",
+  "welcomeNote": "Inscris-toi en deux minutes !",
+  "welcomeBenefitSchedule": "Trajets calés sur tes cours",
+  "welcomeBenefitPrice": "Frais partagés au juste prix",
+  "welcomeBenefitConfirm": "Confirmé à deux, toujours",
+  "welcomeSignup": "Créer mon compte",
+  "welcomeLogin": "J'ai déjà un compte",
+  "back": "Retour",
+  "loading": "Chargement…",
+  "continueAction": "Continuer",
+  "skipForNow": "Passer pour l'instant",
+  "save": "Enregistrer",
+  "edit": "Modifier",
+  "errorGeneric": "Une erreur est survenue. Réessaie.",
+  "errorNetwork": "Connexion impossible pour l'instant. Vérifie ton réseau.",
+  "errorRateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
+  "errorValidation": "Vérifie les informations saisies.",
+  "errorSessionExpired": "Ta session a expiré. Connecte-toi à nouveau.",
+  "errorEmailDomain": "Utilise ton adresse mail universitaire (univ-smb.fr).",
+  "errorCodeCooldown": "Attends une minute avant de redemander un code.",
+  "errorCodeInvalid": "Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.",
+  "errorAccountExists": "Tu as déjà un compte avec cette adresse. Connecte-toi.",
+  "errorInvalidCredentials": "Mail ou mot de passe incorrect.",
+  "errorAddressNotFound": "Adresse introuvable. Ajoute la ville ou le code postal.",
+  "errorGeocodingUnavailable": "Recherche d'adresse indisponible. Réessaie plus tard ou passe cette étape.",
+  "errorVehicleRequired": "Ajoute un véhicule pour conduire.",
+  "errorInvalidPause": "Vérifie les dates : la fin suit le début et la pause dure un an au plus.",
+  "errorTooManyPauses": "Tu as déjà programmé beaucoup de pauses. Supprimes-en une d'abord.",
+  "fieldEmailInvalid": "Saisis une adresse mail valide.",
+  "fieldCodeInvalid": "Le code contient 6 chiffres.",
+  "fieldPasswordTooShort": "8 caractères minimum.",
+  "fieldRequired": "Ce champ est obligatoire.",
+  "fieldNumberInvalid": "Saisis un nombre entre {min} et {max}.",
+  "@fieldNumberInvalid": {
+    "placeholders": {
+      "min": {
+        "type": "num"
+      },
+      "max": {
+        "type": "num"
+      }
+    }
+  },
+  "emailLabel": "Mail universitaire",
+  "emailPlaceholder": "prenom.nom@etu.univ-smb.fr",
+  "passwordLabel": "Mot de passe",
+  "passwordHelp": "8 caractères minimum.",
+  "firstNameLabel": "Prénom",
+  "lastNameLabel": "Nom",
+  "signupEmailTitle": "Crée ton compte",
+  "signupEmailBody": "Utilise ton adresse mail universitaire : on t'envoie un code pour la vérifier.",
+  "signupEmailAction": "Recevoir mon code",
+  "signupCodeTitle": "Vérifie ta boîte mail",
+  "signupCodeBody": "Saisis le code à 6 chiffres envoyé à {email}. Il est valable 10 minutes.",
+  "@signupCodeBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "signupCodeLabel": "Code de confirmation",
+  "signupCodeResend": "Renvoyer le code",
+  "signupCodeResent": "Nouveau code envoyé.",
+  "signupChangeEmail": "Changer d'adresse",
+  "signupIdentityTitle": "Présente-toi",
+  "signupIdentityBody": "Les autres étudiants voient ton prénom. Ton nom n'apparaît qu'après un trajet confirmé à deux.",
+  "signupIdentityAction": "Créer mon compte",
+  "loginTitle": "Content de te revoir",
+  "loginAction": "Me connecter",
+  "loginNoAccount": "Créer un compte",
+  "splashError": "Impossible de charger ton profil.",
+  "signOut": "Me déconnecter",
+  "onboardingProgress": "Étape {current} sur {total}",
+  "@onboardingProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "addressTitle": "Où habites-tu ?",
+  "addressBody": "Ton adresse sert à trouver des trajets près de chez toi. Avant un trajet confirmé à deux, les autres ne voient qu'un secteur approximatif.",
+  "addressLabel": "Adresse",
+  "addressPlaceholder": "12 rue de la Paix, Annecy",
+  "addressFound": "Adresse enregistrée : {address}",
+  "@addressFound": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "vehicleTitle": "As-tu une voiture ?",
+  "vehicleBody": "Avec une voiture, tu peux conduire et partager les frais avec tes passagers.",
+  "vehicleYes": "Oui, j'ai une voiture",
+  "vehicleNo": "Non, pas de voiture",
+  "vehicleConsumptionLabel": "Consommation (L/100 km)",
+  "vehicleConsumptionHelp": "Sert à calculer le partage des frais.",
+  "vehicleSeatsLabel": "Places passagers",
+  "vehicleDetourLabel": "Détour maximal (minutes)",
+  "vehicleDetourHelp": "On ne te propose que des passagers sous ce détour.",
+  "roleTitle": "Quel rôle préfères-tu ?",
+  "roleBody": "Tu pourras le changer quand tu veux depuis ton profil.",
+  "roleAuto": "Automatique",
+  "roleAutoHelp": "Uni-Moov te propose conducteur ou passager selon les besoins de la semaine.",
+  "roleDriver": "Toujours conducteur",
+  "rolePassenger": "Toujours passager",
+  "roleNoVehicle": "Sans voiture, tu voyages en passager. Tu peux ajouter un véhicule plus tard dans ton profil.",
+  "calendarTitle": "Ton emploi du temps",
+  "calendarBody": "Bientôt, Uni-Moov lira ton emploi du temps pour te proposer tes trajets de la semaine. Tu le connecteras depuis ton profil.",
+  "calendarAction": "Terminer",
+  "homeGreeting": "Salut {firstName}",
+  "@homeGreeting": {
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "homeProfileTooltip": "Mon profil",
+  "discoveryTitle": "Mode découverte",
+  "discoveryBody": "Ajoute ton adresse pour recevoir des propositions de trajets.",
+  "discoveryAction": "Compléter mon profil",
+  "pausedToday": "En pause aujourd'hui",
+  "pauseAction": "Mettre en pause",
+  "pauseManage": "Gérer mes pauses",
+  "weekTitle": "Ta semaine",
+  "weekEmpty": "Tes propositions de trajets arriveront ici une fois ton emploi du temps connecté.",
+  "profileTitle": "Mon profil",
+  "profileIdentity": "Identité",
+  "profileAddress": "Adresse",
+  "profileNoAddress": "Aucune adresse enregistrée.",
+  "profileVehicle": "Véhicule",
+  "profileNoVehicle": "Pas de véhicule.",
+  "profileVehicleSummary": "{consumption} L/100 km · {seats} places · détour {detour} min",
+  "@profileVehicleSummary": {
+    "placeholders": {
+      "consumption": {
+        "type": "String"
+      },
+      "seats": {
+        "type": "int"
+      },
+      "detour": {
+        "type": "int"
+      }
+    }
+  },
+  "profileRemoveVehicle": "Retirer le véhicule",
+  "profileRole": "Rôle",
+  "profilePauses": "Pauses",
+  "profileNoPauses": "Aucune pause programmée.",
+  "pauseRange": "Du {start} au {end}",
+  "@pauseRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseAlternating": "une semaine sur {weeks}",
+  "@pauseAlternating": {
+    "placeholders": {
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+  "pauseDelete": "Supprimer la pause du {start}",
+  "@pauseDelete": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseSheetTitle": "Mettre en pause",
+  "pauseSheetBody": "Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n'est pas touché.",
+  "pauseChooseDates": "Choisir les dates",
+  "pauseAlternatingToggle": "Une semaine sur deux (alternance)",
+  "pauseSave": "Enregistrer la pause"
 }
