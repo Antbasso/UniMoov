@@ -1,0 +1,7 @@
+{
+  "name": "unimoov-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": { "start": "node src/index.js" }
+}
