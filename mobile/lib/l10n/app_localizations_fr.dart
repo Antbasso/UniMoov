@@ -19,7 +19,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeTitle => 'Ton emploi du temps organise aussi tes trajets.';
 
   @override
-  String get homeSubtitle => 'Covoiturage domicile-campus pour les étudiants d\'Annecy';
+  String get homeSubtitle =>
+      'Covoiturage domicile-campus pour les étudiants d\'Annecy';
 
   @override
   String get homeNote => 'Bientôt sur ton campus !';

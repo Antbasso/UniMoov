@@ -30,16 +30,23 @@ Projet étudiant à commission limitée : coût de fonctionnement visé d'enviro
 - Backend : Node.js LTS, TypeScript strict, Fastify, Zod (validation, source des types), Drizzle ORM + migrations SQL, WebSocket (`@fastify/websocket`), jobs avec pg-boss (file dans PostgreSQL, pas de Redis en v1).
 - Données : PostgreSQL 16 + PostGIS. Géocodage : Base Adresse Nationale. Itinéraires : OpenRouteService (palier gratuit) derrière `RoutingProvider`, OSRM/Valhalla auto-hébergé en plan B. Mail : palier gratuit derrière `MailProvider`.
 - Dev : Docker Compose (`db`, `api`), `.env` non commité (`.env.example` à jour).
-- Le `backend/src/index.js` actuel est un squelette JavaScript : migre-le en TypeScript au jalon M0.
 
 ## Commandes (à garder à jour dans ce fichier)
 ```bash
-docker compose up -d db        # base locale
-cd backend && npm run dev      # API :3000
-cd backend && npm test         # tests (vitest)
+cp .env.example .env                          # une fois
+docker compose up -d                          # base PostGIS + API (migrations au démarrage) sur :3000
+docker compose up -d db                       # base seule, pour développer l'API hors Docker
+cd backend && npm ci
+cd backend && npm run dev                     # API :3000 (lit ../.env)
+cd backend && npm run db:migrate && npm run db:seed   # schéma + étudiants de démonstration
+cd backend && npm run db:new-migration -- nom_en_snake_case
 cd backend && npm run lint && npm run typecheck
+cd backend && npm test                        # unitaires (vitest, sans base)
+cd backend && npm run test:integration        # PostGIS requis : TEST_DATABASE_URL (base effacée)
 cd mobile && flutter pub get && flutter analyze && flutter test
-cd mobile && flutter run
+cd mobile && dart run tool/generate_tokens.dart   # après modification de tokens.json
+cd mobile && flutter gen-l10n                 # après modification de lib/l10n/app_fr.arb
+cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 Avant de déclarer un travail terminé, lance lint, typecheck et tests des parties touchées et donne le résultat réel. Si une commande n'existe pas encore, crée-la dans le même changement.
 
