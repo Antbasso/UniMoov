@@ -1,10 +1,34 @@
 services:
   db:
-    image: postgres:16
-    env_file: .env
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-unimoov}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définis POSTGRES_PASSWORD dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-unimoov}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   db-data:
