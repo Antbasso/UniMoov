@@ -1,0 +1,45 @@
+name: unimoov
+description: "Uni-Moov : covoiturage domicile-campus pour étudiants."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  dio: ^5.11.1
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.1.0
+  intl: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: UniMoov Display
+      fonts:
+        - asset: assets/fonts/UniMoovDisplay-SemiBold.ttf
+          weight: 600
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+    - family: Caveat
+      fonts:
+        - asset: assets/fonts/Caveat-SemiBold.ttf
+          weight: 600
