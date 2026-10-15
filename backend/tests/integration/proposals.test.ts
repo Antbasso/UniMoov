@@ -278,6 +278,16 @@ describe('recherche manuelle', () => {
     }
   });
 
+  it('sans cours ce jour-là, on peut rejoindre une voiture trouvée par la recherche', async () => {
+    // Inès n'a pas de cours le vendredi : elle cherche un aller pour 8 h.
+    const search = await call('Inès', 'GET', `/search/rides?day=${FRIDAY}&direction=to_campus&time=08:00`);
+    const rides = search.json<{ rides: { rideId: string; driver: Person }[] }>().rides;
+    expect(rides.length).toBeGreaterThan(0);
+    const joined = await call('Inès', 'POST', `/proposals/${rides[0]!.rideId}/accept`);
+    expect(joined.statusCode).toBe(200);
+    expect(joined.json()).toMatchObject({ role: 'passenger', myStatus: 'accepted' });
+  });
+
   it('refuse une date passée', async () => {
     expect((await call('Théo', 'GET', '/search/rides?day=2026-10-01&direction=to_campus')).statusCode).toBe(400);
   });

@@ -187,6 +187,12 @@ export class MatchingRepo {
     return ride!.id;
   }
 
+  /** Lecture sans verrou : sert à connaître le jour avant de prendre le verrou du jour. */
+  async peekRide(rideId: string): Promise<RideRow | undefined> {
+    const [ride] = await this.db.select().from(rides).where(eq(rides.id, rideId));
+    return ride ? { ...ride, day: ride.day!, direction: ride.direction } : undefined;
+  }
+
   async findRide(rideId: string, db: DbOrTx = this.db): Promise<RideRow | undefined> {
     const [ride] = await db
       .select()

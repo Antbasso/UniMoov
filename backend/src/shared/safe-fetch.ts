@@ -101,6 +101,15 @@ export async function fetchPublicText(raw: string, options: SafeFetchOptions = {
   const url = normalizeCalendarUrl(raw);
 
   return new Promise((resolve, reject) => {
+    // `timeout` ci-dessous ne mesure que l'inactivité ; ce délai borne la durée totale
+    // (serveur qui envoie au compte-gouttes).
+    const deadline = setTimeout(() => request.destroy(new FetchFailedError('Délai dépassé')), timeoutMs);
+    const settle = <T>(fn: (value: T) => void) => (value: T) => {
+      clearTimeout(deadline);
+      fn(value);
+    };
+    resolve = settle(resolve);
+    reject = settle(reject);
     const request = https.get(
       url,
       { lookup: guardedLookup, timeout: timeoutMs, headers: { accept: 'text/calendar, */*' } },

@@ -100,3 +100,44 @@ describe('daySlotsFromIntervals', () => {
     ]);
   });
 });
+
+describe('robustesse', () => {
+  const victim = wrap(
+    ['BEGIN:VEVENT', 'UID:v', 'DTSTART;TZID=Europe/Paris:20261013T080000', 'DTEND;TZID=Europe/Paris:20261013T090000', 'END:VEVENT'].join('\r\n'),
+  );
+
+  it('un fuseau déclaré par un agenda n’affecte pas la lecture des autres', () => {
+    const before = parseIcsIntervals(victim, from, to)[0]!.start.toISOString();
+    const evil = wrap(
+      [
+        'BEGIN:VEVENT',
+        'UID:e',
+        'DTSTART;TZID=Europe/Paris:20261012T080000',
+        'DTEND;TZID=Europe/Paris:20261012T090000',
+        'END:VEVENT',
+      ].join('\r\n'),
+      [
+        'BEGIN:VTIMEZONE',
+        'TZID:Europe/Paris',
+        'BEGIN:STANDARD',
+        'DTSTART:19700101T000000',
+        'TZOFFSETFROM:+0500',
+        'TZOFFSETTO:+0500',
+        'END:STANDARD',
+        'END:VTIMEZONE',
+      ].join('\r\n'),
+    );
+    // Son propre fuseau s'applique à ses propres événements…
+    expect(parseIcsIntervals(evil, from, to)[0]!.start.toISOString()).toBe('2026-10-12T03:00:00.000Z');
+    // … mais pas à ceux des agendas lus ensuite.
+    expect(parseIcsIntervals(victim, from, to)[0]!.start.toISOString()).toBe(before);
+    expect(before).toBe('2026-10-13T06:00:00.000Z');
+  });
+
+  it('une récurrence quotidienne commencée il y a des années reste lue dans la fenêtre', () => {
+    const old = wrap(
+      ['BEGIN:VEVENT', 'UID:o', 'DTSTART:20000103T070000Z', 'DTEND:20000103T080000Z', 'RRULE:FREQ=DAILY', 'END:VEVENT'].join('\r\n'),
+    );
+    expect(parseIcsIntervals(old, from, to)).toHaveLength(7);
+  });
+});

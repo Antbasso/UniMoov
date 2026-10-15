@@ -219,9 +219,11 @@ export class MatchingService {
    * quand le conducteur et au moins un passager ont accepté (confirmation à deux).
    */
   async accept(userId: string, rideId: string): Promise<ProposalView> {
+    // Toujours le verrou du jour avant celui du trajet (même ordre que la régénération).
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
     return this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
       const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
-      await this.repo.lockDay(tx, ride.day);
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
 
@@ -229,7 +231,8 @@ export class MatchingService {
         if (!ACTIVE(me)) throw new AppError(409, 'proposal_declined', 'Tu as refusé cette proposition');
         await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
       } else {
-        const joinable = await this.joinable(userId, ride.day, ride.direction, null, tx);
+        // Sans créneau ce jour-là (trajet trouvé par la recherche) : l'heure du trajet choisi.
+        const joinable = await this.joinable(userId, ride.day, ride.direction, null, tx, undefined, ride.targetTime);
         const match = joinable.find((j) => j.rideId === rideId);
         if (!match) throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
         for (const other of await this.repo.otherActiveRides(userId, ride.day, ride.direction, rideId, tx)) {
@@ -258,9 +261,10 @@ export class MatchingService {
    * Après acceptation, c'est une annulation (jalon M5).
    */
   async decline(userId: string, rideId: string): Promise<void> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
     const ride = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
       const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
-      await this.repo.lockDay(tx, ride.day);
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
       if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
@@ -310,6 +314,7 @@ export class MatchingService {
     excludeRideId: string | null,
     db?: DbOrTx,
     explicitTime?: string,
+    fallbackTime?: Date,
   ): Promise<JoinableRide[]> {
     const me = (await this.repo.needsForDay(day, db)).find((n) => n.userId === userId);
     const homes = await this.repo.homesAndVehicles([userId], db);
@@ -321,7 +326,7 @@ export class MatchingService {
         ? direction === 'to_campus'
           ? me.start
           : me.end
-        : null;
+        : (fallbackTime ?? null);
     if (!myTime) throw new AppError(400, 'time_required', 'Indique une heure pour ce jour');
 
     const declines = await this.repo.declines(day, direction, db);
