@@ -1,0 +1,92 @@
+# UniMoov — Cahier des charges fonctionnel
+
+*Document de cadrage issu d'une session de brainstorming, à destination du développeur. Version pilote (v1) et pistes d'évolution (v2) clairement séparées.*
+
+## 1. Inscription et authentification
+
+- Vérification d'identité obligatoire à l'inscription : l'utilisateur saisit son adresse mail universitaire et reçoit un code de confirmation par mail.
+- Une fois vérifié, choix de la méthode de connexion au quotidien : identifiant (mail universitaire) + mot de passe, ou connexion rapide via Google ou Apple, reliée au compte déjà vérifié.
+- Onboarding en plusieurs étapes, chacune avec un bouton « passer / configurer plus tard » : profil (adresse domicile, lieu de cours), véhicule si applicable, connexion de l'emploi du temps, validation des préférences de trajet pour la semaine.
+- Tant que le profil n'est pas complet, l'utilisateur a accès à un mode découverte limité, sans accès au matching complet.
+
+## 2. Profil véhicule et rôle conducteur/passager
+
+- À la configuration du profil, l'utilisateur indique s'il possède une voiture ; si oui, consommation du véhicule et nombre de places passagers par défaut.
+- La capacité par défaut peut être modifiée ponctuellement pour un trajet donné.
+- Gestion du rôle à chaque trajet, deux modes au choix : mode automatique (uniquement si véhicule déclaré, l'app propose conducteur ou passager selon l'optimisation du réseau), ou mode forcé (l'utilisateur impose toujours conducteur ou toujours passager).
+- Sans véhicule déclaré : rôle passager par défaut, pas d'accès au mode automatique.
+
+## 3. Emploi du temps et génération des trajets
+
+- Synchronisation d'agenda via ICS/CalDAV, Google Calendar ou Microsoft Graph ; alternative si refus : saisie manuelle des heures de début/fin de journée.
+- Chaque semaine, l'appli propose automatiquement un trajet par créneau à partir de l'emploi du temps synchronisé ; l'utilisateur accepte ou refuse, avec un bouton pour voir d'autres propositions compatibles.
+- Si l'agenda synchronisé modifie l'heure de début/fin d'une journée, le système relance automatiquement une nouvelle recherche de matching pour ce créneau.
+
+## 4. Matching et recherche manuelle
+
+- Chaque conducteur définit un seuil de détour acceptable (temps ou distance) ; le moteur ne propose un passager que si le détour reste sous ce seuil.
+- V1 : règle simple de départage en cas de conflit sur les places (détour le plus court, combiné au score de fiabilité). V2 (évolution) : matching global optimisant l'ensemble du réseau.
+- Recherche manuelle en secours si aucune proposition automatique : écran liste avec filtres (horaires, distance), limité en nombre de requêtes par jour pour éviter le scraping.
+- Confidentialité avant acceptation mutuelle : seules ces informations sont visibles — prénom, photo, secteur de départ approximatif (jamais l'adresse exacte), horaire, score de fiabilité, temps de détour exact engendré pour le conducteur. Nom complet et adresse précise débloqués après acceptation des deux parties.
+- Sur l'écran de sélection des covoitureurs, uniquement visible par le conducteur : suggestion d'ajout de passagers supplémentaires (y compris ceux écartés automatiquement car hors seuil de détour), avec simulation en direct de la baisse de prix induite.
+
+## 5. Tarification
+
+- Estimation du coût du trajet : consommation du véhicule × distance du trajet × prix moyen du carburant en France (actualisé). Coût total divisé entre toutes les personnes du véhicule (conducteur inclus).
+- Commission UniMoov : petite commission symbolique par passager, valeur à définir dans le business model — implémenter comme variable configurable avec une valeur par défaut, ne pas coder en dur.
+- Le prix affiché avant le trajet est une estimation (basée sur le nombre de passagers prévus). Le prix définitif n'est calculé qu'à la fin du trajet : coût total ÷ nombre réel de personnes ayant validé leur présence. Un passager absent ne fait donc pas payer plus cher les autres ; il est pénalisé sur son score (section 7), pas eux.
+- Le conducteur avance les frais ; chaque passager le rembourse via l'app dès validation individuelle de sa présence (paiement déclenché par passager, pas en bloc).
+- V2 (évolution) : QR code pour l'accès aux places réservées.
+
+## 6. Messagerie intégrée
+
+Architecture façon Teams, trois niveaux de conversation :
+
+- Message privé en tête-à-tête entre deux utilisateurs.
+- Groupe personnalisé créé librement par les utilisateurs (trajets récurrents).
+- Chat automatique lié à un trajet confirmé, incluant tous les participants, créé à la confirmation et lié au cycle de vie du trajet.
+- Rétention : le chat de trajet reste accessible un certain temps après la fin du trajet, puis est archivé, puis supprimé (durée exacte à définir — cohérent avec la minimisation des données RGPD).
+
+## 7. Confiance et fiabilité
+
+- Notation croisée optionnelle après chaque trajet : le conducteur note ses passagers, les passagers notent le conducteur.
+- Score de fiabilité agrégeant les notations et des données comportementales objectives (taux d'annulation, etc.), visible publiquement sur le profil avant tout engagement sur un trajet.
+- Le score est utilisé comme critère dans le matching automatique (priorité aux utilisateurs bien notés) — pas de sanction brutale ni de bannissement automatique.
+
+## 8. Annulations et modifications
+
+- Toute annulation entraîne : une pénalité sur le score de fiabilité (dégressive selon le délai, plus sévère si tardif), une notification immédiate à l'autre partie, et une relance automatique de recherche de remplaçant sur le créneau.
+- Un changement d'horaire détecté dans l'agenda synchronisé déclenche aussi une nouvelle recherche automatique (voir section 3).
+
+## 9. Validation de présence et clôture du trajet
+
+- Au moment du rendez-vous, vérification de la géolocalisation des deux téléphones pour confirmer leur proximité physique ; cette validation déclenche à la fois la confirmation du trajet et le paiement individuel du passager concerné.
+- Échec de la vérification pour un passager = absence constatée automatiquement → pas de remboursement de sa part, pénalité de score (section 8).
+- Nécessite un partage de localisation actif en continu pendant tout le trajet (bien expliciter à l'utilisateur côté confidentialité).
+- Clôture du trajet : manuelle (bouton « trajet finalisé » par n'importe quel participant), ou automatique (détection de l'arrivée à destination via la position partagée en continu). Si ni l'un ni l'autre : notification push invitant à rouvrir l'app pour finaliser manuellement.
+
+## 10. Litiges
+
+- Premier niveau : arbitrage automatique basé sur les horodatages serveur (annulation, confirmation de présence, etc.).
+- Second niveau : en cas de désaccord, possibilité de contacter l'équipe UniMoov par mail ou message pour un arbitrage humain.
+
+## 11. Notifications
+
+- Push activé par défaut pour tous les événements (nouveau match, rappel de trajet, annulation, message de chat, etc.). Rappel de trajet : 1 heure avant le départ.
+- Personnalisation fine disponible dans les paramètres (ex. désactiver les notifications de chat en gardant les rappels de trajet).
+
+## 12. Mode pause
+
+- Bouton de mise en pause visible directement sur l'écran principal (pas enfoui dans les paramètres).
+- La pause n'affecte pas le score de fiabilité.
+- Programmable à l'avance avec récurrence (ex. une semaine sur deux, pour les rythmes d'alternance).
+
+## 13. Plateforme
+
+- Application mobile uniquement (iOS/Android via Flutter), pas de version web — positionnement proche de BlaBlaCar Daily (covoiturage courte distance et récurrent domicile-campus), à l'opposé d'un covoiturage longue distance occasionnel.
+
+## 14. Points encore ouverts à trancher plus tard
+
+- Montant exact de la commission UniMoov (dépend du business model final).
+- Durée exacte de rétention des chats de trajet avant archivage/suppression.
+- Détail du matching global v2 (optimisation réseau) et du système de QR code v2.

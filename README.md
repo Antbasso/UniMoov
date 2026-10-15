@@ -42,9 +42,15 @@ Sécurité, consentement lors de la connexion des agendas, minimisation des donn
 ```
 mobile/    application Flutter
 backend/   API Node.js
-docs/      fiche projet, étude de marché, présentation
+docs/      cahier des charges, fiche projet, étude, présentation, design system
 assets/    logo et visuels
 ```
+
+## Documentation
+
+- [Cahier des charges fonctionnel](docs/cahier-des-charges.md) : fonctionnalités v1 (pilote) et pistes v2.
+- [Design system](docs/design-system/README.md) : marque, tokens (`tokens.json`), composants et polices.
+- [Fiche projet](docs/fiche-projet.md), [étude](docs/etude.md), [présentation](docs/presentation.md).
 
 ## Démarrage (développement)
 

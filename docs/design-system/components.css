@@ -1,0 +1,55 @@
+/* Uni-Moov — component styles. Every value comes from tokens.css. */
+.um-page { margin: 0; padding: var(--space-5); background: var(--surface); color: var(--ink); font-family: var(--font-sans); font-size: 16px; line-height: 24px; }
+.um-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+.um-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* Button */
+.um-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 48px; padding: var(--space-3) var(--space-5); border: 2px solid transparent; border-radius: var(--radius-md); font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
+.um-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.um-btn--primary { background: var(--brand); color: var(--on-brand); }
+.um-btn--primary:hover { background: var(--brand-strong); color: var(--surface); }
+.um-btn--secondary { background: var(--surface-raised); color: var(--brand-strong); border-color: var(--border-control); }
+.um-btn--secondary:hover { background: var(--lavender); }
+.um-btn--ghost { background: transparent; color: var(--brand-strong); }
+.um-btn--ghost:hover { background: var(--surface-tint); }
+.um-btn--pill { border-radius: var(--radius-pill); }
+.um-btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* Chip */
+.um-chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); background: var(--lavender); color: var(--brand-strong); font-size: 14px; line-height: 20px; font-weight: 600; }
+.um-chip--success { background: var(--success-soft); color: var(--success); }
+.um-chip--danger { background: var(--danger-soft); color: var(--danger); }
+.um-chip svg { width: 16px; height: 16px; }
+.um-note { display: inline-block; padding: var(--space-3) var(--space-5); background: var(--lavender); color: var(--brand-strong); font-family: var(--font-hand); font-size: 26px; line-height: 28px; font-weight: 600; border-radius: var(--radius-md); transform: rotate(-4deg); }
+
+/* Field */
+.um-field { display: flex; flex-direction: column; gap: var(--space-1); max-width: 360px; }
+.um-field label { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink); }
+.um-field input { min-height: 48px; padding: var(--space-3) var(--space-4); border: 2px solid var(--border-control); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--ink); font-family: var(--font-sans); font-size: 16px; }
+.um-field input::placeholder { color: var(--ink-muted); }
+.um-field input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.um-field .um-help { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--ink-muted); }
+.um-field--error input { border-color: var(--danger); }
+.um-field--error .um-help { color: var(--danger); }
+
+/* Card */
+.um-card { background: var(--surface-raised); color: var(--ink); border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--shadow-soft); }
+.um-card--frame { background: var(--lavender); padding: var(--space-3); }
+.um-card--frame > .um-card__inner { background: var(--surface-raised); border-radius: var(--radius-md); padding: var(--space-4); }
+.um-card h3 { margin: 0 0 var(--space-2); font-family: var(--font-display); font-size: 18px; line-height: 24px; font-weight: 600; }
+.um-card p { margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+
+/* Benefit (icône + légende) */
+.um-benefits { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); text-align: center; }
+.um-benefit { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); font-size: 14px; line-height: 20px; color: var(--ink); }
+.um-benefit svg { width: 48px; height: 48px; fill: none; stroke: var(--brand-strong); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* RideCard */
+.um-ride { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3) var(--space-4); max-width: 420px; background: var(--surface-raised); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: var(--shadow-soft); }
+.um-ride__route { display: flex; flex-direction: column; gap: var(--space-1); }
+.um-ride__stop { display: flex; align-items: center; gap: var(--space-2); font-size: 16px; line-height: 24px; font-weight: 600; }
+.um-ride__stop::before { content: ""; width: 12px; height: 12px; border-radius: var(--radius-pill); background: var(--brand); flex: none; }
+.um-ride__stop--end::before { background: transparent; border: 3px solid var(--brand-strong); box-sizing: border-box; }
+.um-ride__meta { font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+.um-ride__price { align-self: start; font-family: var(--font-display); font-size: 26px; line-height: 32px; font-weight: 600; color: var(--brand-strong); }
+.um-ride__foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

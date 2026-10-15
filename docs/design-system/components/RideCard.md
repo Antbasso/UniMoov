@@ -1,0 +1,3 @@
+Carte de trajet de covoiturage étudiant : départ et arrivée reliés par deux repères (pastille pleine `brand` au départ, anneau `brand-strong` à l'arrivée), heure et conducteur en `ink-muted`, prix en `brand-strong`, puce de statut et bouton `primary` en pied.
+
+Ajout volontaire (le logo et l'affiche ne définissent pas d'écran d'application) : elle n'utilise que des tokens existants, rayon `radius-md` et ombre `shadow-soft`. Le consommateur fournit les deux lieux, l'horaire, le prénom du conducteur, le nombre de places, le prix et l'état. Une seule action par carte ; l'état annulé utilise la puce `danger` avec son mot.
