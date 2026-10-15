@@ -36,17 +36,22 @@ Base : `/api/v1`, JSON, UTF-8. Authentification `Authorization: Bearer <jwt>` sa
 - `GET /proposals/{id}/alternatives` → `{ rides: [{ rideId, day, direction, time, seatsLeft, driver }] }` : autres voitures compatibles, classées par détour puis fiabilité (passagers ; liste vide pour un conducteur, les suggestions avec simulation de prix arrivent en M3).
 - `GET /search/rides?day=AAAA-MM-JJ&direction=to_campus|from_campus&time=HH:MM` (heure facultative si un créneau existe ce jour-là) : même format ; quota quotidien `app_settings.search.dailyQuota` (`429 search_quota_exceeded`) et limite de débit par IP.
 - Avant acceptation mutuelle, les personnes sont représentées par : `userId`, `firstName`, `photoUrl`, `sector` (centre de la cellule de 500 m, arrondi), `reliabilityScore`, `detourMinutes`, `status`. Les schémas de réponse sont stricts : nom de famille, adresse et coordonnées exactes ne peuvent pas sortir de l'API.
-- Conducteur uniquement : `GET /rides/{id}/suggestions` (passagers supplémentaires, y compris hors seuil, avec `estimatedPricePerPerson` simulé) : M3.
+- Conducteur uniquement : `GET /rides/{id}/suggestions` → `{ seatsLeft, current: { persons, shareCents, passengerPaysCents } | null, suggestions: [{ person, withinDetourLimit, shareCents, passengerPaysCents }] }` : passagers sans trajet ce jour-là dans ce sens, horaire compatible, y compris ceux écartés car au-delà du détour maximal (`withinDetourLimit: false`), avec le prix par passager simulé (distance estimée, comme le prix actuel). Dix au plus, par détour croissant puis fiabilité. `403 forbidden` hors conducteur, `409 accept_first` tant que le conducteur n'a pas accepté.
+- `POST /rides/{id}/suggestions/{userId}/invite` → la proposition du conducteur à jour : la personne reçoit une proposition à accepter (`409 ride_full`, `409 suggestion_unavailable`).
 
 ## Trajets
-- `GET /rides?status=` ; `GET /rides/{id}` : participants, arrêts ordonnés, `eta`, prix estimé ; coordonnées exactes selon les droits (voir ci-dessus).
-- `PUT /rides/{id}/me/pickup` `{ useMeetingPoint, label, lat, lon }`.
-- `POST /rides/{id}/cancel` ; effets : pénalité de score, notification, relance du matching.
+- `GET /rides/{id}` (participant accepté d'un trajet `confirmed`, `in_progress` ou `completed`) → `{ id, day, direction, time, status, role, seatsTotal, distanceM, durationS, routeEstimated, route: [[lat, lon]…], stops, price }`. `403 forbidden` pour toute autre personne (y compris un participant qui n'a pas accepté), `409 ride_not_confirmed` avant la confirmation à deux, `404` si le trajet n'existe pas.
+  - `stops` dans l'ordre du trajet : aller = domicile du conducteur, passagers acceptés, campus ; retour = campus, passagers, domicile du conducteur. Chaque arrêt : `{ order, kind: driver|passenger|campus, userId, firstName, lastName, label, lat, lon, eta, isMeetingPoint }`. Le point de rendez-vous remplace l'adresse dans toutes les réponses. `lastName` n'est rempli qu'entre conducteur et passager (et pour soi) : entre passagers, prénom seulement.
+  - `route` : tracé simplifié ; `routeEstimated: true` si le fournisseur d'itinéraires était indisponible (lignes droites estimées).
+  - Plan (ordre des arrêts, tracé, heures de passage, distance) calculé à la confirmation, puis recalculé quand un passager accepte ou change de point de rendez-vous ; aller : arrivée au campus à l'heure cible, retour : départ du campus à l'heure cible.
+- `GET /rides/{id}/price` → `{ price }` : `{ estimated: true, totalCostCents, persons, shareCents, commissionCents, passengerPaysCents, driverReceivesCents, youPayCents, youReceiveCents }`, `null` si le conducteur n'a plus de véhicule. Coût = consommation × distance du tracé × `pricing.fuelPriceCentsPerLitre`, partagé entre conducteur et passagers acceptés (part arrondie au centime supérieur), plus `pricing.commissionCentsPerPassenger` pour chaque passager. Le prix final est calculé à la clôture (M4).
+- `PUT /rides/{id}/me/pickup` `{ useMeetingPoint, label?, lat?, lon? }` → `204` (passager accepté, trajet pas encore commencé) : à moins de `rides.meetingPointMaxMeters` du domicile (`422 meeting_point_too_far`) ; `useMeetingPoint: false` revient à l'adresse. `403 forbidden` pour le conducteur ou un non-participant, `409 ride_locked` une fois le trajet commencé.
+- `GET /rides?status=` : M4 (liste des trajets du jour, écran de départ).
+- `POST /rides/{id}/cancel` ; effets : pénalité de score, notification, relance du matching (M5).
 - `POST /rides/{id}/start` (conducteur) : passe en `in_progress`, ouvre le suivi en direct.
 - `POST /rides/{id}/participants/{userId}/picked-up` (conducteur) : « monté ».
 - `POST /rides/{id}/presence` : tentative de validation de présence (le serveur compare les positions).
 - `POST /rides/{id}/finish` : clôture manuelle ; clôture automatique côté serveur à l'arrivée.
-- `GET /rides/{id}/price` : estimation ; le prix final est calculé à la clôture.
 
 ## Navigation (conducteur uniquement)
 - `GET /rides/{id}/navigation` →
