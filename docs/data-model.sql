@@ -155,6 +155,7 @@ CREATE TABLE ride_participants (
   presence_validated_at timestamptz,
   amount_cents integer,
   cancelled_at timestamptz,
+  picked_up_at timestamptz,               -- « monté » déclaré par le conducteur (arbitrage des litiges)
   PRIMARY KEY (ride_id, user_id)
 );
 CREATE INDEX ride_participants_user_idx ON ride_participants (user_id);
@@ -269,28 +270,37 @@ CREATE TABLE ratings (
   rater_id uuid NOT NULL REFERENCES users(id),
   rated_id uuid NOT NULL REFERENCES users(id),
   stars smallint NOT NULL CHECK (stars BETWEEN 1 AND 5),
-  comment text,
+  comment text,                           -- non utilisé en v1 (étoiles seulement)
+  created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (ride_id, rater_id, rated_id)
 );
+CREATE INDEX ratings_rated_idx ON ratings (rated_id, created_at);
 
 CREATE TABLE reliability_events (         -- annulations, absences, etc. (entrées du score)
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id),
   ride_id uuid REFERENCES rides(id),
-  kind text NOT NULL,                      -- 'late_cancel' | 'no_show' | 'completed' ...
-  weight numeric(4,3) NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('completed','cancel_early','cancel_medium','cancel_late','no_show','correction')),
+  weight numeric(4,3) NOT NULL,            -- correction : poids négatif (écriture seule, pas de mise à jour)
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX reliability_events_user_idx ON reliability_events (user_id, created_at);
+CREATE UNIQUE INDEX reliability_events_once_idx ON reliability_events (user_id, ride_id, kind)
+  WHERE ride_id IS NOT NULL AND kind <> 'correction';
 
 CREATE TABLE disputes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ride_id uuid NOT NULL REFERENCES rides(id),
   opened_by uuid NOT NULL REFERENCES users(id),
-  reason text NOT NULL,
+  reason text NOT NULL CHECK (reason IN ('cancellation_penalty','marked_absent','payment','driver_issue','other')),
+  message text,
   level smallint NOT NULL DEFAULT 1,       -- 1 automatique, 2 humain
-  resolution text,
+  decision text NOT NULL DEFAULT 'escalated' CHECK (decision IN ('upheld','corrected','escalated')),
+  resolution text,                         -- code d'explication de l'arbitrage
+  escalated_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX disputes_once_idx ON disputes (ride_id, opened_by, reason);
 
 CREATE TABLE notification_preferences (
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
@@ -317,6 +327,8 @@ CREATE TABLE reports (                     -- signalements
   reporter_id uuid NOT NULL REFERENCES users(id),
   target_user_id uuid REFERENCES users(id),
   target_message_id uuid REFERENCES messages(id),
-  reason text NOT NULL,
+  reason text NOT NULL CHECK (reason IN ('dangerous_driving','inappropriate_behaviour','fake_profile','other')),
+  message text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX reports_reporter_idx ON reports (reporter_id, created_at);
