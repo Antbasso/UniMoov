@@ -14,6 +14,13 @@ const settingSchemas = {
   'pricing.fuelPriceCentsPerLitre': z.number().int().min(1).max(1000),
   'pricing.commissionCentsPerPassenger': z.number().int().min(0).max(500),
   'rides.meetingPointMaxMeters': z.number().int().min(100).max(20_000),
+  'rides.startWindowMinutes': z.number().int().min(0).max(24 * 60),
+  'rides.staleAfterHours': z.number().int().min(1).max(72),
+  'wallet.minTopupCents': z.number().int().min(1).max(100_000),
+  'wallet.holdMarginPercent': z.number().min(0).max(100),
+  'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
+  'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),
+  'tracking.traceRetentionDays': z.number().int().min(1).max(365),
 } as const;
 
 type SettingKey = keyof typeof settingSchemas;

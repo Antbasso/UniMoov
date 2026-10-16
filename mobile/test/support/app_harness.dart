@@ -8,10 +8,15 @@ import 'package:unimoov/core/widgets/widgets.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/profile/data/profile_api.dart';
 import 'package:unimoov/features/proposals/data/proposals_api.dart';
+import 'package:unimoov/core/location/location_service.dart';
+import 'package:unimoov/features/rides/data/live_channel.dart';
+import 'package:unimoov/features/rides/data/nav_launcher.dart';
 import 'package:unimoov/features/rides/data/rides_api.dart';
+import 'package:unimoov/features/wallet/data/wallet_api.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
 
 import 'fake_backend.dart';
+import 'live_fakes.dart';
 
 /// Lance l'app complète sur un faux backend ; appeler deux fois simule un redémarrage
 /// (nouvel état Riverpod, même stockage de jetons, même serveur).
@@ -21,6 +26,10 @@ Future<void> launchApp(
   required MemoryTokenStorage storage,
   ThemeMode themeMode = ThemeMode.light,
   DateTime? now,
+  DateTime Function()? clock,
+  FakeLiveConnector? live,
+  FakeLocationService? location,
+  FakeNavLauncher? launcher,
 }) async {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -37,8 +46,12 @@ Future<void> launchApp(
         scheduleApiProvider.overrideWithValue(backend),
         proposalsApiProvider.overrideWithValue(backend),
         ridesApiProvider.overrideWithValue(backend),
+        walletApiProvider.overrideWithValue(backend),
+        liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),
+        locationServiceProvider.overrideWithValue(location ?? FakeLocationService()),
+        navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),
         // Date figée : goldens et semaines stables quel que soit le jour du test.
-        clockProvider.overrideWithValue(() => now ?? testNow),
+        clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
       ],
       child: UniMoovApp(themeMode: themeMode),
     ),

@@ -23,6 +23,9 @@ abstract final class AppRoutes {
   static String ride(String id) => '/rides/$id';
   static String rideMeetingPoint(String id) => '/rides/$id/meeting-point';
   static String rideSuggestions(String id) => '/rides/$id/suggestions';
+  static String rideDeparture(String id) => '/rides/$id/departure';
+  static String rideLocation(String id) => '/rides/$id/location';
+  static const wallet = '/wallet';
 
   static const public = {welcome, login, signup};
   static const entry = {splash, welcome, login, signup, onboarding};

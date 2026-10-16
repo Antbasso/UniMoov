@@ -52,6 +52,7 @@ class RideMap extends ConsumerWidget {
     this.dashed = false,
     this.pin,
     this.onTap,
+    this.live,
   });
 
   final List<RideStop> stops;
@@ -62,6 +63,9 @@ class RideMap extends ConsumerWidget {
   final bool dashed;
   final LatLng? pin;
   final ValueChanged<LatLng>? onTap;
+
+  /// Position du conducteur en direct (trajet en cours).
+  final LatLng? live;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -123,6 +127,25 @@ class RideMap extends ConsumerWidget {
                   width: UmSize.mapMarker,
                   height: UmSize.mapMarker,
                   child: StopBadge(stop: stop),
+                ),
+              if (live != null)
+                Marker(
+                  point: live!,
+                  width: UmSize.mapMarker,
+                  height: UmSize.mapMarker,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.brandStrong,
+                      border: Border.all(color: c.onBrand, width: UmSize.routeRing),
+                      boxShadow: context.umShadowSoft,
+                    ),
+                    child: Icon(
+                      Icons.navigation_rounded, // distincte de la voiture du point de départ
+                      size: UmSize.iconSm,
+                      color: c.onBrand,
+                    ),
+                  ),
                 ),
               if (pin != null)
                 Marker(

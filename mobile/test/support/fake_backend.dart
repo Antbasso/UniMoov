@@ -8,11 +8,13 @@ import 'package:unimoov/features/proposals/domain/proposal.dart';
 import 'package:unimoov/features/rides/data/rides_api.dart';
 import 'package:unimoov/features/rides/domain/ride.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
+import 'package:unimoov/features/wallet/data/wallet_api.dart';
+import 'package:unimoov/features/wallet/domain/wallet.dart';
 import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 /// Backend en mémoire qui reproduit les règles de l'API (docs/api.md) pour les tests de
 /// parcours. Il survit à un « redémarrage » de l'app, comme le vrai serveur.
-class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi {
+class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi, WalletApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -142,6 +144,12 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, Rid
       throw const ApiException('vehicle_required', '', statusCode: 409);
     }
     _me.roleMode = mode;
+    return _me.toMe();
+  }
+
+  @override
+  Future<Me> setDefaultNavApp(String app) async {
+    _me.defaultNavApp = app;
     return _me.toMe();
   }
 
@@ -338,6 +346,146 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, Rid
     );
   }
 
+  // --- Cycle de vie et navigation ---
+
+  final List<String> actions = [];
+
+  RideDetails _withStatus(String id, String status, {List<RideStop>? stops}) {
+    final ride = rides[id]!;
+    return rides[id] = RideDetails(
+      id: ride.id,
+      day: ride.day,
+      direction: ride.direction,
+      time: ride.time,
+      status: status,
+      isDriver: ride.isDriver,
+      routeEstimated: ride.routeEstimated,
+      route: ride.route,
+      stops: stops ?? ride.stops,
+      distanceM: ride.distanceM,
+      durationS: ride.durationS,
+      price: ride.price,
+    );
+  }
+
+  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated}) => RideStop(
+    order: s.order,
+    kind: s.kind,
+    userId: s.userId,
+    firstName: s.firstName,
+    lastName: s.lastName,
+    label: s.label,
+    lat: s.lat,
+    lon: s.lon,
+    eta: s.eta,
+    isMeetingPoint: s.isMeetingPoint,
+    pickedUp: pickedUp ?? s.pickedUp,
+    presenceValidated: presenceValidated ?? s.presenceValidated,
+  );
+
+  @override
+  Future<void> start(String id) async {
+    _maybeFail();
+    actions.add('start:$id');
+    _withStatus(id, 'in_progress');
+  }
+
+  @override
+  Future<void> pickedUp(String id, String userId) async {
+    _maybeFail();
+    actions.add('picked_up:$userId');
+    final ride = rides[id]!;
+    _withStatus(
+      id,
+      ride.status,
+      stops: [for (final s in ride.stops) s.userId == userId ? _stopWith(s, pickedUp: true) : s],
+    );
+  }
+
+  @override
+  Future<NavigationPlan> navigation(String id) async {
+    _maybeFail();
+    final ride = rides[id]!;
+    final passengers = ride.stops.where((s) => s.kind == StopKind.passenger).toList();
+    final stops = [...passengers, ride.stops.last];
+    final remaining = stops.where((s) => !s.pickedUp).toList();
+    String coord(RideStop s) => '${s.lat.toStringAsFixed(6)},${s.lon.toStringAsFixed(6)}';
+    final last = remaining.isEmpty ? stops.last : remaining.last;
+    final waypoints = remaining.isEmpty ? <RideStop>[] : remaining.sublist(0, remaining.length - 1);
+    return NavigationPlan(
+      stops: [
+        for (final (i, s) in stops.indexed)
+          NavigationStop(
+            order: i + 1,
+            isDestination: s.kind != StopKind.passenger,
+            userId: s.userId,
+            firstName: s.firstName,
+            label: s.label,
+            eta: s.eta,
+            pickedUp: s.pickedUp,
+          ),
+      ],
+      googleMaps:
+          'https://www.google.com/maps/dir/?api=1&destination=${coord(last)}'
+          '${waypoints.isEmpty ? '' : '&waypoints=${waypoints.map(coord).join('%7C')}'}&travelmode=driving',
+      appleMaps: 'https://maps.apple.com/?daddr=${remaining.map(coord).join('+to:')}&dirflg=d',
+      wazeNextStop:
+          'https://waze.com/ul?ll=${coord(remaining.isEmpty ? last : remaining.first)}&navigate=yes',
+    );
+  }
+
+  @override
+  Future<bool> presence(String id) async {
+    _maybeFail();
+    final ride = rides[id]!;
+    final me = idOf(_me.email);
+    _withStatus(
+      id,
+      ride.status,
+      stops: [
+        for (final s in ride.stops) s.userId == me ? _stopWith(s, presenceValidated: true) : s,
+      ],
+    );
+    actions.add('presence');
+    return true;
+  }
+
+  @override
+  Future<void> finish(String id) async {
+    _maybeFail();
+    actions.add('finish');
+    _withStatus(id, 'completed');
+  }
+
+  // --- Portefeuille ---
+
+  int balanceCents = 0;
+  final List<WalletEntry> walletHistory = [];
+  final Set<String> topupKeys = {};
+
+  Wallet get _wallet =>
+      Wallet(balanceCents: balanceCents, heldCents: 0, history: List.of(walletHistory));
+
+  @override
+  Future<Wallet> wallet() async {
+    _maybeFail();
+    return _wallet;
+  }
+
+  @override
+  Future<Wallet> topup(int amountCents, String idempotencyKey) async {
+    _maybeFail();
+    // Même clé : aucune nouvelle écriture (comme le serveur).
+    if (topupKeys.add(idempotencyKey)) {
+      balanceCents += amountCents;
+      walletHistory.insert(
+        0,
+        WalletEntry(kind: 'topup', amountCents: amountCents, at: DateTime(2026, 10, 15, 9)),
+      );
+    }
+    return _wallet;
+  }
+
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).
   String idOf(String email) => 'id-$email';
 
@@ -366,6 +514,7 @@ class _Account {
   Home? home;
   Vehicle? vehicle;
   RoleMode roleMode = RoleMode.alwaysPassenger;
+  String? defaultNavApp;
   final Map<OnboardingStep, StepStatus> steps = {};
   final List<Pause> pauses = [];
 
@@ -385,6 +534,7 @@ class _Account {
       onboardingCompleted: next == null,
       discoveryMode: home == null,
       pausedToday: pauses.any((p) => !today.isBefore(p.startsOn) && !today.isAfter(p.endsOn)),
+      defaultNavApp: defaultNavApp,
     );
   }
 }

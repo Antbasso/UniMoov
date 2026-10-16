@@ -12,6 +12,8 @@ class RideStop {
     required this.lat,
     required this.lon,
     required this.isMeetingPoint,
+    this.pickedUp = false,
+    this.presenceValidated = false,
     this.userId,
     this.firstName,
     this.lastName,
@@ -29,6 +31,8 @@ class RideStop {
     lon: (json['lon'] as num).toDouble(),
     eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String),
     isMeetingPoint: json['isMeetingPoint'] as bool,
+    pickedUp: json['pickedUp'] as bool? ?? false,
+    presenceValidated: json['presenceValidated'] as bool? ?? false,
   );
 
   final int order;
@@ -43,6 +47,10 @@ class RideStop {
   final double lon;
   final DateTime? eta;
   final bool isMeetingPoint;
+
+  /// Passager monté (signalé par le conducteur) ; présence validée par proximité (paiement).
+  final bool pickedUp;
+  final bool presenceValidated;
 
   String? get fullName => firstName == null ? null : [firstName, ?lastName].join(' ');
 }
@@ -132,6 +140,11 @@ class RideDetails {
   RideStop? stopOf(String? userId) => stops.where((s) => s.userId == userId).firstOrNull;
 
   bool get editable => status == 'confirmed';
+  bool get inProgress => status == 'in_progress';
+  bool get completed => status == 'completed';
+
+  /// Arrêt du conducteur (départ à l'aller, arrivée au retour).
+  RideStop? get driverStop => stops.where((s) => s.kind == StopKind.driver).firstOrNull;
 }
 
 /// Passager supplémentaire proposé au conducteur, avec la simulation du prix.
@@ -184,4 +197,153 @@ class MeetingPoint {
   final String label;
   final double lat;
   final double lon;
+}
+
+/// Applications GPS proposées au conducteur (cahier §15). `wire` : valeur de l'API.
+enum NavApp {
+  googleMaps('google_maps'),
+  waze('waze'),
+  appleMaps('apple_maps');
+
+  const NavApp(this.wire);
+  final String wire;
+
+  static NavApp? fromWire(String? value) => values.where((a) => a.wire == value).firstOrNull;
+
+  /// Waze n'accepte qu'une destination : navigation arrêt par arrêt.
+  bool get multiStop => this != NavApp.waze;
+}
+
+/// Arrêts restants dans l'ordre et liens prêts à ouvrir (`GET /rides/{id}/navigation`).
+class NavigationPlan {
+  const NavigationPlan({
+    required this.stops,
+    required this.googleMaps,
+    required this.appleMaps,
+    required this.wazeNextStop,
+  });
+
+  factory NavigationPlan.fromJson(Map<String, dynamic> json) {
+    final links = json['links'] as Map<String, dynamic>;
+    return NavigationPlan(
+      stops: [
+        for (final s in json['stops'] as List<dynamic>)
+          NavigationStop.fromJson(s as Map<String, dynamic>),
+      ],
+      googleMaps: links['googleMaps'] as String,
+      appleMaps: links['appleMaps'] as String,
+      wazeNextStop: (links['waze'] as Map<String, dynamic>)['nextStop'] as String,
+    );
+  }
+
+  final List<NavigationStop> stops;
+  final String googleMaps;
+  final String appleMaps;
+  final String wazeNextStop;
+
+  /// Lien pour l'application choisie (Waze : l'arrêt suivant seulement).
+  Uri linkFor(NavApp app) => Uri.parse(switch (app) {
+    NavApp.googleMaps => googleMaps,
+    NavApp.appleMaps => appleMaps,
+    NavApp.waze => wazeNextStop,
+  });
+
+  List<NavigationStop> get remaining => stops.where((s) => !s.pickedUp).toList();
+}
+
+class NavigationStop {
+  const NavigationStop({
+    required this.order,
+    required this.isDestination,
+    required this.label,
+    required this.pickedUp,
+    this.userId,
+    this.firstName,
+    this.eta,
+  });
+
+  factory NavigationStop.fromJson(Map<String, dynamic> json) => NavigationStop(
+    order: json['order'] as int,
+    isDestination: json['kind'] == 'destination',
+    userId: json['userId'] as String?,
+    firstName: json['firstName'] as String?,
+    label: json['label'] as String,
+    eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String),
+    pickedUp: json['pickedUp'] as bool,
+  );
+
+  final int order;
+  final bool isDestination;
+  final String? userId;
+  final String? firstName;
+  final String label;
+  final DateTime? eta;
+  final bool pickedUp;
+}
+
+/// Messages du suivi en direct (docs/api.md, WebSocket).
+sealed class LiveEvent {
+  const LiveEvent();
+
+  static LiveEvent? fromJson(Map<String, dynamic> json) => switch (json['type']) {
+    'ready' => const LiveReady(),
+    'position' => LivePosition(
+      userId: json['userId'] as String,
+      lat: (json['lat'] as num).toDouble(),
+      lon: (json['lon'] as num).toDouble(),
+      at: DateTime.parse(json['ts'] as String),
+    ),
+    'eta' => LiveEta(userId: json['userId'] as String, eta: DateTime.parse(json['eta'] as String)),
+    'stop_picked_up' => LivePickedUp(json['userId'] as String),
+    'presence_validated' => LivePresence(
+      userId: json['userId'] as String,
+      paid: json['payment'] == 'paid',
+    ),
+    'ride_status' => LiveStatus(json['status'] as String),
+    _ => null,
+  };
+}
+
+class LiveReady extends LiveEvent {
+  const LiveReady();
+}
+
+class LivePosition extends LiveEvent {
+  const LivePosition({
+    required this.userId,
+    required this.lat,
+    required this.lon,
+    required this.at,
+  });
+
+  final String userId;
+  final double lat;
+  final double lon;
+  final DateTime at;
+}
+
+class LiveEta extends LiveEvent {
+  const LiveEta({required this.userId, required this.eta});
+
+  final String userId;
+  final DateTime eta;
+}
+
+class LivePickedUp extends LiveEvent {
+  const LivePickedUp(this.userId);
+
+  final String userId;
+}
+
+class LivePresence extends LiveEvent {
+  const LivePresence({required this.userId, required this.paid});
+
+  final String userId;
+  final bool paid;
+}
+
+class LiveStatus extends LiveEvent {
+  const LiveStatus(this.status);
+
+  final String status;
 }

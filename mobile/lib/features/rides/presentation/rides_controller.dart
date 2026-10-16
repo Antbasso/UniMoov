@@ -20,7 +20,32 @@ class RideController extends AsyncNotifier<RideDetails> {
     // La modification est faite : un échec du rechargement ne doit pas la faire passer pour ratée.
     if (ref.mounted) ref.invalidateSelf();
   }
+
+  /// Conducteur : départ (le suivi en direct s'ouvre), passager monté, clôture.
+  Future<void> start() => _act((api) => api.start(id));
+  Future<void> pickedUp(String userId) => _act((api) => api.pickedUp(id, userId));
+  Future<void> finish() => _act((api) => api.finish(id));
+
+  /// Passager : présence validée par proximité ; `true` si le paiement est passé.
+  Future<bool> confirmPresence() async {
+    final paid = await ref.read(ridesApiProvider).presence(id);
+    if (ref.mounted) ref.invalidateSelf();
+    return paid;
+  }
+
+  Future<void> _act(Future<void> Function(RidesApi api) action) async {
+    await action(ref.read(ridesApiProvider));
+    if (!ref.mounted) return;
+    ref.invalidateSelf();
+    ref.invalidate(navigationProvider(id));
+  }
 }
+
+/// Arrêts restants et liens GPS (conducteur).
+final navigationProvider = FutureProvider.autoDispose.family<NavigationPlan, String>(
+  (ref, id) => ref.watch(ridesApiProvider).navigation(id),
+  retry: (retryCount, error) => null,
+);
 
 final rideProvider = AsyncNotifierProvider.autoDispose.family<RideController, RideDetails, String>(
   RideController.new,

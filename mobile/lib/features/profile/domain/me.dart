@@ -70,6 +70,7 @@ class Me {
     required this.onboardingCompleted,
     required this.discoveryMode,
     required this.pausedToday,
+    this.defaultNavApp,
   });
 
   factory Me.fromJson(Map<String, dynamic> json) {
@@ -95,6 +96,7 @@ class Me {
       onboardingCompleted: onboarding['completed'] as bool,
       discoveryMode: json['discoveryMode'] as bool,
       pausedToday: json['pausedToday'] as bool,
+      defaultNavApp: json['defaultNavApp'] as String?,
     );
   }
 
@@ -110,6 +112,9 @@ class Me {
   final bool onboardingCompleted;
   final bool discoveryMode;
   final bool pausedToday;
+
+  /// Application GPS choisie au premier départ (`google_maps`, `waze`, `apple_maps`).
+  final String? defaultNavApp;
 }
 
 /// Pause programmée ; `everyWeeks` : une semaine sur N (alternance), `null` : continue.

@@ -72,6 +72,11 @@ class ProfileScreen extends ConsumerWidget {
           body: l10n.calendarBody,
           onEdit: () => context.push(AppRoutes.profileSchedule),
         ),
+        _Section(
+          title: l10n.profileWallet,
+          body: l10n.walletIntro,
+          onEdit: () => context.push(AppRoutes.wallet),
+        ),
         const _PausesSection(),
       ],
     );

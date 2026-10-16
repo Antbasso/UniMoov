@@ -37,5 +37,10 @@ String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'ride_full' => l10n.suggestionsFull,
   'suggestion_unavailable' => l10n.errorSuggestionUnavailable,
   'accept_first' => l10n.errorAcceptFirst,
+  'too_early' => l10n.errorTooEarly,
+  'ride_not_started' => l10n.errorRideNotStarted,
+  'presence_not_confirmed' => l10n.errorPresenceNotConfirmed,
+  'topup_too_small' => l10n.errorTopupTooSmall,
+  'topup_failed' => l10n.errorTopupFailed,
   _ => l10n.errorGeneric,
 };

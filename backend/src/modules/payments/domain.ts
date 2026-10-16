@@ -1,0 +1,100 @@
+/**
+ * Registre du portefeuille (cahier §5, AGENTS.md « Argent ») : fonctions pures qui
+ * construisent des opérations équilibrées (la somme des écritures vaut zéro), en centimes.
+ *
+ * Comptes : `user:<id>` (disponible), `held:<id>` (retenu pour un trajet),
+ * `platform:commission`, `provider:clearing` (contrepartie des fonds du prestataire).
+ */
+export type EntryKind =
+  | 'topup'
+  | 'hold'
+  | 'hold_release'
+  | 'ride_charge'
+  | 'ride_credit'
+  | 'commission'
+  | 'payout'
+  | 'refund';
+
+export interface Entry {
+  account: string;
+  kind: EntryKind;
+  amountCents: number;
+}
+
+export const userAccount = (id: string) => `user:${id}`;
+export const heldAccount = (id: string) => `held:${id}`;
+export const COMMISSION = 'platform:commission';
+export const CLEARING = 'provider:clearing';
+
+function positive(amount: number, name: string): void {
+  if (!Number.isInteger(amount) || amount <= 0) throw new RangeError(`${name} : entier positif attendu`);
+}
+
+export function isBalanced(entries: readonly Entry[]): boolean {
+  return entries.reduce((sum, e) => sum + e.amountCents, 0) === 0;
+}
+
+/** Recharge confirmée par le prestataire. */
+export function topupEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'recharge');
+  return [
+    { account: CLEARING, kind: 'topup', amountCents: -amountCents },
+    { account: userAccount(userId), kind: 'topup', amountCents },
+  ];
+}
+
+/** Retenue au départ du trajet : prix estimé plus la marge. */
+export function holdEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'retenue');
+  return [
+    { account: userAccount(userId), kind: 'hold', amountCents: -amountCents },
+    { account: heldAccount(userId), kind: 'hold', amountCents },
+  ];
+}
+
+export function releaseEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'libération');
+  return [
+    { account: heldAccount(userId), kind: 'hold_release', amountCents: -amountCents },
+    { account: userAccount(userId), kind: 'hold_release', amountCents },
+  ];
+}
+
+/**
+ * Paiement d'un passager à la validation de sa présence : la retenue est libérée, puis le
+ * passager paie sa part et la commission ; le conducteur reçoit la part, Uni-Moov la commission.
+ */
+export function chargeEntries(input: {
+  passengerId: string;
+  driverId: string;
+  heldCents: number;
+  shareCents: number;
+  commissionCents: number;
+}): Entry[] {
+  const { passengerId, driverId, heldCents, shareCents, commissionCents } = input;
+  if (!Number.isInteger(shareCents) || shareCents < 0) throw new RangeError('part invalide');
+  if (!Number.isInteger(commissionCents) || commissionCents < 0) throw new RangeError('commission invalide');
+  if (passengerId === driverId) throw new RangeError('le conducteur ne se paie pas lui-même');
+  const entries: Entry[] = heldCents > 0 ? releaseEntries(passengerId, heldCents) : [];
+  const total = shareCents + commissionCents;
+  if (total > 0) entries.push({ account: userAccount(passengerId), kind: 'ride_charge', amountCents: -total });
+  if (shareCents > 0) entries.push({ account: userAccount(driverId), kind: 'ride_credit', amountCents: shareCents });
+  if (commissionCents > 0) entries.push({ account: COMMISSION, kind: 'commission', amountCents: commissionCents });
+  return entries;
+}
+
+/** Retrait vers le compte bancaire du conducteur. */
+export function payoutEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'retrait');
+  return [
+    { account: userAccount(userId), kind: 'payout', amountCents: -amountCents },
+    { account: CLEARING, kind: 'payout', amountCents },
+  ];
+}
+
+/** Retenue = prix estimé majoré de la marge, au centime supérieur. */
+export function holdAmount(estimatedCents: number, marginPercent: number): number {
+  if (!Number.isInteger(estimatedCents) || estimatedCents < 0) throw new RangeError('prix invalide');
+  if (!Number.isFinite(marginPercent) || marginPercent < 0) throw new RangeError('marge invalide');
+  return Math.ceil((estimatedCents * (100 + marginPercent)) / 100);
+}

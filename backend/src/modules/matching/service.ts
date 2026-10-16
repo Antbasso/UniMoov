@@ -233,6 +233,10 @@ export class MatchingService {
     if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (ride.day < this.today()) throw new AppError(409, 'proposal_expired', 'Cette proposition est passée');
     if (ride.status === 'cancelled') throw new AppError(409, 'proposal_cancelled', 'Cette proposition a été annulée');
+    // Trajet commencé ou terminé : plus d'acceptation ni de refus (on ne monte pas en route sans payer).
+    if (ride.status !== 'proposed' && ride.status !== 'confirmed') {
+      throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+    }
     return ride;
   }
 

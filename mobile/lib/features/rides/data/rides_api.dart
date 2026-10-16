@@ -13,6 +13,15 @@ abstract interface class RidesApi {
   Future<void> setMeetingPoint(String id, MeetingPoint? point);
   Future<Suggestions> suggestions(String id);
   Future<Proposal> invite(String id, String userId);
+
+  /// Conducteur : départ, « monté », arrêts et liens GPS.
+  Future<void> start(String id);
+  Future<void> pickedUp(String id, String userId);
+  Future<NavigationPlan> navigation(String id);
+
+  /// Passager : présence validée par proximité ; renvoie `true` si le paiement est passé.
+  Future<bool> presence(String id);
+  Future<void> finish(String id);
 }
 
 class DioRidesApi implements RidesApi {
@@ -49,6 +58,28 @@ class DioRidesApi implements RidesApi {
     );
     return Proposal.fromJson(response.data!);
   });
+
+  @override
+  Future<void> start(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/start'));
+
+  @override
+  Future<void> pickedUp(String id, String userId) =>
+      guardApi(() => _dio.post<void>('/api/v1/rides/$id/participants/$userId/picked-up'));
+
+  @override
+  Future<NavigationPlan> navigation(String id) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/rides/$id/navigation');
+    return NavigationPlan.fromJson(response.data!);
+  });
+
+  @override
+  Future<bool> presence(String id) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/rides/$id/presence');
+    return response.data!['payment'] != 'failed';
+  });
+
+  @override
+  Future<void> finish(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/finish'));
 }
 
 final ridesApiProvider = Provider<RidesApi>((ref) => DioRidesApi(ref.watch(dioProvider)));

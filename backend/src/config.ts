@@ -26,12 +26,18 @@ const envSchema = z
   ORS_API_KEY: z.string().optional(),
   /** Appels quotidiens autorisés (palier gratuit d'OpenRouteService), alerte à 80 %. */
   ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),
+  /** `fake` : portefeuille simulé (aucun argent réel), interdit en production. */
+  PAYMENT_PROVIDER: z.enum(['fake']).default('fake'),
   /** Tâches planifiées (synchronisation des agendas, génération hebdomadaire). */
   JOBS_ENABLED: z.stringbool().default(true),
 })
   .refine((env) => env.NODE_ENV !== 'production' || env.MAIL_PROVIDER !== 'console', {
     path: ['MAIL_PROVIDER'],
     message: 'console interdit en production',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || env.PAYMENT_PROVIDER !== 'fake', {
+    path: ['PAYMENT_PROVIDER'],
+    message: 'fake interdit en production',
   })
   .refine((env) => env.ROUTING_PROVIDER !== 'ors' || Boolean(env.ORS_API_KEY), {
     path: ['ORS_API_KEY'],

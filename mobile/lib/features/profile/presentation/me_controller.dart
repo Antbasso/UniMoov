@@ -23,6 +23,7 @@ class MeController extends AsyncNotifier<Me?> {
   Future<void> setAddress(String address) => _apply(() => _api.setAddress(address));
   Future<void> setVehicle(Vehicle vehicle) => _apply(() => _api.setVehicle(vehicle));
   Future<void> setRoleMode(RoleMode mode) => _apply(() => _api.setRoleMode(mode));
+  Future<void> setDefaultNavApp(String app) => _apply(() => _api.setDefaultNavApp(app));
   Future<void> updateNames({String? firstName, String? lastName}) =>
       _apply(() => _api.updateNames(firstName: firstName, lastName: lastName));
   Future<void> setStep(OnboardingStep step, StepStatus status) =>

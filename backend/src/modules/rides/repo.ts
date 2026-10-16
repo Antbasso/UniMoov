@@ -4,8 +4,8 @@ import { rideParticipants, rides } from '../../db/schema.js';
 import type { LatLon } from '../../shared/geo.js';
 import type { Direction } from './domain.js';
 
-type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
-type DbOrTx = Db | Tx;
+export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+export type DbOrTx = Db | Tx;
 
 export interface RideInfo {
   id: string;
@@ -38,6 +38,7 @@ export interface Member {
   meetingLabel: string | null;
   stopOrder: number | null;
   eta: Date | null;
+  presenceValidatedAt: Date | null;
 }
 
 export const isAccepted = (m: Member) => m.status === 'accepted' || m.status === 'picked_up';
@@ -119,12 +120,13 @@ export class RidesRepo {
       pickup_label: string | null;
       stop_order: number | null;
       eta: Date | null;
+      presence_validated_at: Date | null;
     }>(sql`
       SELECT p.user_id, p.role, p.status, u.first_name, u.last_name, u.photo_url,
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta
+             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -142,6 +144,7 @@ export class RidesRepo {
       meetingLabel: r.pickup_label,
       stopOrder: r.stop_order,
       eta: r.eta ? new Date(r.eta) : null,
+      presenceValidatedAt: r.presence_validated_at ? new Date(r.presence_validated_at) : null,
     }));
   }
 
@@ -200,6 +203,55 @@ export class RidesRepo {
         pickup_label = ${pickup?.label ?? null},
         pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null}
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
+  async setRideStatus(
+    rideId: string,
+    status: 'in_progress' | 'completed',
+    fields: { startedAt?: Date; endedAt?: Date; finalTotalCostCents?: number | null },
+    tx: Tx,
+  ): Promise<void> {
+    await tx
+      .update(rides)
+      .set({
+        status,
+        ...(fields.startedAt ? { startedAt: fields.startedAt } : {}),
+        ...(fields.endedAt ? { endedAt: fields.endedAt } : {}),
+        ...(fields.finalTotalCostCents !== undefined ? { finalTotalCostCents: fields.finalTotalCostCents } : {}),
+      })
+      .where(eq(rides.id, rideId));
+  }
+
+  async setParticipant(
+    rideId: string,
+    userId: string,
+    fields: { status?: 'picked_up' | 'absent'; presenceValidatedAt?: Date; amountCents?: number },
+    tx: Tx,
+  ): Promise<void> {
+    await tx
+      .update(rideParticipants)
+      .set(fields)
+      .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, userId)));
+  }
+
+  /** Trace réduite pour les litiges (rétention courte, `tracking.traceRetentionDays`). */
+  async insertTrace(rideId: string, userId: string, at: Date, point: LatLon): Promise<void> {
+    await this.db.execute(sql`
+      INSERT INTO position_trace (ride_id, user_id, recorded_at, location)
+      VALUES (${rideId}, ${userId}, ${at}, ST_SetSRID(ST_MakePoint(${point.lon}, ${point.lat}), 4326)::geography)
+      ON CONFLICT DO NOTHING`);
+  }
+
+  async staleInProgress(targetBefore: Date): Promise<string[]> {
+    const { rows } = await this.db.execute<{ id: string }>(
+      sql`SELECT id FROM rides WHERE status = 'in_progress' AND target_time < ${targetBefore}`,
+    );
+    return rows.map((r) => r.id);
+  }
+
+  async purgeTraces(before: Date): Promise<number> {
+    const result = await this.db.execute(sql`DELETE FROM position_trace WHERE recorded_at < ${before}`);
+    return result.rowCount ?? 0;
   }
 
   /** Trajets confirmés à venir où l'utilisateur est accepté. */

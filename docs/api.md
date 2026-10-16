@@ -46,43 +46,43 @@ Base : `/api/v1`, JSON, UTF-8. Authentification `Authorization: Bearer <jwt>` sa
   - Plan (ordre des arrêts, tracé, heures de passage, distance) calculé à la confirmation, puis recalculé quand un passager accepte ou change de point de rendez-vous ; aller : arrivée au campus à l'heure cible, retour : départ du campus à l'heure cible.
 - `GET /rides/{id}/price` → `{ price }` : `{ estimated: true, totalCostCents, persons, shareCents, commissionCents, passengerPaysCents, driverReceivesCents, youPayCents, youReceiveCents }`, `null` si le conducteur n'a plus de véhicule. Coût = consommation × distance du tracé × `pricing.fuelPriceCentsPerLitre`, partagé entre conducteur et passagers acceptés (part arrondie au centime supérieur), plus `pricing.commissionCentsPerPassenger` pour chaque passager. Le prix final est calculé à la clôture (M4).
 - `PUT /rides/{id}/me/pickup` `{ useMeetingPoint, label?, lat?, lon? }` → `204` (passager accepté, trajet pas encore commencé) : à moins de `rides.meetingPointMaxMeters` du domicile (`422 meeting_point_too_far`) ; `useMeetingPoint: false` revient à l'adresse. `403 forbidden` pour le conducteur ou un non-participant, `409 ride_locked` une fois le trajet commencé.
-- `GET /rides?status=` : M4 (liste des trajets du jour, écran de départ).
-- `POST /rides/{id}/cancel` ; effets : pénalité de score, notification, relance du matching (M5).
-- `POST /rides/{id}/start` (conducteur) : passe en `in_progress`, ouvre le suivi en direct.
-- `POST /rides/{id}/participants/{userId}/picked-up` (conducteur) : « monté ».
-- `POST /rides/{id}/presence` : tentative de validation de présence (le serveur compare les positions).
-- `POST /rides/{id}/finish` : clôture manuelle ; clôture automatique côté serveur à l'arrivée.
+- `GET /rides?status=` : liste des trajets du jour, plus tard (l'app passe par « Ta semaine »).
+- `POST /rides/{id}/start` (conducteur accepté, trajet `confirmed`, au plus tôt `rides.startWindowMinutes` avant l'heure du trajet) → `204` : passe en `in_progress`, ouvre le suivi en direct et retient sur le portefeuille de chaque passager accepté son prix estimé plus `wallet.holdMarginPercent` (au plus ce qui est disponible). `403 forbidden` hors conducteur, `409 too_early`, `409 ride_not_confirmed`. Rejoué : sans effet.
+- `POST /rides/{id}/participants/{userId}/picked-up` (conducteur, trajet en cours) → `204` : « monté » ; l'arrêt sort de la navigation (`stop_picked_up` diffusé).
+- `POST /rides/{id}/presence` (passager) → `{ payment: "paid" | "failed" | "already" }` : la présence est validée si les dernières positions du passager et du conducteur sont à moins de `tracking.presenceRadiusMeters` (`409 presence_not_confirmed` sinon). Elle est aussi validée automatiquement quand les deux téléphones se rapprochent pendant le suivi. Elle déclenche le paiement du passager depuis son portefeuille (voir « Portefeuille »).
+- `POST /rides/{id}/finish` (tout participant accepté) → `204` : `completed`, prix final enregistré (coût du tracé partagé entre les personnes présentes, jamais plus que la part estimée de chacun), retenues des passagers absents libérées (statut `absent`), suivi fermé. Clôture automatique quand le conducteur arrive à moins de `tracking.arrivalRadiusMeters` de la destination et que plus personne n'attend. Rejoué : sans effet.
 
 ## Navigation (conducteur uniquement)
-- `GET /rides/{id}/navigation` →
+- `GET /rides/{id}/navigation` (trajet `confirmed` ou `in_progress`) →
 ```json
 {
   "stops": [
-    { "order": 1, "userId": "…", "firstName": "Léa", "label": "12 rue …", "lat": 45.9, "lon": 6.12, "eta": "2026-10-20T07:42:00Z", "pickedUp": false },
-    { "order": 2, "kind": "campus", "label": "Campus d'Annecy", "lat": 45.92, "lon": 6.15 }
+    { "order": 1, "kind": "passenger", "userId": "…", "firstName": "Hugo", "label": "12 rue …", "lat": 45.9, "lon": 6.12, "eta": "2026-10-20T07:42:00Z", "pickedUp": false },
+    { "order": 2, "kind": "destination", "userId": null, "firstName": null, "label": "Campus d'Annecy", "lat": 45.92, "lon": 6.15, "eta": "…", "pickedUp": false }
   ],
   "links": {
-    "googleMaps": "https://www.google.com/maps/dir/?api=1&…",
-    "appleMaps": "https://maps.apple.com/?…",
-    "waze": { "nextStop": "https://waze.com/ul?ll=45.9,6.12&navigate=yes" }
+    "googleMaps": "https://www.google.com/maps/dir/?api=1&destination=LAT,LON&waypoints=LAT,LON%7CLAT,LON&travelmode=driving",
+    "appleMaps": "https://maps.apple.com/?daddr=LAT,LON+to:LAT,LON&dirflg=d",
+    "waze": { "nextStop": "https://waze.com/ul?ll=LAT,LON&navigate=yes" }
   },
   "supportsMultiStop": { "googleMaps": true, "appleMaps": true, "waze": false }
 }
 ```
-Le serveur n'inclut ce corps que pour le conducteur d'un trajet `confirmed` ou `in_progress`.
+Les liens portent les arrêts restants (pas encore montés) dans l'ordre, puis la destination (campus à l'aller, domicile du conducteur au retour) ; sans origine, l'application part de la position du téléphone. Ils ne contiennent que des coordonnées. `403` pour tout autre utilisateur.
 
 ## Suivi en direct (WebSocket)
-`GET /ws/rides/{rideId}?token=<jwt>` (upgrade). Messages JSON :
-- Client → serveur : `{ "type": "position", "lat": 0, "lon": 0, "accuracy": 8, "speed": 12.5, "ts": "ISO-8601" }`.
-- Serveur → client : `{ "type": "position", "userId": "…", "lat": …, "lon": …, "ts": "…" }`, `{ "type": "eta", "userId": "…", "eta": "…" }`, `{ "type": "stop_picked_up", "userId": "…" }`, `{ "type": "ride_status", "status": "in_progress" }`, `{ "type": "stops_reordered", "stops": [...] }`.
-- Règles : refus (code 4403) si l'utilisateur n'est pas un participant confirmé ; fermeture à la clôture ; limite de 1 message de position toutes les 2 s par client.
+`GET /ws/rides/{rideId}?token=<jwt>` (upgrade) ; le jeton n'est jamais journalisé. Messages JSON :
+- Client → serveur : `{ "type": "position", "lat": 0, "lon": 0, "accuracy": 8, "speed": 12.5, "ts": "ISO-8601" }` ; une position toutes les 2 s au plus (les autres sont ignorées).
+- Serveur → client : `{ "type": "ready", "role": "driver" | "passenger" }` (abonné ; suivi de la dernière position connue du conducteur), `{ "type": "position", "userId", "lat", "lon", "ts" }`, `{ "type": "eta", "userId", "eta" }`, `{ "type": "stop_picked_up", "userId" }`, `{ "type": "presence_validated", "userId", "payment": "paid" | "failed" }` (au passager et au conducteur), `{ "type": "ride_status", "status": "in_progress" | "completed" }`.
+- Diffusion : le passager reçoit la position du conducteur et son heure de passage ; le conducteur reçoit celles des passagers pas encore montés ; jamais d'un passager à un autre.
+- Fermeture : `4401` jeton invalide, `4403` pas participant accepté, `4409` trajet pas en cours, `4410` trajet clôturé. Positions gardées en mémoire, trace d'un point toutes les 30 s pour les litiges, supprimée après `tracking.traceRetentionDays`.
 
 ## Portefeuille et paiements
-- `GET /wallet` : solde, montant retenu, historique paginé.
-- `POST /wallet/topups` `{ amountCents }` (minimum `app_settings.wallet.minTopupCents`) → renvoie la session de paiement du prestataire ; confirmation par webhook.
-- `POST /wallet/payouts` (conducteur, solde au-dessus du seuil, limite hebdomadaire) ; `GET /wallet/payouts`.
-- `POST /webhooks/payments` : webhooks du prestataire, signature vérifiée, idempotents.
-- Réservation d'un trajet : refus `402 insufficient_funds` si le solde ne couvre pas le prix estimé plus la marge.
+- `GET /wallet` → `{ balanceCents, heldCents, history: [{ kind, amountCents, rideId, createdAt }] }` (50 dernières opérations, retenues exclues).
+- `POST /wallet/topups` `{ amountCents }` avec l'en-tête `Idempotency-Key` (8 à 100 caractères) → `201 { status, wallet }` ; minimum `app_settings.wallet.minTopupCents` (`400 topup_too_small`), refus du prestataire `402 topup_failed`. La même clé ne recharge qu'une fois. Fournisseur factice (`PAYMENT_PROVIDER=fake`, refusé en production) : recharge immédiate ; prestataire réel, session de paiement et webhook : M4b.
+- Registre `wallet_ledger` en écriture seule (déclencheur en base) ; chaque opération est équilibrée (somme nulle) et idempotente. Comptes : `user:<id>`, `held:<id>`, `platform:commission`, `provider:clearing`.
+- Paiement d'un passager à la validation de sa présence : sa retenue est libérée, il paie sa part plus la commission, le conducteur reçoit la part, Uni-Moov la commission. Solde insuffisant : paiement `failed`, jamais de solde négatif.
+- `POST /wallet/payouts`, `GET /wallet/payouts`, `POST /webhooks/payments`, refus de réservation `402 insufficient_funds` : M4b.
 - Montants toujours en centimes (entiers).
 
 ## Messagerie
