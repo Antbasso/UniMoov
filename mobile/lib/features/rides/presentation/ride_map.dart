@@ -130,8 +130,7 @@ class RideMap extends ConsumerWidget {
                 ),
             ],
           ),
-          if (background != null)
-            const SimpleAttributionWidget(source: Text('OpenStreetMap, OpenMapTiles')),
+          if (background != null) const _Attribution(),
         ],
       ),
     );
@@ -177,6 +176,29 @@ class StopBadge extends StatelessWidget {
             style: UmText.label.copyWith(color: foreground),
           ),
         },
+      ),
+    );
+  }
+}
+
+/// Mention des données (licence ODbL d'OpenStreetMap), lisible et sans débordement même
+/// avec un texte agrandi.
+class _Attribution extends StatelessWidget {
+  const _Attribution();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Container(
+        margin: const EdgeInsets.all(UmSpace.s1),
+        padding: const EdgeInsets.symmetric(horizontal: UmSpace.s2, vertical: UmSpace.s1),
+        decoration: BoxDecoration(
+          color: c.surfaceRaised,
+          borderRadius: BorderRadius.circular(UmRadius.sm),
+        ),
+        child: Text('© OpenStreetMap', style: UmText.caption.copyWith(color: c.ink)),
       ),
     );
   }
