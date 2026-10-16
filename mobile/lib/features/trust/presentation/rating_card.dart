@@ -24,6 +24,9 @@ class _RatingCardState extends ConsumerState<RatingCard> {
   String? _busyFor;
   String? _errorCode;
 
+  /// Étoiles choisies, pas encore envoyées : un appui raté se corrige avant d'envoyer.
+  final Map<String, int> _draft = {};
+
   Future<void> _rate(RatingTarget person, int stars) async {
     final messenger = ScaffoldMessenger.of(context);
     final done = AppLocalizations.of(context).ratingDone;
@@ -33,6 +36,7 @@ class _RatingCardState extends ConsumerState<RatingCard> {
     });
     try {
       await ref.read(ratingsProvider(widget.rideId).notifier).rate(person.userId, stars);
+      _draft.remove(person.userId);
       messenger.showSnackBar(SnackBar(content: Text(done)));
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
@@ -46,16 +50,33 @@ class _RatingCardState extends ConsumerState<RatingCard> {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final ratings = ref.watch(ratingsProvider(widget.rideId));
-    // Personne à noter (passager absent, tiers) ou erreur de lecture : la carte ne s'affiche pas.
     final value = ratings.value;
-    if (value == null || value.people.isEmpty) {
-      return ratings.isLoading
-          ? Semantics(
-              label: l10n.loading,
-              child: LinearProgressIndicator(color: c.brand),
-            )
-          : const SizedBox.shrink();
+    if (value == null) {
+      if (ratings.isLoading) {
+        return Semantics(
+          label: l10n.loading,
+          child: LinearProgressIndicator(color: c.brand),
+        );
+      }
+      final error = ratings.error;
+      // Pas de droit de noter (absent, tiers) : rien à afficher. Autre erreur : message et réessai.
+      if (error is ApiException && error.statusCode == 403) return const SizedBox.shrink();
+      return UmCard(
+        title: l10n.ratingTitle,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
+            UmButton(
+              label: l10n.retry,
+              variant: UmButtonVariant.ghost,
+              onPressed: () => ref.invalidate(ratingsProvider(widget.rideId)),
+            ),
+          ],
+        ),
+      );
     }
+    if (value.people.isEmpty) return const SizedBox.shrink();
     return UmCard(
       title: l10n.ratingTitle,
       child: Column(
@@ -77,21 +98,36 @@ class _RatingCardState extends ConsumerState<RatingCard> {
             ),
             if (person.stars case final stars?)
               _Stars(value: stars, label: l10n.ratingGiven(stars))
-            else if (value.open)
+            else if (value.open) ...[
               Row(
                 children: [
                   for (var n = 1; n <= 5; n++)
                     IconButton(
                       tooltip: l10n.ratingStar(n, person.firstName),
+                      isSelected: (_draft[person.userId] ?? 0) >= n,
                       constraints: const BoxConstraints(
                         minWidth: UmSize.tapTarget,
                         minHeight: UmSize.tapTarget,
                       ),
                       icon: Icon(Icons.star_outline_rounded, color: c.brandStrong),
-                      onPressed: _busyFor == null ? () => _rate(person, n) : null,
+                      selectedIcon: Icon(Icons.star_rounded, color: c.brandStrong),
+                      onPressed: _busyFor == null
+                          ? () => setState(() => _draft[person.userId] = n)
+                          : null,
                     ),
                 ],
               ),
+              if (_draft[person.userId] case final stars?)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: UmButton(
+                    label: l10n.ratingSend(stars),
+                    variant: UmButtonVariant.secondary,
+                    loading: _busyFor == person.userId,
+                    onPressed: _busyFor == null ? () => _rate(person, stars) : null,
+                  ),
+                ),
+            ],
           ],
           if (_errorCode != null) ...[
             const SizedBox(height: UmSpace.s3),

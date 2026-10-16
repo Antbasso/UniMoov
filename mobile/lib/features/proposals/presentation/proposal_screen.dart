@@ -33,8 +33,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
   Future<void> _cancel(String id) async {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
-    final done = AppLocalizations.of(context).cancelDone;
-    if (!await showCancelSheet(context, id)) return;
+    final done = await showCancelSheet(context, id);
+    if (done == null) return;
     ref.invalidate(weekProposalsProvider);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     if (router.canPop()) router.pop();

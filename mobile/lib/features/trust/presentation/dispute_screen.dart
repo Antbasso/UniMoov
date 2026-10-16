@@ -28,13 +28,14 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
   bool _busy = false;
   String? _errorCode;
 
+  /// Avec des demandes existantes, le formulaire d'une nouvelle demande est replié.
+  bool _another = false;
+
   @override
   void dispose() {
     _message.dispose();
     super.dispose();
   }
-
-  String? get _text => _message.text.trim().isEmpty ? null : _message.text.trim();
 
   Future<void> _run(Future<void> Function() action, {String? done}) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -55,10 +56,18 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
   Future<void> _send() async {
     final reason = _reason;
     if (reason == null) return;
+    final text = _message.text.trim();
     await _run(() async {
-      await ref.read(disputesProvider(widget.rideId).notifier).open(reason, _text);
+      await ref
+          .read(disputesProvider(widget.rideId).notifier)
+          .open(reason, text.isEmpty ? null : text);
       _message.clear();
-      if (mounted) setState(() => _reason = null);
+      if (mounted) {
+        setState(() {
+          _reason = null;
+          _another = false;
+        });
+      }
     });
   }
 
@@ -70,13 +79,14 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
     final mine = disputes.value ?? const <Dispute>[];
     final taken = {for (final d in mine) d.reason};
     final reasons = DisputeReason.values.where((r) => !taken.contains(r)).toList();
+    final showForm = disputes.hasValue && reasons.isNotEmpty && (mine.isEmpty || _another);
 
     return UmPage(
       appBar: AppBar(),
       title: l10n.disputeTitle,
       intro: l10n.disputeIntro,
       footer: [
-        if (reasons.isNotEmpty)
+        if (showForm)
           UmButton(
             label: l10n.disputeSend,
             expand: true,
@@ -90,6 +100,19 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
             label: l10n.loading,
             child: LinearProgressIndicator(color: c.brand),
           ),
+        if (disputes.hasError) ...[
+          UmErrorText(
+            apiErrorMessage(
+              l10n,
+              disputes.error is ApiException ? (disputes.error! as ApiException).code : null,
+            ),
+          ),
+          UmButton(
+            label: l10n.retry,
+            variant: UmButtonVariant.ghost,
+            onPressed: () => ref.invalidate(disputesProvider(widget.rideId)),
+          ),
+        ],
         if (mine.isNotEmpty) ...[
           Semantics(
             header: true,
@@ -102,15 +125,23 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
               child: _DisputeCard(
                 dispute: d,
                 busy: _busy,
-                onEscalate: () => _run(
-                  () => ref.read(disputesProvider(widget.rideId).notifier).escalate(d.id, _text),
+                onEscalate: (message) => _run(
+                  () => ref.read(disputesProvider(widget.rideId).notifier).escalate(d.id, message),
                   done: l10n.disputeEscalated,
                 ),
               ),
             ),
-          const SizedBox(height: UmSpace.s3),
+          if (reasons.isNotEmpty && !_another)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: UmButton(
+                label: l10n.disputeAnother,
+                variant: UmButtonVariant.ghost,
+                onPressed: () => setState(() => _another = true),
+              ),
+            ),
         ],
-        if (reasons.isNotEmpty) ...[
+        if (showForm) ...[
           Text(l10n.disputeReasonLabel, style: UmText.label.copyWith(color: c.brandStrong)),
           RadioGroup<DisputeReason>(
             groupValue: _reason,
@@ -126,27 +157,19 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
               ],
             ),
           ),
+          if (_reason == null)
+            Text(l10n.disputeChooseReason, style: UmText.caption.copyWith(color: c.inkMuted)),
           const SizedBox(height: UmSpace.s3),
+          UmField(
+            label: l10n.disputeMessageLabel,
+            controller: _message,
+            maxLines: 5,
+            maxLength: 1000,
+          ),
         ],
-        // Le message sert aussi à expliquer un désaccord au moment de contester une décision.
-        UmField(
-          label: l10n.disputeMessageLabel,
-          controller: _message,
-          maxLines: 5,
-          maxLength: 1000,
-        ),
         if (_errorCode != null) ...[
           const SizedBox(height: UmSpace.s3),
           UmErrorText(apiErrorMessage(l10n, _errorCode)),
-        ],
-        if (disputes.hasError) ...[
-          const SizedBox(height: UmSpace.s3),
-          UmErrorText(
-            apiErrorMessage(
-              l10n,
-              disputes.error is ApiException ? (disputes.error! as ApiException).code : null,
-            ),
-          ),
         ],
       ],
     );
@@ -172,16 +195,32 @@ String explanationText(AppLocalizations l10n, String code) => switch (code) {
   _ => l10n.explainNeedsHuman,
 };
 
-class _DisputeCard extends StatelessWidget {
+/// Demande et sa décision ; « Je ne suis pas d'accord » déplie le message à l'équipe.
+class _DisputeCard extends StatefulWidget {
   const _DisputeCard({required this.dispute, required this.busy, required this.onEscalate});
 
   final Dispute dispute;
   final bool busy;
-  final VoidCallback onEscalate;
+  final Future<void> Function(String? message) onEscalate;
+
+  @override
+  State<_DisputeCard> createState() => _DisputeCardState();
+}
+
+class _DisputeCardState extends State<_DisputeCard> {
+  final _why = TextEditingController();
+  bool _open = false;
+
+  @override
+  void dispose() {
+    _why.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final dispute = widget.dispute;
     final chip = dispute.withTeam
         ? UmChip(label: l10n.disputePending, icon: Icons.mail_outline_rounded)
         : switch (dispute.decision) {
@@ -190,7 +229,7 @@ class _DisputeCard extends StatelessWidget {
               icon: Icons.check_circle_outline_rounded,
               tone: UmChipTone.success,
             ),
-            _ => UmChip(label: l10n.disputeUpheld, icon: Icons.gavel_rounded),
+            _ => UmChip(label: l10n.disputeUpheld, icon: Icons.info_outline_rounded),
           };
     return UmCard(
       title: reasonLabel(l10n, dispute.reason),
@@ -207,11 +246,23 @@ class _DisputeCard extends StatelessWidget {
           ),
           if (!dispute.withTeam) ...[
             const SizedBox(height: UmSpace.s3),
-            UmButton(
-              label: l10n.disputeEscalate,
-              variant: UmButtonVariant.secondary,
-              onPressed: busy ? null : onEscalate,
-            ),
+            if (!_open)
+              UmButton(
+                label: l10n.disputeEscalate,
+                variant: UmButtonVariant.secondary,
+                onPressed: widget.busy ? null : () => setState(() => _open = true),
+              )
+            else ...[
+              UmField(label: l10n.disputeWhy, controller: _why, maxLines: 5, maxLength: 1000),
+              const SizedBox(height: UmSpace.s2),
+              UmButton(
+                label: l10n.disputeSendTeam,
+                loading: widget.busy,
+                onPressed: widget.busy
+                    ? null
+                    : () => widget.onEscalate(_why.text.trim().isEmpty ? null : _why.text.trim()),
+              ),
+            ],
           ],
         ],
       ),

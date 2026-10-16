@@ -172,6 +172,35 @@ export class TrustRepo {
     return rows.map((r) => Number(r.stars));
   }
 
+  /** Verrou de la ligne : deux recalculs simultanés du même score ne s'écrasent pas. */
+  async lockUser(userId: string, db: DbOrTx): Promise<void> {
+    await db.execute(sql`SELECT 1 FROM users WHERE id = ${userId} FOR UPDATE`);
+  }
+
+  /** Date de la pénalité corrigée : la correction sort de la fenêtre du score en même temps qu'elle. */
+  async penaltyDate(userId: string, rideId: string, kinds: readonly ReliabilityKind[], db: DbOrTx): Promise<Date | null> {
+    const { rows } = await db.execute<{ at: string | null }>(sql`
+      SELECT min(created_at) AS at FROM reliability_events
+      WHERE user_id = ${userId} AND ride_id = ${rideId} AND kind IN (${sql.join(
+        kinds.map((k) => sql`${k}`),
+        sql`, `,
+      )})`);
+    return rows[0]?.at ? new Date(rows[0].at) : null;
+  }
+
+  /** Personnes dont une entrée ou une note vient de sortir de la fenêtre du score. */
+  async usersLeavingWindow(from: Date, to: Date): Promise<string[]> {
+    const { rows } = await this.db.execute<{ user_id: string }>(sql`
+      SELECT user_id FROM reliability_events WHERE created_at >= ${from} AND created_at < ${to}
+      UNION SELECT rated_id FROM ratings WHERE created_at >= ${from} AND created_at < ${to}`);
+    return rows.map((r) => r.user_id);
+  }
+
+  /** Verrou par auteur : le quota de signalements tient avec des requêtes simultanées. */
+  async lockReporter(reporterId: string, db: DbOrTx): Promise<void> {
+    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`report:${reporterId}`}))`);
+  }
+
   async setScore(userId: string, score: number, db: DbOrTx = this.db): Promise<void> {
     await db.execute(sql`UPDATE users SET reliability_score = ${score} WHERE id = ${userId}`);
   }
@@ -203,8 +232,10 @@ export class TrustRepo {
     return rows[0] ? toDispute(rows[0]) : null;
   }
 
-  async dispute(disputeId: string, db: DbOrTx = this.db): Promise<DisputeRow | null> {
-    const { rows } = await db.execute(sql`SELECT * FROM disputes WHERE id = ${disputeId}`);
+  async dispute(disputeId: string, db: DbOrTx = this.db, lock = false): Promise<DisputeRow | null> {
+    const { rows } = await db.execute(
+      lock ? sql`SELECT * FROM disputes WHERE id = ${disputeId} FOR UPDATE` : sql`SELECT * FROM disputes WHERE id = ${disputeId}`,
+    );
     return rows[0] ? toDispute(rows[0]) : null;
   }
 
@@ -215,8 +246,8 @@ export class TrustRepo {
   }
 
   /** Passage au niveau 2 ; `false` si déjà transmis (rejeu). */
-  async escalate(disputeId: string, message: string | null, at: Date): Promise<boolean> {
-    const { rows } = await this.db.execute<{ id: string }>(sql`
+  async escalate(disputeId: string, message: string | null, at: Date, db: DbOrTx = this.db): Promise<boolean> {
+    const { rows } = await db.execute<{ id: string }>(sql`
       UPDATE disputes SET level = 2, decision = 'escalated', escalated_at = ${at},
              message = COALESCE(${message}, message)
       WHERE id = ${disputeId} AND level = 1 RETURNING id`);
@@ -231,24 +262,31 @@ export class TrustRepo {
     return rows.length > 0;
   }
 
-  async reportsSince(reporterId: string, since: Date): Promise<number> {
-    const { rows } = await this.db.execute<{ n: string }>(sql`
+  async reportsSince(reporterId: string, since: Date, db: DbOrTx = this.db): Promise<number> {
+    const { rows } = await db.execute<{ n: string }>(sql`
       SELECT count(*) AS n FROM reports WHERE reporter_id = ${reporterId} AND created_at >= ${since}`);
     return Number(rows[0]?.n ?? 0);
   }
 
-  async insertReport(input: { reporterId: string; targetUserId: string; reason: string; message: string | null; at: Date }) {
-    const { rows } = await this.db.execute<{ id: string }>(sql`
+  async insertReport(
+    input: { reporterId: string; targetUserId: string; reason: string; message: string | null; at: Date },
+    db: DbOrTx = this.db,
+  ) {
+    const { rows } = await db.execute<{ id: string }>(sql`
       INSERT INTO reports (reporter_id, target_user_id, reason, message, created_at)
       VALUES (${input.reporterId}, ${input.targetUserId}, ${input.reason}, ${input.message}, ${input.at})
       RETURNING id`);
     return rows[0]!.id;
   }
 
-  async contact(userId: string): Promise<{ email: string; firstName: string } | null> {
-    const { rows } = await this.db.execute<{ email: string; first_name: string }>(sql`
+  async contact(userId: string, db: DbOrTx = this.db): Promise<{ email: string; firstName: string } | null> {
+    const { rows } = await db.execute<{ email: string; first_name: string }>(sql`
       SELECT university_email AS email, first_name FROM users WHERE id = ${userId}`);
     return rows[0] ? { email: rows[0].email, firstName: rows[0].first_name } : null;
+  }
+
+  async eventCount(userId: string, rideId: string, kinds: readonly ReliabilityKind[]): Promise<number> {
+    return (await this.entriesForRide(userId, rideId)).filter((e) => kinds.includes(e.kind)).length;
   }
 
   async score(userId: string): Promise<number> {

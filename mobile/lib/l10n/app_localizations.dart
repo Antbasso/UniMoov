@@ -2005,19 +2005,19 @@ abstract class AppLocalizations {
   /// No description provided for @cancelTierEarly.
   ///
   /// In fr, this message translates to:
-  /// **'Tu préviens tôt : ton score de fiabilité baisse un peu.'**
+  /// **'Tu préviens tôt : ton score baisse un peu.'**
   String get cancelTierEarly;
 
   /// No description provided for @cancelTierMedium.
   ///
   /// In fr, this message translates to:
-  /// **'Le départ approche : ton score de fiabilité baisse davantage.'**
+  /// **'Le départ approche : ton score baisse davantage.'**
   String get cancelTierMedium;
 
   /// No description provided for @cancelTierLate.
   ///
   /// In fr, this message translates to:
-  /// **'Départ imminent : ton score de fiabilité baisse nettement. Les autres comptent sur toi.'**
+  /// **'Départ imminent : ton score baisse nettement.'**
   String get cancelTierLate;
 
   /// No description provided for @cancelPassengerEffect.
@@ -2031,12 +2031,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tes passagers sont prévenus et on leur cherche une autre voiture.'**
   String get cancelDriverEffect;
-
-  /// No description provided for @cancelConfirm.
-  ///
-  /// In fr, this message translates to:
-  /// **'Confirmer l\'annulation'**
-  String get cancelConfirm;
 
   /// No description provided for @cancelKeep.
   ///
@@ -2059,7 +2053,7 @@ abstract class AppLocalizations {
   /// No description provided for @ratingIntro.
   ///
   /// In fr, this message translates to:
-  /// **'Facultatif. Ta note compte dans le score de fiabilité.'**
+  /// **'Facultatif. Ta note compte dans le score de fiabilité de la personne.'**
   String get ratingIntro;
 
   /// No description provided for @ratingStar.
@@ -2071,7 +2065,7 @@ abstract class AppLocalizations {
   /// No description provided for @ratingGiven.
   ///
   /// In fr, this message translates to:
-  /// **'Ta note : {stars} sur 5'**
+  /// **'Ta note : {stars} sur 5'**
   String ratingGiven(int stars);
 
   /// No description provided for @ratingDone.
@@ -2167,14 +2161,14 @@ abstract class AppLocalizations {
   /// No description provided for @reliabilityEventsTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Ce qui pèse sur ton score'**
+  /// **'Ce qui a compté dans ton score'**
   String get reliabilityEventsTitle;
 
   /// No description provided for @reliabilityEmpty.
   ///
   /// In fr, this message translates to:
-  /// **'Aucune annulation ni absence ces derniers mois.'**
-  String get reliabilityEmpty;
+  /// **'Aucune annulation ni absence sur les {days} derniers jours.'**
+  String reliabilityEmpty(int days);
 
   /// No description provided for @eventCancelEarly.
   ///
@@ -2227,7 +2221,7 @@ abstract class AppLocalizations {
   /// No description provided for @rideAbsent.
   ///
   /// In fr, this message translates to:
-  /// **'Ta présence n\'a pas été validée : ce trajet compte comme une absence.'**
+  /// **'Ta présence n\'a pas été validée : ce trajet compte comme une absence.'**
   String get rideAbsent;
 
   /// No description provided for @disputeTitle.
@@ -2239,7 +2233,7 @@ abstract class AppLocalizations {
   /// No description provided for @disputeIntro.
   ///
   /// In fr, this message translates to:
-  /// **'On vérifie d\'abord les horodatages du serveur. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.'**
+  /// **'On vérifie d\'abord ce que l\'app a enregistré : heure d\'annulation, présence au rendez-vous. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.'**
   String get disputeIntro;
 
   /// No description provided for @disputeReasonLabel.
@@ -2329,19 +2323,19 @@ abstract class AppLocalizations {
   /// No description provided for @disputePending.
   ///
   /// In fr, this message translates to:
-  /// **'À l\'équipe'**
+  /// **'En cours d\'examen'**
   String get disputePending;
 
   /// No description provided for @explainPenaltyMatches.
   ///
   /// In fr, this message translates to:
-  /// **'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.'**
+  /// **'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.'**
   String get explainPenaltyMatches;
 
   /// No description provided for @explainPenaltyRecomputed.
   ///
   /// In fr, this message translates to:
-  /// **'La pénalité ne correspondait pas aux horodatages : elle est corrigée.'**
+  /// **'La pénalité ne correspondait pas aux horodatages : elle est corrigée.'**
   String get explainPenaltyRecomputed;
 
   /// No description provided for @explainNoPenalty.
@@ -2353,19 +2347,19 @@ abstract class AppLocalizations {
   /// No description provided for @explainPresenceValidated.
   ///
   /// In fr, this message translates to:
-  /// **'Ta présence avait bien été validée : la pénalité est retirée.'**
+  /// **'Ta présence avait bien été validée : la pénalité est retirée.'**
   String get explainPresenceValidated;
 
   /// No description provided for @explainDriverConfirmed.
   ///
   /// In fr, this message translates to:
-  /// **'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.'**
+  /// **'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.'**
   String get explainDriverConfirmed;
 
   /// No description provided for @explainNoPresence.
   ///
   /// In fr, this message translates to:
-  /// **'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.'**
+  /// **'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.'**
   String get explainNoPresence;
 
   /// No description provided for @explainNotAbsent.
@@ -2389,7 +2383,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportIntro.
   ///
   /// In fr, this message translates to:
-  /// **'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit.'**
+  /// **'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit et peut te recontacter par mail.'**
   String get reportIntro;
 
   /// No description provided for @reportWho.
@@ -2493,6 +2487,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu as atteint le nombre de signalements du jour.'**
   String get errorReportLimit;
+
+  /// No description provided for @ratingSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer ma note ({stars} sur 5)'**
+  String ratingSend(int stars);
+
+  /// No description provided for @cancelSheetTitlePassenger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler ta place ?'**
+  String get cancelSheetTitlePassenger;
+
+  /// No description provided for @cancelDonePassenger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta place est annulée.'**
+  String get cancelDonePassenger;
+
+  /// No description provided for @eventContestClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Délai de contestation dépassé.'**
+  String get eventContestClosed;
+
+  /// No description provided for @disputeWhy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dis-nous pourquoi (facultatif)'**
+  String get disputeWhy;
+
+  /// No description provided for @disputeSendTeam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer à l\'équipe'**
+  String get disputeSendTeam;
+
+  /// No description provided for @disputeAnother.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler un autre problème'**
+  String get disputeAnother;
+
+  /// No description provided for @disputeChooseReason.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis un motif pour continuer.'**
+  String get disputeChooseReason;
+
+  /// No description provided for @reportEmergency.
+  ///
+  /// In fr, this message translates to:
+  /// **'En cas de danger immédiat, appelle le 112.'**
+  String get reportEmergency;
 }
 
 class _AppLocalizationsDelegate

@@ -1131,16 +1131,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get cancelSheetTitle => 'Annuler ce trajet ?';
 
   @override
-  String get cancelTierEarly =>
-      'Tu préviens tôt : ton score de fiabilité baisse un peu.';
+  String get cancelTierEarly => 'Tu préviens tôt : ton score baisse un peu.';
 
   @override
   String get cancelTierMedium =>
-      'Le départ approche : ton score de fiabilité baisse davantage.';
+      'Le départ approche : ton score baisse davantage.';
 
   @override
-  String get cancelTierLate =>
-      'Départ imminent : ton score de fiabilité baisse nettement. Les autres comptent sur toi.';
+  String get cancelTierLate => 'Départ imminent : ton score baisse nettement.';
 
   @override
   String get cancelPassengerEffect =>
@@ -1149,9 +1147,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get cancelDriverEffect =>
       'Tes passagers sont prévenus et on leur cherche une autre voiture.';
-
-  @override
-  String get cancelConfirm => 'Confirmer l\'annulation';
 
   @override
   String get cancelKeep => 'Garder mon trajet';
@@ -1164,7 +1159,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get ratingIntro =>
-      'Facultatif. Ta note compte dans le score de fiabilité.';
+      'Facultatif. Ta note compte dans le score de fiabilité de la personne.';
 
   @override
   String ratingStar(int stars, String name) {
@@ -1173,7 +1168,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String ratingGiven(int stars) {
-    return 'Ta note : $stars sur 5';
+    return 'Ta note : $stars sur 5';
   }
 
   @override
@@ -1262,11 +1257,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reliabilityNoRatings => 'Pas encore de note';
 
   @override
-  String get reliabilityEventsTitle => 'Ce qui pèse sur ton score';
+  String get reliabilityEventsTitle => 'Ce qui a compté dans ton score';
 
   @override
-  String get reliabilityEmpty =>
-      'Aucune annulation ni absence ces derniers mois.';
+  String reliabilityEmpty(int days) {
+    return 'Aucune annulation ni absence sur les $days derniers jours.';
+  }
 
   @override
   String get eventCancelEarly => 'Annulation prévenue tôt';
@@ -1296,14 +1292,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rideAbsent =>
-      'Ta présence n\'a pas été validée : ce trajet compte comme une absence.';
+      'Ta présence n\'a pas été validée : ce trajet compte comme une absence.';
 
   @override
   String get disputeTitle => 'Un problème sur ce trajet ?';
 
   @override
   String get disputeIntro =>
-      'On vérifie d\'abord les horodatages du serveur. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.';
+      'On vérifie d\'abord ce que l\'app a enregistré : heure d\'annulation, présence au rendez-vous. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.';
 
   @override
   String get disputeReasonLabel => 'Motif';
@@ -1350,15 +1346,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get disputeCorrected => 'Corrigé';
 
   @override
-  String get disputePending => 'À l\'équipe';
+  String get disputePending => 'En cours d\'examen';
 
   @override
   String get explainPenaltyMatches =>
-      'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.';
+      'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.';
 
   @override
   String get explainPenaltyRecomputed =>
-      'La pénalité ne correspondait pas aux horodatages : elle est corrigée.';
+      'La pénalité ne correspondait pas aux horodatages : elle est corrigée.';
 
   @override
   String get explainNoPenalty =>
@@ -1366,15 +1362,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get explainPresenceValidated =>
-      'Ta présence avait bien été validée : la pénalité est retirée.';
+      'Ta présence avait bien été validée : la pénalité est retirée.';
 
   @override
   String get explainDriverConfirmed =>
-      'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.';
+      'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.';
 
   @override
   String get explainNoPresence =>
-      'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.';
+      'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.';
 
   @override
   String get explainNotAbsent =>
@@ -1389,7 +1385,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reportIntro =>
-      'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit.';
+      'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit et peut te recontacter par mail.';
 
   @override
   String get reportWho => 'Qui ?';
@@ -1446,4 +1442,33 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errorReportLimit =>
       'Tu as atteint le nombre de signalements du jour.';
+
+  @override
+  String ratingSend(int stars) {
+    return 'Envoyer ma note ($stars sur 5)';
+  }
+
+  @override
+  String get cancelSheetTitlePassenger => 'Annuler ta place ?';
+
+  @override
+  String get cancelDonePassenger => 'Ta place est annulée.';
+
+  @override
+  String get eventContestClosed => 'Délai de contestation dépassé.';
+
+  @override
+  String get disputeWhy => 'Dis-nous pourquoi (facultatif)';
+
+  @override
+  String get disputeSendTeam => 'Envoyer à l\'équipe';
+
+  @override
+  String get disputeAnother => 'Signaler un autre problème';
+
+  @override
+  String get disputeChooseReason => 'Choisis un motif pour continuer.';
+
+  @override
+  String get reportEmergency => 'En cas de danger immédiat, appelle le 112.';
 }

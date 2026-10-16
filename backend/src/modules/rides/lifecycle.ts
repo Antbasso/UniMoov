@@ -94,11 +94,13 @@ export class RideLifecycle {
     if (now > ride.targetTime.getTime() + staleHours * 3_600_000) {
       throw new AppError(409, 'too_late', 'Ce trajet est passé');
     }
-    const passengers = members.filter((m) => m.role === 'passenger' && isAccepted(m));
-    const price = await this.rides.estimate(ride, ride.distanceM, passengers.length + 1);
-    await this.repo.transaction(async (tx) => {
+    const started = await this.repo.transaction(async (tx) => {
       const current = await this.repo.ride(rideId, tx, true);
-      if (current?.status !== 'confirmed') return;
+      if (current?.status === 'in_progress') return false;
+      // Relu sous le verrou : une annulation simultanée a pu retirer un passager ou rouvrir le trajet.
+      if (current?.status !== 'confirmed') throw new AppError(409, 'ride_not_confirmed', "Ce trajet n'est pas confirmé");
+      const passengers = (await this.repo.members(rideId, tx)).filter((m) => m.role === 'passenger' && isAccepted(m));
+      const price = await this.rides.estimate(current, current.distanceM, passengers.length + 1);
       await this.repo.setRideStatus(rideId, 'in_progress', { startedAt: this.clock() }, tx);
       // Tous les portefeuilles d'un coup, dans l'ordre des identifiants : pas d'interblocage.
       await this.wallet.lockWallets([ride.driverId, ...passengers.map((p) => p.userId)], tx);
@@ -114,7 +116,9 @@ export class RideLifecycle {
           tx,
         );
       }
+      return true;
     });
+    if (!started) return;
     this.onLiveChanged(rideId);
     this.hub.send(rideId, { type: 'ride_status', status: 'in_progress' });
   }

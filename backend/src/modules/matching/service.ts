@@ -408,7 +408,8 @@ export class MatchingService {
     const invited = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
       const ride = await this.repo.findRide(rideId, tx);
-      if (!ride || ride.day < this.today() || (ride.status !== 'proposed' && ride.status !== 'confirmed')) return null;
+      // Heure passée : la voiture est partie, personne n'est relancé.
+      if (!ride || ride.targetTime <= this.clock() || (ride.status !== 'proposed' && ride.status !== 'confirmed')) return null;
       const view = await this.suggestionsFor(ride, tx);
       const pick = view.seatsLeft > 0 ? view.suggestions.find((s) => s.withinDetourLimit) : undefined;
       if (!pick) return null;
@@ -420,6 +421,7 @@ export class MatchingService {
 
   /** Passager dont le conducteur a annulé : la meilleure autre voiture lui est proposée. */
   private async rehome(passengerId: string, cancelled: RideRow): Promise<void> {
+    if (cancelled.targetTime <= this.clock()) return;
     const rideId = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, cancelled.day);
       // La régénération du jour lui a peut-être déjà trouvé une voiture : on le prévient.

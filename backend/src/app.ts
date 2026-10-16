@@ -56,7 +56,7 @@ import type { PaymentProvider } from './shared/payments/payment-provider.js';
 declare module 'fastify' {
   interface FastifyInstance {
     /** Services utilisés par les tâches planifiées (présents si les modules sont montés). */
-    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle };
+    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService };
   }
 }
 
@@ -209,7 +209,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle });
+    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(

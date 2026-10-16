@@ -94,7 +94,10 @@ class ReliabilityScreen extends ConsumerWidget {
           ),
           const SizedBox(height: UmSpace.s3),
           if (value.events.isEmpty)
-            Text(l10n.reliabilityEmpty, style: UmText.body.copyWith(color: c.inkMuted))
+            Text(
+              l10n.reliabilityEmpty(value.windowDays),
+              style: UmText.body.copyWith(color: c.inkMuted),
+            )
           else
             for (final event in value.events) _EventRow(event: event),
         ],
@@ -121,6 +124,7 @@ class _EventRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
     final title = switch (event.kind) {
       ReliabilityEventKind.cancelEarly => l10n.eventCancelEarly,
       ReliabilityEventKind.cancelMedium => l10n.eventCancelMedium,
@@ -131,21 +135,31 @@ class _EventRow extends StatelessWidget {
     final day = event.day;
     final reason = event.disputeReason;
     final rideId = event.rideId;
+    final contestable = reason != null && rideId != null;
     return Padding(
       padding: const EdgeInsets.only(bottom: UmSpace.s3),
       child: UmCard(
         title: title,
         body: day == null ? null : l10n.eventRideOn(formatDayInline(day, l10n.localeName)),
-        child: reason == null || rideId == null
-            ? null
-            : Align(
-                alignment: Alignment.centerLeft,
-                child: UmButton(
-                  label: l10n.contest,
-                  variant: UmButtonVariant.secondary,
-                  onPressed: () => context.push(AppRoutes.dispute(rideId, reason: reason)),
-                ),
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.kind == ReliabilityEventKind.correction)
+              UmChip(
+                label: l10n.disputeCorrected,
+                icon: Icons.check_circle_outline_rounded,
+                tone: UmChipTone.success,
+              )
+            else if (contestable)
+              UmButton(
+                label: l10n.contest,
+                variant: UmButtonVariant.secondary,
+                onPressed: () => context.push(AppRoutes.dispute(rideId, reason: reason)),
+              )
+            else
+              Text(l10n.eventContestClosed, style: UmText.caption.copyWith(color: c.inkMuted)),
+          ],
+        ),
       ),
     );
   }

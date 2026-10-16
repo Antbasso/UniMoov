@@ -493,6 +493,12 @@ class FakeBackend
   // --- Confiance (annulations, notes, fiabilité, litiges, signalements) ---
 
   CancelTier cancelTier = CancelTier.medium;
+
+  /// Palier appliqué à l'annulation, s'il diffère de celui annoncé (seuil franchi entre-temps).
+  CancelTier? appliedTier;
+
+  /// Erreur au prochain chargement des notes (une fois).
+  ApiException? failNextRatings;
   final List<String> cancelled = [];
   final Map<String, RideRatings> ratingsById = {};
   final Map<String, int> _given = {};
@@ -521,12 +527,15 @@ class FakeBackend
       final i = list.indexWhere((p) => p.id == rideId);
       if (i >= 0) list[i] = list[i].copyWith(myStatus: 'cancelled');
     }
-    return cancelTier;
+    return appliedTier ?? cancelTier;
   }
 
   @override
   Future<RideRatings> ratings(String rideId) async {
     _maybeFail();
+    final error = failNextRatings;
+    failNextRatings = null;
+    if (error != null) throw error;
     final base = ratingsById[rideId] ?? const RideRatings(open: true, people: []);
     return RideRatings(
       open: base.open,

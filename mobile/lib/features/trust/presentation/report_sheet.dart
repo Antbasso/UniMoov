@@ -92,6 +92,11 @@ class _ReportSheetState extends ConsumerState<ReportSheet> {
             ),
             const SizedBox(height: UmSpace.s2),
             Text(l10n.reportIntro, style: UmText.bodySm.copyWith(color: c.inkMuted)),
+            const SizedBox(height: UmSpace.s2),
+            Text(
+              l10n.reportEmergency,
+              style: UmText.bodySm.copyWith(color: c.ink, fontWeight: FontWeight.w600),
+            ),
             if (widget.people.length > 1) ...[
               const SizedBox(height: UmSpace.s4),
               Text(l10n.reportWho, style: UmText.label.copyWith(color: c.brandStrong)),

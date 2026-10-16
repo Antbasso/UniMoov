@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/core/router/redirect.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
@@ -50,16 +51,28 @@ void main() {
     testWidgets('passagère : pénalité annoncée, confirmée, retour à l’accueil', (tester) async {
       await openRide(tester);
       await tapText(tester, 'Annuler ma place');
-      expect(find.text('Annuler ce trajet ?'), findsOneWidget);
-      expect(
-        find.text('Le départ approche : ton score de fiabilité baisse davantage.'),
-        findsOneWidget,
-      );
+      expect(find.text('Annuler ta place ?'), findsOneWidget);
+      expect(find.text('Le départ approche\u00a0: ton score baisse davantage.'), findsOneWidget);
       expect(find.textContaining('ta place est proposée à quelqu\'un d\'autre'), findsOneWidget);
-      await tapText(tester, 'Confirmer l\'annulation');
+      // Bouton de la feuille (le même libellé reste visible sous la feuille).
+      await tester.tap(find.text('Annuler ma place').last);
+      await tester.pumpAndSettle();
       expect(backend.cancelled, ['ride-1']);
-      expect(find.text('Trajet annulé.'), findsOneWidget);
+      expect(find.text('Ta place est annulée.'), findsOneWidget);
       expect(find.text('Arrêts'), findsNothing);
+    });
+
+    testWidgets('seuil franchi pendant la confirmation : le palier appliqué est annoncé', (
+      tester,
+    ) async {
+      backend
+        ..cancelTier = CancelTier.early
+        ..appliedTier = CancelTier.medium;
+      await openRide(tester);
+      await tapText(tester, 'Annuler ma place');
+      await tester.tap(find.text('Annuler ma place').last);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Ta place est annulée. Le départ approche'), findsOneWidget);
     });
 
     testWidgets('garder son trajet : rien n’est annulé', (tester) async {
@@ -76,7 +89,8 @@ void main() {
       backend.cancelTier = CancelTier.late;
       await openRide(tester, index: 1);
       await tapText(tester, 'Annuler le trajet');
-      expect(find.textContaining('Départ imminent'), findsOneWidget);
+      expect(find.text('Annuler ce trajet ?'), findsOneWidget);
+      expect(find.text('Départ imminent\u00a0: ton score baisse nettement.'), findsOneWidget);
       expect(
         find.text('Tes passagers sont prévenus et on leur cherche une autre voiture.'),
         findsOneWidget,
@@ -85,15 +99,22 @@ void main() {
   });
 
   group('trajet terminé', () {
-    testWidgets('noter le conducteur une fois, de 1 à 5', (tester) async {
+    testWidgets('noter le conducteur une fois : choisir, corriger, puis envoyer', (tester) async {
       completed();
       await openRide(tester);
       expect(find.text('Noter le trajet'), findsOneWidget);
-      await tester.ensureVisible(find.byTooltip('4 sur 5 pour Nathan'));
-      await tester.tap(find.byTooltip('4 sur 5 pour Nathan'));
-      await tester.pumpAndSettle();
+      Future<void> star(int n) async {
+        await tester.ensureVisible(find.byTooltip('$n sur 5 pour Nathan'));
+        await tester.tap(find.byTooltip('$n sur 5 pour Nathan'));
+        await tester.pumpAndSettle();
+      }
+
+      await star(2); // appui raté : rien n'est encore envoyé
+      expect(backend.given, isEmpty);
+      await star(4);
+      await tapText(tester, 'Envoyer ma note (4 sur 5)');
       expect(backend.given, {'ride-1|driver-1': 4});
-      expect(find.text('Ta note : 4 sur 5'), findsOneWidget);
+      expect(find.text('Ta note\u00a0: 4 sur 5'), findsOneWidget);
       expect(find.byTooltip('5 sur 5 pour Nathan'), findsNothing);
     });
 
@@ -103,7 +124,7 @@ void main() {
         completed(myStatus: 'absent');
         await openRide(tester);
         expect(
-          find.text('Ta présence n\'a pas été validée : ce trajet compte comme une absence.'),
+          find.text('Ta présence n\'a pas été validée\u00a0: ce trajet compte comme une absence.'),
           findsOneWidget,
         );
         expect(find.text('Noter le trajet'), findsNothing);
@@ -116,11 +137,25 @@ void main() {
         expect(find.text('Mon absence est une erreur'), findsOneWidget); // titre de la demande
 
         await tapText(tester, 'Je ne suis pas d\'accord');
-        expect(find.text('À l\'équipe'), findsOneWidget);
+        await tester.enterText(
+          fieldLabeled('Dis-nous pourquoi (facultatif)'),
+          'J’étais au rendez-vous.',
+        );
+        await tapText(tester, 'Envoyer à l\'équipe');
+        expect(find.text('En cours d\'examen'), findsOneWidget);
         expect(find.text('Demande transmise à l\'équipe.'), findsOneWidget);
         expect(find.text('Je ne suis pas d\'accord'), findsNothing);
       },
     );
+
+    testWidgets('notes indisponibles : message et réessai', (tester) async {
+      completed();
+      backend.failNextRatings = const ApiException('network_error', '');
+      await openRide(tester);
+      await tester.ensureVisible(find.text('Réessayer'));
+      await tapText(tester, 'Réessayer');
+      expect(find.byTooltip('4 sur 5 pour Nathan'), findsOneWidget);
+    });
 
     testWidgets('signaler une personne du trajet, avec un motif', (tester) async {
       completed();
@@ -146,8 +181,9 @@ void main() {
       expect(find.text('9 notes, moyenne 4,6 sur 5'), findsOneWidget);
       expect(find.text('Annulation au dernier moment'), findsOneWidget);
       expect(find.text('Absence au rendez-vous'), findsOneWidget);
-      // Seule l'entrée récente est encore contestable.
+      // Seule l'entrée récente est encore contestable ; l'autre le dit.
       expect(find.text('Contester'), findsOneWidget);
+      expect(find.text('Délai de contestation dépassé.'), findsOneWidget);
 
       await tapText(tester, 'Contester');
       await tapText(tester, 'Envoyer');
@@ -158,7 +194,7 @@ void main() {
     testWidgets('aucune pénalité : état vide', (tester) async {
       backend.reliabilityState = reliabilityFixture(events: const []);
       await go(tester, AppRoutes.reliability);
-      expect(find.text('Aucune annulation ni absence ces derniers mois.'), findsOneWidget);
+      expect(find.text('Aucune annulation ni absence sur les 180 derniers jours.'), findsOneWidget);
     });
 
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {

@@ -262,6 +262,8 @@ describe('annulation tardive du conducteur', () => {
       event: { type: 'ride_cancelled', rideId: tueTo, by: 'driver' },
     });
     expect((await proposals('Inès')).find((p) => p.id === tueTo)!.rideStatus).toBe('cancelled');
+    // Le trajet annulé par le conducteur n'ouvre pas de litige à ses passagers (rien à contester).
+    expect((await call('Inès', 'POST', `/rides/${tueTo}/disputes`, { reason: 'other' })).statusCode).toBe(403);
     // Remplaçant : chaque passager reçoit une autre proposition pour ce créneau, et en est prévenu.
     for (const name of ['Hugo', 'Inès']) {
       const other = (await proposals(name)).find((p) => p.day === '2026-10-20' && p.direction === 'to_campus' && p.id !== tueTo);
@@ -299,5 +301,15 @@ describe('fenêtres de temps', () => {
     ctx.clock.now = new Date('2026-11-03T07:00:00Z');
     expect(code(await call('Inès', 'POST', `/rides/${monFrom}/disputes`, { reason: 'payment' }))).toBe('dispute_closed');
     expect((await reliability('Hugo')).events.every((e) => e.disputeReason === null)).toBe(true);
+  });
+
+  it('pénalités sorties de la fenêtre : la tâche quotidienne rétablit le score, même sans nouveau trajet', async () => {
+    const score = async () =>
+      Number((await ctx.database.pool.query<{ s: string }>('SELECT reliability_score AS s FROM users WHERE id = $1', [user('Hugo').id])).rows[0]!.s);
+    expect(await score()).toBeLessThan(0.8);
+    // 180 jours après l'absence du 19 octobre.
+    ctx.clock.now = new Date('2027-04-19T12:00:00Z');
+    expect(await ctx.app.services!.trust.refreshExpired()).toBeGreaterThan(0);
+    expect(await score()).toBe(0.8);
   });
 });

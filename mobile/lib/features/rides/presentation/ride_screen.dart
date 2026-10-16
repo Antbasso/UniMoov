@@ -102,8 +102,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
   Future<void> _cancel() async {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
-    final done = AppLocalizations.of(context).cancelDone;
-    if (!await showCancelSheet(context, widget.ride.id)) return;
+    final done = await showCancelSheet(context, widget.ride.id);
+    if (done == null) return;
     ref.invalidate(weekProposalsProvider);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     router.go(AppRoutes.home);
