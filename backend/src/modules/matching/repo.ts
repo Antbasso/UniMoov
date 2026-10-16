@@ -290,14 +290,61 @@ export class MatchingRepo {
       .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, userId)));
   }
 
-  async addPassenger(rideId: string, userId: string, detourS: number, db: DbOrTx = this.db) {
+  async addPassenger(
+    rideId: string,
+    userId: string,
+    detourS: number,
+    db: DbOrTx = this.db,
+    status: 'accepted' | 'proposed' = 'accepted',
+  ) {
     await db
       .insert(rideParticipants)
-      .values({ rideId, userId, role: 'passenger', status: 'accepted', detourS })
+      .values({ rideId, userId, role: 'passenger', status, detourS })
       .onConflictDoUpdate({
         target: [rideParticipants.rideId, rideParticipants.userId],
-        set: { status: 'accepted', detourS },
+        set: { status, detourS },
       });
+  }
+
+  /** Utilisateurs déjà dans un trajet actif ce jour-là dans ce sens (conducteur ou passager). */
+  async busyUsers(day: string, direction: Direction, db: DbOrTx = this.db): Promise<Set<string>> {
+    const { rows } = await db.execute<{ user_id: string }>(sql`
+      SELECT p.user_id FROM ride_participants p JOIN rides r ON r.id = p.ride_id
+      WHERE r.day = ${day} AND r.direction = ${direction} AND r.status <> 'cancelled'
+        AND p.status NOT IN ('declined', 'cancelled')`);
+    return new Set(rows.map((r) => r.user_id));
+  }
+
+  /** Informations publiques (avant acceptation) d'utilisateurs hors trajet. */
+  async publicUsers(userIds: readonly string[], db: DbOrTx = this.db): Promise<Map<string, Omit<ParticipantRow, 'rideId' | 'role' | 'status' | 'detourS'>>> {
+    if (userIds.length === 0) return new Map();
+    const { rows } = await db.execute<{
+      id: string;
+      first_name: string;
+      photo_url: string | null;
+      home_sector: string | null;
+      reliability: string;
+    }>(sql`
+      SELECT id, first_name, photo_url, home_sector, reliability_score AS reliability FROM users
+      WHERE id IN (${sql.join(userIds.map((id) => sql`${id}::uuid`), sql`, `)})`);
+    return new Map(
+      rows.map((r) => [
+        r.id,
+        { userId: r.id, firstName: r.first_name, photoUrl: r.photo_url, sector: r.home_sector, reliability: Number(r.reliability) },
+      ]),
+    );
+  }
+
+  async vehicleConsumption(userId: string, db: DbOrTx = this.db): Promise<number | null> {
+    const { rows } = await db.execute<{ consumption: string }>(
+      sql`SELECT consumption_l_per_100km AS consumption FROM vehicles WHERE user_id = ${userId}`,
+    );
+    return rows[0] ? Number(rows[0].consumption) : null;
+  }
+
+  /** Les arrêts d'un trajet ont changé : son plan (tracé, heures) est à recalculer. */
+  async invalidatePlan(rideId: string, db: DbOrTx = this.db) {
+    await db.update(rides).set({ plannedAt: null }).where(eq(rides.id, rideId));
   }
 
   async setRideStatus(rideId: string, status: 'confirmed' | 'cancelled', db: DbOrTx = this.db) {

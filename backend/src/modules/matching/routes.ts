@@ -5,9 +5,11 @@ import { isoWeekMonday } from '../../shared/time.js';
 import {
   alternativesResponse,
   idParams,
+  inviteParams,
   proposal,
   proposalsResponse,
   searchQuery,
+  suggestionsResponse,
   weekQuery,
 } from './schema.js';
 import type { MatchingService } from './service.js';
@@ -42,6 +44,19 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
     '/proposals/:id/alternatives',
     { schema: { params: idParams, response: { 200: alternativesResponse } } },
     async (request) => ({ rides: await service.alternatives(request.userId, request.params.id) }),
+  );
+
+  // Conducteur uniquement : passagers supplémentaires et simulation du prix (cahier §4).
+  app.get(
+    '/rides/:id/suggestions',
+    { schema: { params: idParams, response: { 200: suggestionsResponse } } },
+    (request) => service.suggestions(request.userId, request.params.id),
+  );
+
+  app.post(
+    '/rides/:id/suggestions/:userId/invite',
+    { schema: { params: inviteParams, response: { 200: proposal } } },
+    (request) => service.invite(request.userId, request.params.id, request.params.userId),
   );
 
   app.get(

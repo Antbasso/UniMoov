@@ -11,6 +11,9 @@ const settingSchemas = {
   'matching.arrivalWindowMinutes': z.number().int().min(0).max(180),
   'calendar.horizonDays': z.number().int().min(1).max(90),
   'search.dailyQuota': z.number().int().min(1).max(1000),
+  'pricing.fuelPriceCentsPerLitre': z.number().int().min(1).max(1000),
+  'pricing.commissionCentsPerPassenger': z.number().int().min(0).max(500),
+  'rides.meetingPointMaxMeters': z.number().int().min(100).max(20_000),
 } as const;
 
 type SettingKey = keyof typeof settingSchemas;

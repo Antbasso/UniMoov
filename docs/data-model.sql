@@ -128,6 +128,8 @@ CREATE TABLE rides (
   seats_total smallint NOT NULL,
   status ride_status NOT NULL DEFAULT 'proposed',
   route geography(LineString,4326),
+  route_estimated boolean NOT NULL DEFAULT false,  -- tracé estimé (fournisseur indisponible)
+  planned_at timestamptz,                 -- dernier calcul du plan (null : à recalculer)
   distance_m integer,
   duration_s integer,
   started_at timestamptz,

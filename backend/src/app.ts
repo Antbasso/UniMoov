@@ -23,6 +23,9 @@ import { AuthService } from './modules/auth/service.js';
 import { AUTH_POLICY } from './modules/auth/policy.js';
 import { healthRoutes } from './modules/health/routes.js';
 import type { PingDb } from './modules/health/service.js';
+import { RidesRepo } from './modules/rides/repo.js';
+import { ridesRoutes } from './modules/rides/routes.js';
+import { RidesService } from './modules/rides/service.js';
 import { ProfileRepo } from './modules/profile/repo.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { ProfileService } from './modules/profile/service.js';
@@ -33,6 +36,9 @@ import { AppError, errorBody } from './shared/errors.js';
 import { fetchPublicText } from './shared/safe-fetch.js';
 import type { GeocodingProvider } from './shared/geocoding/geocoding-provider.js';
 import type { MailProvider } from './shared/mail/mail-provider.js';
+import { EstimateRoutingProvider } from './shared/routing/estimate.js';
+import { GuardedRoutingProvider } from './shared/routing/guarded-routing-provider.js';
+import type { RoutingProvider } from './shared/routing/routing-provider.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -49,6 +55,10 @@ export interface AppModules {
   geocoding: GeocodingProvider;
   /** Clé AES-256 (base64) des liens d'agenda. */
   calendarKey: string;
+  /** Fournisseur d'itinéraires (OpenRouteService) ; absent : estimation locale seulement. */
+  routing?: RoutingProvider;
+  /** Appels quotidiens autorisés au fournisseur (palier gratuit). */
+  routingDailyQuota?: number;
   /** Lecture d'un lien ICS ; par défaut téléchargement protégé contre le SSRF. */
   fetchIcs?: (url: string) => Promise<string>;
   clock?: () => Date;
@@ -139,10 +149,25 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       secret: modules.jwtSecret,
       signAccessToken: (userId) => app.jwt.sign({ sub: userId }),
     });
-    const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock);
-    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, (userId) =>
-      matchingService.onProfileChanged(userId),
+    const estimate = new EstimateRoutingProvider(async () => ({
+      roadFactor: await settings.get('matching.roadFactor'),
+      avgSpeedKmh: await settings.get('matching.avgSpeedKmh'),
+    }));
+    const routing = modules.routing
+      ? new GuardedRoutingProvider(modules.routing, estimate, {
+          dailyQuota: modules.routingDailyQuota ?? 2000,
+          onEvent: (event) => app.log.warn({ event }, 'routing provider'),
+        })
+      : estimate;
+    const ridesService = new RidesService(new RidesRepo(modules.db), routing, settings, clock, Boolean(modules.routing));
+    const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock, (rideId) =>
+      ridesService.onRideChanged(rideId),
     );
+    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
+      await matchingService.onProfileChanged(userId);
+      // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
+      await ridesService.onUserChanged(userId);
+    });
     const calendarService = new CalendarService({
       repo: new CalendarRepo(modules.db),
       box: new SecretBox(modules.calendarKey),
@@ -159,6 +184,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(profileRoutes, { service: profileService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
+        await api.register(ridesRoutes, { service: ridesService });
       },
       { prefix: '/api/v1' },
     );

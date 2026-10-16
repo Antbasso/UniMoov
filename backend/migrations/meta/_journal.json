@@ -29,6 +29,13 @@
       "when": 1792098799955,
       "tag": "0003_schedule_and_matching",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792101847463,
+      "tag": "0004_rides_plan_and_pricing",
+      "breakpoints": true
     }
   ]
 }

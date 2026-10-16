@@ -1,6 +1,8 @@
 import { AppError } from '../../shared/errors.js';
 import { sectorCenter } from '../../shared/geo.js';
 import { addDaysIso, isoWeekOf, parisDateOf, parisToUtc, weekDays } from '../../shared/time.js';
+import { estimateRoute } from '../../shared/routing/estimate.js';
+import { estimatePrice } from '../pricing/domain.js';
 import { isPausedOn } from '../profile/domain.js';
 import type { SettingsService } from '../settings/service.js';
 import {
@@ -10,6 +12,7 @@ import {
   type MatchParams,
   matchSlot,
   type Need,
+  pickupOrder,
 } from './domain.js';
 import type { DbOrTx, MatchingRepo, ParticipantRow, RideRow } from './repo.js';
 
@@ -54,6 +57,24 @@ export interface JoinableRide {
   driver: PublicPerson;
 }
 
+/** Passager supplémentaire suggéré au conducteur, avec la simulation du prix (cahier §4). */
+export interface Suggestion {
+  person: PublicPerson;
+  /** `false` : écarté automatiquement car au-delà du détour maximal du conducteur. */
+  withinDetourLimit: boolean;
+  shareCents: number;
+  passengerPaysCents: number;
+}
+
+export interface SuggestionsView {
+  seatsLeft: number;
+  /** Prix actuel par personne (estimation à vol d'oiseau, comme la simulation). */
+  current: { persons: number; shareCents: number; passengerPaysCents: number } | null;
+  suggestions: Suggestion[];
+}
+
+const MAX_SUGGESTIONS = 10;
+
 const minutes = (seconds: number | null) => Math.ceil((seconds ?? 0) / 60);
 /** Centre de la cellule de 500 m, arrondi : pas de fausse précision. */
 const round4 = (value: number) => Math.round(value * 1e4) / 1e4;
@@ -79,6 +100,8 @@ export class MatchingService {
     private readonly repo: MatchingRepo,
     private readonly settings: SettingsService,
     private readonly clock: () => Date,
+    /** Arrêts d'un trajet confirmé modifiés : nouveau plan (tracé, heures, prix). */
+    private readonly onRideChanged: (rideId: string) => Promise<void> = () => Promise.resolve(),
   ) {}
 
   private today(): string {
@@ -221,7 +244,7 @@ export class MatchingService {
   async accept(userId: string, rideId: string): Promise<ProposalView> {
     // Toujours le verrou du jour avant celui du trajet (même ordre que la régénération).
     const peek = this.assertOpen(await this.repo.peekRide(rideId));
-    return this.repo.transaction(async (tx) => {
+    const result = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
       const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
       const parts = await this.repo.participants([rideId], tx);
@@ -251,8 +274,13 @@ export class MatchingService {
       if (driverAccepted && passengerAccepted && ride.status === 'proposed') {
         await this.repo.setRideStatus(rideId, 'confirmed', tx);
       }
-      return this.viewFor(userId, rideId, tx);
+      const confirmed = driverAccepted && passengerAccepted;
+      if (confirmed) await this.repo.invalidatePlan(rideId, tx);
+      return { view: await this.viewFor(userId, rideId, tx), confirmed };
     });
+    // Après la transaction (appel d'itinéraire) ; en cas d'échec, le plan sera calculé à la lecture.
+    if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
+    return result.view;
   }
 
   /**
@@ -304,6 +332,117 @@ export class MatchingService {
       throw new AppError(429, 'search_quota_exceeded', 'Tu as atteint le nombre de recherches du jour');
     }
     return this.joinable(userId, query.day, query.direction, null, undefined, query.time);
+  }
+
+  /**
+   * Conducteur seulement : passagers sans trajet ce jour-là qui pourraient monter, y compris
+   * ceux écartés car au-delà de son détour maximal, avec la baisse de prix simulée (cahier §4).
+   */
+  async suggestions(userId: string, rideId: string): Promise<SuggestionsView> {
+    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    await this.assertAcceptedDriver(userId, rideId);
+    return this.suggestionsFor(ride);
+  }
+
+  /** Le conducteur propose une place : le passager reçoit une proposition à accepter. */
+  async invite(userId: string, rideId: string, passengerId: string): Promise<ProposalView> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    return this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      await this.assertAcceptedDriver(userId, rideId, tx);
+      const view = await this.suggestionsFor(ride, tx);
+      if (view.seatsLeft <= 0) throw new AppError(409, 'ride_full', 'Ta voiture est complète');
+      const pick = view.suggestions.find((s) => s.person.userId === passengerId);
+      if (!pick) throw new AppError(409, 'suggestion_unavailable', 'Cette personne ne peut plus être proposée');
+      await this.repo.addPassenger(rideId, passengerId, pick.person.detourMinutes * 60, tx, 'proposed');
+      return this.viewFor(userId, rideId, tx);
+    });
+  }
+
+  private async assertAcceptedDriver(userId: string, rideId: string, db?: DbOrTx): Promise<void> {
+    const me = (await this.repo.participants([rideId], db)).find((p) => p.userId === userId);
+    if (!me || me.role !== 'driver') throw new AppError(403, 'forbidden', 'Réservé au conducteur de ce trajet');
+    if (me.status !== 'accepted') throw new AppError(409, 'accept_first', "Accepte d'abord ce trajet");
+  }
+
+  private async suggestionsFor(ride: RideRow, db?: DbOrTx): Promise<SuggestionsView> {
+    const parts = await this.repo.participants([ride.id], db);
+    const passengers = parts.filter((p) => p.role === 'passenger' && ACTIVE(p));
+    const seatsLeft = ride.seatsTotal - passengers.length;
+    const busy = await this.repo.busyUsers(ride.day, ride.direction, db);
+    const declines = await this.repo.declines(ride.day, ride.direction, db);
+    const needs = (await this.repo.needsForDay(ride.day, db)).filter(
+      (n) =>
+        n.campusId === ride.campusId &&
+        n.roleMode !== 'always_driver' &&
+        !busy.has(n.userId) &&
+        !declines.has(`${ride.driverId}|${n.userId}`),
+    );
+    const pauses = await this.repo.pausesFor(
+      needs.map((n) => n.userId),
+      db,
+    );
+    const params = await this.params(await this.repo.campusLocation(ride.campusId, db));
+    const candidates = needs.filter(
+      (n) =>
+        !isPausedOn(pauses.get(n.userId) ?? [], ride.day) &&
+        isTimeCompatible(ride.targetTime, ride.direction === 'to_campus' ? n.start : n.end, params),
+    );
+
+    const homes = await this.repo.homesAndVehicles([ride.driverId, ...passengers.map((p) => p.userId)], db);
+    const driverInfo = homes.get(ride.driverId);
+    const consumption = await this.repo.vehicleConsumption(ride.driverId, db);
+    if (!driverInfo?.maxDetourMinutes || consumption === null) return { seatsLeft, current: null, suggestions: [] };
+    const driverHome = { lat: driverInfo.lat, lon: driverInfo.lon };
+    const current = passengers.map((p) => homes.get(p.userId)).filter((h): h is NonNullable<typeof h> => Boolean(h));
+
+    const fuel = await this.settings.get('pricing.fuelPriceCentsPerLitre');
+    const commission = await this.settings.get('pricing.commissionCentsPerPassenger');
+    const priceFor = (stops: { lat: number; lon: number }[]) => {
+      const ordered = pickupOrder(driverHome, stops.map((home) => ({ home }))).map((s) => s.home);
+      const { distanceM } = estimateRoute([driverHome, ...ordered, params.campus], params);
+      return estimatePrice({
+        consumptionLPer100km: consumption,
+        distanceM,
+        fuelPriceCentsPerLitre: fuel,
+        commissionCentsPerPassenger: commission,
+        persons: stops.length + 1,
+      });
+    };
+    const now = priceFor(current);
+    const before = detourSeconds(driverHome, current, params);
+    const users = await this.repo.publicUsers(
+      candidates.map((c) => c.userId),
+      db,
+    );
+
+    const suggestions = candidates
+      .map((c) => {
+        const home = { lat: c.lat, lon: c.lon };
+        const after = detourSeconds(driverHome, [...current, home], params);
+        const price = priceFor([...current, home]);
+        const info = users.get(c.userId)!;
+        return {
+          extra: after - before,
+          reliability: c.reliability,
+          suggestion: {
+            person: publicPerson({ ...info, rideId: ride.id, role: 'passenger', status: 'suggested', detourS: null }, after - before),
+            withinDetourLimit: after <= driverInfo.maxDetourMinutes! * 60,
+            shareCents: price.shareCents,
+            passengerPaysCents: price.passengerPaysCents,
+          },
+        };
+      })
+      .sort((a, b) => a.extra - b.extra || b.reliability - a.reliability || a.suggestion.person.userId.localeCompare(b.suggestion.person.userId))
+      .slice(0, MAX_SUGGESTIONS)
+      .map((s) => s.suggestion);
+
+    return {
+      seatsLeft,
+      current: { persons: now.persons, shareCents: now.shareCents, passengerPaysCents: now.passengerPaysCents },
+      suggestions,
+    };
   }
 
   /** Voitures où l'utilisateur peut monter : place libre, horaire et détour compatibles. */

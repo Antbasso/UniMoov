@@ -5,6 +5,7 @@ import { startJobs } from './jobs.js';
 import { BanGeocodingProvider } from './shared/geocoding/ban-geocoding-provider.js';
 import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-provider.js';
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
+import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
 import { ConsoleMailProvider } from './shared/mail/console-mail-provider.js';
 
 const config = loadConfig();
@@ -29,6 +30,9 @@ const app = await buildApp({
     // Développement uniquement (refusé en production par la config).
     mail: new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
+    ...(config.ROUTING_PROVIDER === 'ors' && config.ORS_API_KEY
+      ? { routing: new OrsRoutingProvider(config.ORS_API_KEY), routingDailyQuota: config.ROUTING_DAILY_QUOTA }
+      : {}),
   },
 });
 logIdleError = (error) => app.log.error({ err: error }, 'idle database connection error');

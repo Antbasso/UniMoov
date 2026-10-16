@@ -15,6 +15,9 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/proposals/presentation/alternatives_screen.dart';
 import '../../features/proposals/presentation/proposal_screen.dart';
 import '../../features/proposals/presentation/search_screen.dart';
+import '../../features/rides/presentation/meeting_point_screen.dart';
+import '../../features/rides/presentation/ride_screen.dart';
+import '../../features/rides/presentation/suggestions_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
 import 'redirect.dart';
 
@@ -73,6 +76,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'alternatives',
             builder: (_, state) => AlternativesScreen(id: state.pathParameters['id']!),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/rides/:id',
+        builder: (_, state) => RideScreen(id: state.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'meeting-point',
+            builder: (_, state) => MeetingPointScreen(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'suggestions',
+            builder: (_, state) => SuggestionsScreen(id: state.pathParameters['id']!),
           ),
         ],
       ),

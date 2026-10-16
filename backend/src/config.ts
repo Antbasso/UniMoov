@@ -21,12 +21,21 @@ const envSchema = z
   CALENDAR_ENCRYPTION_KEY: z
     .base64()
     .refine((value) => Buffer.from(value, 'base64').length === 32, '32 octets attendus'),
+  /** `ors` : OpenRouteService (clé requise) ; `estimate` : lignes droites, sans appel externe. */
+  ROUTING_PROVIDER: z.enum(['ors', 'estimate']).default('estimate'),
+  ORS_API_KEY: z.string().optional(),
+  /** Appels quotidiens autorisés (palier gratuit d'OpenRouteService), alerte à 80 %. */
+  ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),
   /** Tâches planifiées (synchronisation des agendas, génération hebdomadaire). */
   JOBS_ENABLED: z.stringbool().default(true),
 })
   .refine((env) => env.NODE_ENV !== 'production' || env.MAIL_PROVIDER !== 'console', {
     path: ['MAIL_PROVIDER'],
     message: 'console interdit en production',
+  })
+  .refine((env) => env.ROUTING_PROVIDER !== 'ors' || Boolean(env.ORS_API_KEY), {
+    path: ['ORS_API_KEY'],
+    message: 'clé requise avec ROUTING_PROVIDER=ors',
   });
 
 export type Config = z.infer<typeof envSchema>;

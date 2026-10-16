@@ -1335,6 +1335,270 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Emploi du temps mis à jour.'**
   String get scheduleSynced;
+
+  /// No description provided for @rideMapOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir la carte'**
+  String get rideMapOpen;
+
+  /// No description provided for @rideMapLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carte du trajet avec {count, plural, =1{1 arrêt} other{{count} arrêts}}'**
+  String rideMapLabel(int count);
+
+  /// No description provided for @rideRouteEstimated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tracé approximatif : le calcul d\'itinéraire n\'était pas disponible.'**
+  String get rideRouteEstimated;
+
+  /// No description provided for @rideStopsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêts'**
+  String get rideStopsTitle;
+
+  /// No description provided for @rideStopAround.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vers {time}'**
+  String rideStopAround(String time);
+
+  /// No description provided for @rideStopSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêt {order} : {name}, {place}, vers {time}'**
+  String rideStopSemantic(int order, String name, String place, String time);
+
+  /// No description provided for @rideYou.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi'**
+  String get rideYou;
+
+  /// No description provided for @rideMeetingPoint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point de rendez-vous'**
+  String get rideMeetingPoint;
+
+  /// No description provided for @ridePriceYouPay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu paies {price}'**
+  String ridePriceYouPay(String price);
+
+  /// No description provided for @ridePriceYouReceive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois {price}'**
+  String ridePriceYouReceive(String price);
+
+  /// No description provided for @ridePriceDetail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Estimation : {total} de carburant partagés entre {persons} personnes, plus {commission} de frais de service par passager. Le prix final est calculé à l\'arrivée.'**
+  String ridePriceDetail(String total, int persons, String commission);
+
+  /// No description provided for @ridePriceUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix indisponible : le véhicule du conducteur n\'est plus renseigné.'**
+  String get ridePriceUnknown;
+
+  /// No description provided for @rideAddPassengers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des passagers'**
+  String get rideAddPassengers;
+
+  /// No description provided for @rideChooseMeetingPoint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un point de rendez-vous'**
+  String get rideChooseMeetingPoint;
+
+  /// No description provided for @rideChangeMeetingPoint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de point de rendez-vous'**
+  String get rideChangeMeetingPoint;
+
+  /// No description provided for @meetingPointTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point de rendez-vous'**
+  String get meetingPointTitle;
+
+  /// No description provided for @meetingPointIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.'**
+  String get meetingPointIntro;
+
+  /// No description provided for @meetingPointMapLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carte : touche pour placer le point de rendez-vous'**
+  String get meetingPointMapLabel;
+
+  /// No description provided for @meetingPointLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du point'**
+  String get meetingPointLabel;
+
+  /// No description provided for @meetingPointHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. arrêt de bus Mairie'**
+  String get meetingPointHint;
+
+  /// No description provided for @meetingPointSave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer ce point'**
+  String get meetingPointSave;
+
+  /// No description provided for @meetingPointReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Revenir à mon adresse'**
+  String get meetingPointReset;
+
+  /// No description provided for @meetingPointSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point de rendez-vous enregistré.'**
+  String get meetingPointSaved;
+
+  /// No description provided for @meetingPointResetDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le conducteur passera à ton adresse.'**
+  String get meetingPointResetDone;
+
+  /// No description provided for @suggestionsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des passagers'**
+  String get suggestionsTitle;
+
+  /// No description provided for @suggestionsIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces étudiants n\'ont pas encore de trajet à cette heure-là. Chaque place prise fait baisser le prix pour tout le monde.'**
+  String get suggestionsIntro;
+
+  /// No description provided for @suggestionsCurrentPrice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aujourd\'hui, chaque passager paie {price}.'**
+  String suggestionsCurrentPrice(String price);
+
+  /// No description provided for @suggestionWithin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans ton détour'**
+  String get suggestionWithin;
+
+  /// No description provided for @suggestionBeyond.
+  ///
+  /// In fr, this message translates to:
+  /// **'Au-delà de ton détour max'**
+  String get suggestionBeyond;
+
+  /// No description provided for @suggestionPrice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec cette personne : {price} par passager'**
+  String suggestionPrice(String price);
+
+  /// No description provided for @suggestionInvite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposer une place'**
+  String get suggestionInvite;
+
+  /// No description provided for @suggestionInvited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposition envoyée à {name}.'**
+  String suggestionInvited(String name);
+
+  /// No description provided for @suggestionsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne d\'autre ne cherche de trajet à cette heure-là.'**
+  String get suggestionsEmpty;
+
+  /// No description provided for @suggestionsFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta voiture est complète.'**
+  String get suggestionsFull;
+
+  /// No description provided for @errorForbidden.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas accès à ce trajet.'**
+  String get errorForbidden;
+
+  /// No description provided for @errorRideNotConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet n\'est pas encore confirmé.'**
+  String get errorRideNotConfirmed;
+
+  /// No description provided for @errorMeetingPointTooFar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis un point plus proche de chez toi.'**
+  String get errorMeetingPointTooFar;
+
+  /// No description provided for @errorRideLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet ne peut plus être modifié.'**
+  String get errorRideLocked;
+
+  /// No description provided for @errorSuggestionUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette personne n\'est plus disponible.'**
+  String get errorSuggestionUnavailable;
+
+  /// No description provided for @errorAcceptFirst.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepte d\'abord ce trajet.'**
+  String get errorAcceptFirst;
+
+  /// No description provided for @ridePricePayLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu paies'**
+  String get ridePricePayLabel;
+
+  /// No description provided for @ridePriceReceiveLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois'**
+  String get ridePriceReceiveLabel;
+
+  /// No description provided for @suggestionPriceCompared.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec cette personne : {price} par passager au lieu de {current}'**
+  String suggestionPriceCompared(String price, String current);
+
+  /// No description provided for @rideStopApproximate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position approximative'**
+  String get rideStopApproximate;
 }
 
 class _AppLocalizationsDelegate

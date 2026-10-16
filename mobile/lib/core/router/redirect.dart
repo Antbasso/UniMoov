@@ -20,6 +20,9 @@ abstract final class AppRoutes {
   static const search = '/search';
   static String proposal(String week, String id) => '/week/$week/proposals/$id';
   static String alternatives(String week, String id) => '/week/$week/proposals/$id/alternatives';
+  static String ride(String id) => '/rides/$id';
+  static String rideMeetingPoint(String id) => '/rides/$id/meeting-point';
+  static String rideSuggestions(String id) => '/rides/$id/suggestions';
 
   static const public = {welcome, login, signup};
   static const entry = {splash, welcome, login, signup, onboarding};

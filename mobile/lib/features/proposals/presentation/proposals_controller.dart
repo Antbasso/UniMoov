@@ -25,6 +25,13 @@ class WeekProposalsController extends AsyncNotifier<List<Proposal>> {
     state = AsyncData(await _api.week(week));
   }
 
+  /// Proposition mise à jour ailleurs (invitation d'un passager par le conducteur).
+  void replace(Proposal updated) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData([for (final p in current) p.id == updated.id ? updated : p]);
+  }
+
   /// Monter dans une autre voiture (alternative ou recherche) : l'ancienne proposition
   /// du même créneau disparaît côté serveur.
   Future<void> join(String rideId) async {

@@ -48,6 +48,7 @@ cd mobile && flutter pub get && flutter analyze && flutter test
 cd mobile && dart run tool/generate_tokens.dart   # après modification de tokens.json
 cd mobile && flutter gen-l10n                 # après modification de lib/l10n/app_fr.arb
 cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000 --dart-define=PMTILES_URL=http://10.0.2.2:8080/annecy.pmtiles   # fond vectoriel OpenMapTiles (facultatif, voir README)
 ```
 Avant de déclarer un travail terminé, lance lint, typecheck et tests des parties touchées et donne le résultat réel. Si une commande n'existe pas encore, crée-la dans le même changement.
 

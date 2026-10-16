@@ -52,3 +52,19 @@ export const searchQuery = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
     .optional(),
 });
+
+export const suggestionsResponse = z.strictObject({
+  seatsLeft: z.number().int(),
+  current: z
+    .strictObject({ persons: z.number().int(), shareCents: z.number().int(), passengerPaysCents: z.number().int() })
+    .nullable(),
+  suggestions: z.array(
+    z.strictObject({
+      person: publicPerson,
+      withinDetourLimit: z.boolean(),
+      shareCents: z.number().int(),
+      passengerPaysCents: z.number().int(),
+    }),
+  ),
+});
+export const inviteParams = z.object({ id: z.uuid(), userId: z.uuid() });
