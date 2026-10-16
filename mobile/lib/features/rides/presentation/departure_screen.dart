@@ -179,7 +179,10 @@ class _DepartureScreenState extends ConsumerState<DepartureScreen> {
             variant: UmButtonVariant.ghost,
             expand: true,
             onPressed: _busy == null
-                ? () => _run('finish', () => ref.read(rideProvider(widget.id).notifier).finish())
+                ? () async {
+                    if (!await confirmFinish(context)) return;
+                    await _run('finish', () => ref.read(rideProvider(widget.id).notifier).finish());
+                  }
                 : null,
           ),
         ],

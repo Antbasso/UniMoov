@@ -1965,6 +1965,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La recharge a été refusée.'**
   String get errorTopupFailed;
+
+  /// No description provided for @finishConfirmTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer le trajet ?'**
+  String get finishConfirmTitle;
+
+  /// No description provided for @finishConfirmBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.'**
+  String get finishConfirmBody;
+
+  /// No description provided for @finishConfirmCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer le trajet'**
+  String get finishConfirmCancel;
 }
 
 class _AppLocalizationsDelegate

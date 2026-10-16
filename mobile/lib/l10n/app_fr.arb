@@ -625,5 +625,8 @@
   "errorRideNotStarted": "Le trajet n'a pas encore commencé.",
   "errorPresenceNotConfirmed": "Ton téléphone et celui du conducteur doivent être proches.",
   "errorTopupTooSmall": "Montant de recharge trop faible.",
-  "errorTopupFailed": "La recharge a été refusée."
+  "errorTopupFailed": "La recharge a été refusée.",
+  "finishConfirmTitle": "Terminer le trajet ?",
+  "finishConfirmBody": "Le suivi s'arrête pour tout le monde et les passagers dont la présence n'est pas validée sont comptés absents.",
+  "finishConfirmCancel": "Continuer le trajet"
 }

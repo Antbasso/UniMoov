@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,4 +20,24 @@ Future<void> shareLocation(BuildContext context, WidgetRef ref, String rideId) a
     notificationTitle: l10n.locationNotificationTitle,
     notificationText: l10n.locationNotificationText,
   );
+}
+
+/// Clôture pour tout le trajet (le suivi s'arrête pour tous) : confirmation avant.
+Future<bool> confirmFinish(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l10n.finishConfirmTitle),
+      content: Text(l10n.finishConfirmBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.finishConfirmCancel),
+        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.finishRide)),
+      ],
+    ),
+  );
+  return confirmed ?? false;
 }

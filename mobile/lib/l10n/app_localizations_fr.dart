@@ -1110,4 +1110,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorTopupFailed => 'La recharge a été refusée.';
+
+  @override
+  String get finishConfirmTitle => 'Terminer le trajet ?';
+
+  @override
+  String get finishConfirmBody =>
+      'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.';
+
+  @override
+  String get finishConfirmCancel => 'Continuer le trajet';
 }

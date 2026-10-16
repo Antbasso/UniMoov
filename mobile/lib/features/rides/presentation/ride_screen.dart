@@ -122,19 +122,16 @@ class _RideContentState extends ConsumerState<_RideContent> {
           loading: _busy,
           onPressed: _busy ? null : () => _act(controller.confirmPresence, done: l10n.presenceDone),
         ),
-      if (!ride.isDriver && ride.inProgress && live != null && !live.sharing)
-        UmButton(
-          label: l10n.shareLocation,
-          variant: UmButtonVariant.secondary,
-          expand: true,
-          onPressed: () => shareLocation(context, ref, ride.id),
-        ),
       if (!ride.isDriver && ride.inProgress)
         UmButton(
           label: l10n.finishRide,
           variant: UmButtonVariant.ghost,
           expand: true,
-          onPressed: _busy ? null : () => _act(controller.finish),
+          onPressed: _busy
+              ? null
+              : () async {
+                  if (await confirmFinish(context)) await _act(controller.finish);
+                },
         ),
       if (ride.editable && ride.isDriver)
         UmButton(
@@ -198,6 +195,7 @@ class _RideContentState extends ConsumerState<_RideContent> {
                     if (live != null && !ride.isDriver) ...[
                       const SizedBox(height: UmSpace.s3),
                       _LiveBanner(
+                        onShare: live.sharing ? null : () => shareLocation(context, ref, ride.id),
                         live: live,
                         driver: driverLive,
                         myEta: myId == null ? null : live.etas[myId],
@@ -255,9 +253,12 @@ class _RideContentState extends ConsumerState<_RideContent> {
 
 /// Passager : heure d'arrivée du conducteur, ou sa dernière position connue après 30 s.
 class _LiveBanner extends ConsumerStatefulWidget {
-  const _LiveBanner({required this.live, required this.driver, required this.myEta});
+  const _LiveBanner({required this.live, required this.driver, required this.myEta, this.onShare});
 
   final LiveState live;
+
+  /// Ma position n'est pas encore partagée : action proposée dans le bandeau du suivi.
+  final VoidCallback? onShare;
   final LivePosition? driver;
   final DateTime? myEta;
 
@@ -305,13 +306,27 @@ class _LiveBannerState extends ConsumerState<_LiveBanner> {
           color: c.surfaceTint,
           borderRadius: BorderRadius.circular(UmRadius.sm),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.directions_car_rounded, size: UmSize.iconMd, color: c.brandStrong),
-            const SizedBox(width: UmSpace.s2),
-            Expanded(
-              child: Text(text, style: UmText.body.copyWith(color: c.ink)),
+            Row(
+              children: [
+                Icon(Icons.directions_car_rounded, size: UmSize.iconMd, color: c.brandStrong),
+                const SizedBox(width: UmSpace.s2),
+                Expanded(
+                  child: Text(text, style: UmText.body.copyWith(color: c.ink)),
+                ),
+              ],
             ),
+            if (widget.onShare != null && !widget.live.ended) ...[
+              const SizedBox(height: UmSpace.s2),
+              UmButton(
+                label: l10n.shareLocation,
+                icon: Icons.my_location_rounded,
+                variant: UmButtonVariant.secondary,
+                onPressed: widget.onShare,
+              ),
+            ],
           ],
         ),
       ),

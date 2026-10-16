@@ -120,6 +120,11 @@ void main() {
       await backend.start('ride-2');
       await openDeparture(tester);
       await tapText(tester, 'Terminer le trajet');
+      expect(find.text('Terminer le trajet ?'), findsOneWidget);
+      await tapText(tester, 'Continuer le trajet');
+      expect(backend.actions, isNot(contains('finish')));
+      await tapText(tester, 'Terminer le trajet');
+      await tapText(tester, 'Terminer le trajet', index: 1); // bouton du dialogue
       expect(backend.actions.last, 'finish');
     });
 
