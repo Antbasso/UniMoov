@@ -1,3 +1,5 @@
+import 'package:unimoov/features/trust/data/trust_api.dart';
+import 'package:unimoov/features/trust/domain/trust.dart';
 import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
@@ -14,7 +16,8 @@ import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 /// Backend en mémoire qui reproduit les règles de l'API (docs/api.md) pour les tests de
 /// parcours. Il survit à un « redémarrage » de l'app, comme le vrai serveur.
-class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi, WalletApi {
+class FakeBackend
+    implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi, WalletApi, TrustApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -359,6 +362,7 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, Rid
       time: ride.time,
       status: status,
       isDriver: ride.isDriver,
+      myStatus: ride.myStatus,
       routeEstimated: ride.routeEstimated,
       route: ride.route,
       stops: stops ?? ride.stops,
@@ -486,6 +490,145 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, Rid
     return _wallet;
   }
 
+  // --- Confiance (annulations, notes, fiabilité, litiges, signalements) ---
+
+  CancelTier cancelTier = CancelTier.medium;
+
+  /// Palier appliqué à l'annulation, s'il diffère de celui annoncé (seuil franchi entre-temps).
+  CancelTier? appliedTier;
+
+  /// Erreur au prochain chargement des notes (une fois).
+  ApiException? failNextRatings;
+  final List<String> cancelled = [];
+  final Map<String, RideRatings> ratingsById = {};
+  final Map<String, int> _given = {};
+  Reliability reliabilityState = reliabilityFixture();
+  final Map<String, List<Dispute>> disputesById = {};
+  final List<({String userId, ReportReason reason, String? message})> reports = [];
+  int _disputeCounter = 0;
+
+  @override
+  Future<CancellationInfo> cancellation(String rideId) async {
+    _maybeFail();
+    final ride = rides[rideId];
+    final proposal = weeks.values.expand((w) => w).where((p) => p.id == rideId).firstOrNull;
+    if (ride == null && proposal == null) {
+      throw const ApiException('not_found', '', statusCode: 404);
+    }
+    return CancellationInfo(isDriver: ride?.isDriver ?? proposal!.isDriver, tier: cancelTier);
+  }
+
+  @override
+  Future<CancelTier> cancel(String rideId) async {
+    _maybeFail();
+    cancelled.add(rideId);
+    rides.remove(rideId);
+    for (final list in weeks.values) {
+      final i = list.indexWhere((p) => p.id == rideId);
+      if (i >= 0) list[i] = list[i].copyWith(myStatus: 'cancelled');
+    }
+    return appliedTier ?? cancelTier;
+  }
+
+  @override
+  Future<RideRatings> ratings(String rideId) async {
+    _maybeFail();
+    final error = failNextRatings;
+    failNextRatings = null;
+    if (error != null) throw error;
+    final base = ratingsById[rideId] ?? const RideRatings(open: true, people: []);
+    return RideRatings(
+      open: base.open,
+      people: [
+        for (final p in base.people)
+          if (_given['$rideId|${p.userId}'] case final stars?) p.withStars(stars) else p,
+      ],
+    );
+  }
+
+  @override
+  Future<void> rate(String rideId, String userId, int stars) async {
+    _maybeFail();
+    final key = '$rideId|$userId';
+    if (_given.containsKey(key)) throw const ApiException('already_rated', '', statusCode: 409);
+    _given[key] = stars;
+  }
+
+  /// Notes données (trajet|personne → étoiles).
+  Map<String, int> get given => Map.unmodifiable(_given);
+
+  @override
+  Future<Reliability> reliability() async {
+    _maybeFail();
+    return reliabilityState;
+  }
+
+  @override
+  Future<List<Dispute>> disputes(String rideId) async {
+    _maybeFail();
+    return List.of(disputesById[rideId] ?? const []);
+  }
+
+  @override
+  Future<Dispute> openDispute(String rideId, DisputeReason reason, String? message) async {
+    _maybeFail();
+    final list = disputesById.putIfAbsent(rideId, () => []);
+    if (list.any((d) => d.reason == reason)) {
+      throw const ApiException('dispute_exists', '', statusCode: 409);
+    }
+    // Mêmes règles que l'arbitrage du serveur pour les cas sans preuve contraire.
+    final dispute = switch (reason) {
+      DisputeReason.cancellationPenalty => Dispute(
+        id: 'dispute-${++_disputeCounter}',
+        reason: reason,
+        level: 1,
+        decision: DisputeDecision.upheld,
+        explanation: 'penalty_matches_timestamps',
+      ),
+      DisputeReason.markedAbsent => Dispute(
+        id: 'dispute-${++_disputeCounter}',
+        reason: reason,
+        level: 1,
+        decision: DisputeDecision.upheld,
+        explanation: 'no_presence_evidence',
+      ),
+      _ => Dispute(
+        id: 'dispute-${++_disputeCounter}',
+        reason: reason,
+        level: 2,
+        decision: DisputeDecision.escalated,
+        explanation: 'needs_human',
+      ),
+    };
+    list.add(dispute);
+    return dispute;
+  }
+
+  @override
+  Future<Dispute> escalate(String disputeId, String? message) async {
+    _maybeFail();
+    for (final list in disputesById.values) {
+      final i = list.indexWhere((d) => d.id == disputeId);
+      if (i >= 0) {
+        final d = list[i];
+        return list[i] = Dispute(
+          id: d.id,
+          reason: d.reason,
+          level: 2,
+          decision: DisputeDecision.escalated,
+          explanation: d.explanation,
+        );
+      }
+    }
+    throw const ApiException('not_found', '', statusCode: 404);
+  }
+
+  @override
+  Future<void> report(String userId, ReportReason reason, String? message) async {
+    _maybeFail();
+    reports.add((userId: userId, reason: reason, message: message));
+  }
+
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).
   String idOf(String email) => 'id-$email';
 
@@ -600,6 +743,7 @@ extension RideCopy on RideDetails {
     time: time,
     status: status,
     isDriver: isDriver,
+    myStatus: myStatus,
     routeEstimated: routeEstimated,
     route: [for (final s in stops) (s.lat, s.lon)],
     stops: stops,
@@ -614,6 +758,8 @@ RideDetails rideFixture({
   String id = 'ride-1',
   bool isDriver = false,
   String me = 'id-lea@etu.univ-smb.fr',
+  String status = 'confirmed',
+  String myStatus = 'accepted',
 }) {
   final day = DateTime(2026, 10, 19);
   final stops = [
@@ -668,8 +814,9 @@ RideDetails rideFixture({
     day: day,
     direction: Direction.toCampus,
     time: DateTime.utc(2026, 10, 19, 6),
-    status: 'confirmed',
+    status: status,
     isDriver: isDriver,
+    myStatus: myStatus,
     routeEstimated: false,
     route: [for (final s in stops) (s.lat, s.lon)],
     stops: stops,
@@ -738,3 +885,31 @@ FakeBackend rideBackend() {
   );
   return backend;
 }
+
+/// Score de Léa : un trajet annulé tard, contestable, et une absence plus ancienne.
+Reliability reliabilityFixture({List<ReliabilityEvent>? events}) => Reliability(
+  score: 0.74,
+  windowDays: 180,
+  completedRides: 12,
+  cancellations: 1,
+  noShows: 1,
+  ratingsCount: 9,
+  averageStars: 4.6,
+  events:
+      events ??
+      [
+        ReliabilityEvent(
+          kind: ReliabilityEventKind.cancelLate,
+          rideId: 'ride-9',
+          day: DateTime(2026, 10, 13),
+          createdAt: DateTime.utc(2026, 10, 13, 5, 30),
+          disputeReason: DisputeReason.cancellationPenalty,
+        ),
+        ReliabilityEvent(
+          kind: ReliabilityEventKind.noShow,
+          rideId: 'ride-8',
+          day: DateTime(2026, 9, 2),
+          createdAt: DateTime.utc(2026, 9, 2, 7),
+        ),
+      ],
+);

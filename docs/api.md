@@ -90,7 +90,23 @@ Les liens portent les arrêts restants (pas encore montés) dans l'ordre, puis l
 - Le chat de trajet est créé automatiquement à la confirmation.
 - Temps réel des messages : même socket utilisateur `GET /ws/me` (événements `message`).
 
-## Confiance, litiges, notifications
-- `POST /rides/{id}/ratings` ; `GET /me/reliability`.
-- `POST /rides/{id}/disputes` ; `POST /reports`.
-- `GET/PUT /me/notification-preferences` ; `POST /devices` `{ platform, pushToken }`.
+## Annulations (cahier §8)
+- `GET /rides/{id}/cancellation` → `{ role, tier }` : palier de pénalité si la personne annule maintenant (`early`, `medium`, `late`, selon `reliability.penalties`). `409 not_accepted` si elle n'a pas accepté (c'est alors un refus, `POST /proposals/{id}/decline`).
+- `POST /rides/{id}/cancel` → `{ tier }`, avant le départ seulement. Pénalité au score de la personne qui annule, notification immédiate des autres participants acceptés (`ride_cancelled`). Passager : sa place est proposée au meilleur passager disponible dans le détour du conducteur ; plus aucun passager accepté, le trajet redevient `proposed`. Conducteur : trajet `cancelled`, chaque passager reçoit une autre proposition si possible (`replacement_proposed`). Pas de pénalité pour les passagers d'un conducteur qui annule.
+
+## Confiance (cahier §7)
+- `GET /rides/{id}/ratings` → `{ open, closesAt, people: [{ userId, firstName, photoUrl, role, stars }] }` : trajet terminé, conducteur ↔ passagers dont la présence est validée, jamais entre passagers. `403` pour un absent ou un tiers.
+- `POST /rides/{id}/ratings` `{ ratedUserId, stars }` (1 à 5, sans commentaire) → `204`. Une fois par personne (`409 already_rated`), pendant `ratings.windowDays` après la fin (`409 rating_closed`).
+- `GET /me/reliability` → `{ score, windowDays, completedRides, cancellations: { early, medium, late }, noShows, ratingsCount, averageStars, events: [{ id, kind, rideId, day, createdAt, disputeReason }] }`. `disputeReason` non nul : l'entrée est encore contestable.
+- Score : moyenne bayésienne du comportement (trajets menés à bien face aux pénalités) et des notes, sur `reliability.windowDays` ; il ne sert qu'à classer dans le matching (détour + `matching.reliabilityWeightSeconds` × (1 − score)), jamais à exclure.
+
+## Litiges (cahier §10)
+- `POST /rides/{id}/disputes` `{ reason, message? }` → `201 { id, rideId, reason, level, decision, explanation, createdAt, escalatedAt }`. Motifs : `cancellation_penalty`, `marked_absent`, `payment`, `driver_issue`, `other`. Niveau 1 tranché sur les horodatages du serveur (`upheld`, `corrected` avec correction du score) ; sinon niveau 2 (`escalated`), mail à `support.email`. Un litige par motif et par trajet (`409 dispute_exists`), pendant `disputes.windowDays` (`409 dispute_closed`).
+- `POST /disputes/{id}/escalate` `{ message? }` : désaccord avec la décision, passage au niveau 2 (idempotent).
+- `GET /rides/{id}/disputes` : mes litiges sur ce trajet. Un passager compté absent garde l'accès en lecture au trajet clôturé (`myStatus: "absent"` dans `GET /rides/{id}`).
+
+## Signalements
+- `POST /reports` `{ targetUserId, reason, message? }` → `201 { id }` ; motifs `dangerous_driving`, `inappropriate_behaviour`, `fake_profile`, `other`. Seulement une personne croisée sur un trajet (sinon `404`, comme une personne inconnue), `reports.dailyLimit` par jour (`429 report_limit`). Transmis à l'équipe par mail, jamais à la personne signalée.
+
+## Notifications
+- `GET/PUT /me/notification-preferences` ; `POST /devices` `{ platform, pushToken }` (M6). En M5, les événements `ride_cancelled` et `replacement_proposed` passent par l'interface `Notifier` (journal sans donnée personnelle, push FCM en M6).

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/presentation/session_controller.dart';
 import '../../features/profile/domain/me.dart';
+import '../../features/trust/domain/trust.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';
@@ -26,6 +27,13 @@ abstract final class AppRoutes {
   static String rideDeparture(String id) => '/rides/$id/departure';
   static String rideLocation(String id) => '/rides/$id/location';
   static const wallet = '/wallet';
+  static const reliability = '/profile/reliability';
+
+  /// Litige sur un trajet ; route à part, car un passager qui a annulé n'a plus accès au trajet.
+  static String dispute(String rideId, {DisputeReason? reason}) => Uri(
+    path: '/disputes/$rideId',
+    queryParameters: reason == null ? null : {'reason': reason.wire},
+  ).toString();
 
   static const public = {welcome, login, signup};
   static const entry = {splash, welcome, login, signup, onboarding};

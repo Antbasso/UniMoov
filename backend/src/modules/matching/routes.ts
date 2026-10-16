@@ -4,6 +4,8 @@ import { AppError } from '../../shared/errors.js';
 import { isoWeekMonday } from '../../shared/time.js';
 import {
   alternativesResponse,
+  cancellationResponse,
+  cancelResponse,
   idParams,
   inviteParams,
   proposal,
@@ -38,6 +40,19 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
       await service.decline(request.userId, request.params.id);
       return reply.code(204).send(null);
     },
+  );
+
+  // Annulation après acceptation (cahier §8) : palier de pénalité affiché avant de confirmer.
+  app.get(
+    '/rides/:id/cancellation',
+    { schema: { params: idParams, response: { 200: cancellationResponse } } },
+    (request) => service.cancellation(request.userId, request.params.id),
+  );
+
+  app.post(
+    '/rides/:id/cancel',
+    { schema: { params: idParams, response: { 200: cancelResponse } } },
+    (request) => service.cancel(request.userId, request.params.id),
   );
 
   app.get(

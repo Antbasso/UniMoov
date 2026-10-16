@@ -66,6 +66,7 @@ export class AuthRepo {
       lastName: string;
       passwordHash: string;
       campusId: string | null;
+      reliabilityScore?: number;
       now: Date;
     },
     db: DbOrTx = this.db,
@@ -79,6 +80,7 @@ export class AuthRepo {
         lastName: values.lastName,
         passwordHash: values.passwordHash,
         campusId: values.campusId,
+        ...(values.reliabilityScore === undefined ? {} : { reliabilityScore: values.reliabilityScore.toFixed(3) }),
         createdAt: values.now,
       })
       .onConflictDoNothing({ target: users.universityEmail })

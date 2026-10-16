@@ -1120,4 +1120,355 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishConfirmCancel => 'Continuer le trajet';
+
+  @override
+  String get cancelMyPlace => 'Annuler ma place';
+
+  @override
+  String get cancelRide => 'Annuler le trajet';
+
+  @override
+  String get cancelSheetTitle => 'Annuler ce trajet ?';
+
+  @override
+  String get cancelTierEarly => 'Tu préviens tôt : ton score baisse un peu.';
+
+  @override
+  String get cancelTierMedium =>
+      'Le départ approche : ton score baisse davantage.';
+
+  @override
+  String get cancelTierLate => 'Départ imminent : ton score baisse nettement.';
+
+  @override
+  String get cancelPassengerEffect =>
+      'Le conducteur est prévenu et ta place est proposée à quelqu\'un d\'autre.';
+
+  @override
+  String get cancelDriverEffect =>
+      'Tes passagers sont prévenus et on leur cherche une autre voiture.';
+
+  @override
+  String get cancelKeep => 'Garder mon trajet';
+
+  @override
+  String get cancelDone => 'Trajet annulé.';
+
+  @override
+  String get ratingTitle => 'Noter le trajet';
+
+  @override
+  String get ratingIntro =>
+      'Facultatif. Ta note compte dans le score de fiabilité de la personne.';
+
+  @override
+  String ratingStar(int stars, String name) {
+    return '$stars sur 5 pour $name';
+  }
+
+  @override
+  String ratingGiven(int stars) {
+    return 'Ta note : $stars sur 5';
+  }
+
+  @override
+  String get ratingDone => 'Note enregistrée.';
+
+  @override
+  String get ratingClosed => 'La notation de ce trajet est fermée.';
+
+  @override
+  String get ratingDriver => 'Conducteur';
+
+  @override
+  String get ratingPassenger => 'Passager';
+
+  @override
+  String get profileReliability => 'Fiabilité';
+
+  @override
+  String get profileReliabilityBody =>
+      'Ton score, ce qui le compose, et les pénalités que tu peux contester.';
+
+  @override
+  String get reliabilityTitle => 'Ma fiabilité';
+
+  @override
+  String reliabilityIntro(int days) {
+    return 'Ton score aide à composer des trajets fiables, il ne t\'exclut jamais. Il se calcule sur les $days derniers jours.';
+  }
+
+  @override
+  String reliabilityScore(String score) {
+    return '$score sur 5';
+  }
+
+  @override
+  String get reliabilityScoreLabel => 'Score de fiabilité';
+
+  @override
+  String reliabilityCompleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trajets menés à bien',
+      one: '1 trajet mené à bien',
+      zero: 'Aucun trajet mené à bien',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reliabilityCancellations(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count annulations',
+      one: '1 annulation',
+      zero: 'Aucune annulation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reliabilityNoShows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count absences',
+      one: '1 absence',
+      zero: 'Aucune absence',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reliabilityRatings(int count, String average) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes, moyenne $average sur 5',
+      one: '1 note, $average sur 5',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reliabilityNoRatings => 'Pas encore de note';
+
+  @override
+  String get reliabilityEventsTitle => 'Ce qui a compté dans ton score';
+
+  @override
+  String reliabilityEmpty(int days) {
+    return 'Aucune annulation ni absence sur les $days derniers jours.';
+  }
+
+  @override
+  String get eventCancelEarly => 'Annulation prévenue tôt';
+
+  @override
+  String get eventCancelMedium => 'Annulation peu avant le départ';
+
+  @override
+  String get eventCancelLate => 'Annulation au dernier moment';
+
+  @override
+  String get eventNoShow => 'Absence au rendez-vous';
+
+  @override
+  String get eventCorrection => 'Pénalité corrigée après vérification';
+
+  @override
+  String eventRideOn(String day) {
+    return 'Trajet du $day';
+  }
+
+  @override
+  String get contest => 'Contester';
+
+  @override
+  String get rideProblem => 'Un problème sur ce trajet ?';
+
+  @override
+  String get rideAbsent =>
+      'Ta présence n\'a pas été validée : ce trajet compte comme une absence.';
+
+  @override
+  String get disputeTitle => 'Un problème sur ce trajet ?';
+
+  @override
+  String get disputeIntro =>
+      'On vérifie d\'abord ce que l\'app a enregistré : heure d\'annulation, présence au rendez-vous. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.';
+
+  @override
+  String get disputeReasonLabel => 'Motif';
+
+  @override
+  String get disputeReasonCancellation =>
+      'Je conteste la pénalité d\'annulation';
+
+  @override
+  String get disputeReasonAbsent => 'Mon absence est une erreur';
+
+  @override
+  String get disputeReasonPayment => 'Un souci de paiement';
+
+  @override
+  String get disputeReasonDriver => 'Un souci avec le conducteur';
+
+  @override
+  String get disputeReasonOther => 'Autre chose';
+
+  @override
+  String get disputeMessageLabel => 'Explique en quelques mots (facultatif)';
+
+  @override
+  String get disputeSend => 'Envoyer';
+
+  @override
+  String get disputeYours => 'Tes demandes sur ce trajet';
+
+  @override
+  String get disputeWithTeam =>
+      'Transmis à l\'équipe Uni-Moov, réponse par mail.';
+
+  @override
+  String get disputeEscalate => 'Je ne suis pas d\'accord';
+
+  @override
+  String get disputeEscalated => 'Demande transmise à l\'équipe.';
+
+  @override
+  String get disputeUpheld => 'Décision maintenue';
+
+  @override
+  String get disputeCorrected => 'Corrigé';
+
+  @override
+  String get disputePending => 'En cours d\'examen';
+
+  @override
+  String get explainPenaltyMatches =>
+      'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.';
+
+  @override
+  String get explainPenaltyRecomputed =>
+      'La pénalité ne correspondait pas aux horodatages : elle est corrigée.';
+
+  @override
+  String get explainNoPenalty =>
+      'Aucune pénalité n\'a été appliquée pour ce trajet.';
+
+  @override
+  String get explainPresenceValidated =>
+      'Ta présence avait bien été validée : la pénalité est retirée.';
+
+  @override
+  String get explainDriverConfirmed =>
+      'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.';
+
+  @override
+  String get explainNoPresence =>
+      'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.';
+
+  @override
+  String get explainNotAbsent =>
+      'Aucune absence n\'est enregistrée pour toi sur ce trajet.';
+
+  @override
+  String get explainNeedsHuman =>
+      'L\'équipe Uni-Moov examine ta demande et te répond par mail.';
+
+  @override
+  String get reportAction => 'Signaler une personne';
+
+  @override
+  String get reportIntro =>
+      'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit et peut te recontacter par mail.';
+
+  @override
+  String get reportWho => 'Qui ?';
+
+  @override
+  String get reportWhy => 'Pourquoi ?';
+
+  @override
+  String get reportDangerous => 'Conduite dangereuse';
+
+  @override
+  String get reportInappropriate => 'Comportement déplacé';
+
+  @override
+  String get reportFake => 'Faux profil';
+
+  @override
+  String get reportOther => 'Autre chose';
+
+  @override
+  String get reportSend => 'Envoyer le signalement';
+
+  @override
+  String get reportDone => 'Signalement envoyé.';
+
+  @override
+  String get errorNotAccepted => 'Tu n\'as pas accepté ce trajet.';
+
+  @override
+  String get errorAlreadyRated => 'Tu as déjà noté cette personne.';
+
+  @override
+  String get errorNotRateable =>
+      'Tu ne peux pas noter cette personne pour ce trajet.';
+
+  @override
+  String get errorRatingClosed => 'La notation de ce trajet est fermée.';
+
+  @override
+  String get errorRideNotCompleted => 'Ce trajet n\'est pas terminé.';
+
+  @override
+  String get errorDisputeExists =>
+      'Tu as déjà signalé ce problème pour ce trajet.';
+
+  @override
+  String get errorDisputeClosed =>
+      'Le délai pour signaler un problème sur ce trajet est passé.';
+
+  @override
+  String get errorDisputeNotApplicable =>
+      'Ce motif ne correspond pas à ce trajet.';
+
+  @override
+  String get errorReportLimit =>
+      'Tu as atteint le nombre de signalements du jour.';
+
+  @override
+  String ratingSend(int stars) {
+    return 'Envoyer ma note ($stars sur 5)';
+  }
+
+  @override
+  String get cancelSheetTitlePassenger => 'Annuler ta place ?';
+
+  @override
+  String get cancelDonePassenger => 'Ta place est annulée.';
+
+  @override
+  String get eventContestClosed => 'Délai de contestation dépassé.';
+
+  @override
+  String get disputeWhy => 'Dis-nous pourquoi (facultatif)';
+
+  @override
+  String get disputeSendTeam => 'Envoyer à l\'équipe';
+
+  @override
+  String get disputeAnother => 'Signaler un autre problème';
+
+  @override
+  String get disputeChooseReason => 'Choisis un motif pour continuer.';
+
+  @override
+  String get reportEmergency => 'En cas de danger immédiat, appelle le 112.';
 }

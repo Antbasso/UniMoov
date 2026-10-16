@@ -19,6 +19,8 @@ class UmField extends StatefulWidget {
     this.enabled = true,
     this.onChanged,
     this.autofillHints,
+    this.maxLines = 1,
+    this.maxLength,
   });
 
   final String label;
@@ -33,6 +35,10 @@ class UmField extends StatefulWidget {
   final bool enabled;
   final ValueChanged<String>? onChanged;
   final Iterable<String>? autofillHints;
+
+  /// Texte libre sur plusieurs lignes (message à l'équipe) ; longueur bornée par l'API.
+  final int maxLines;
+  final int? maxLength;
 
   @override
   State<UmField> createState() => _UmFieldState();
@@ -76,6 +82,9 @@ class _UmFieldState extends State<UmField> {
                 enabled: widget.enabled,
                 onChanged: widget.onChanged,
                 autofillHints: widget.autofillHints,
+                minLines: 1,
+                maxLines: widget.obscureText ? 1 : widget.maxLines,
+                maxLength: widget.maxLength,
                 style: UmText.body.copyWith(color: c.ink),
                 decoration: InputDecoration(
                   hintText: widget.placeholder,

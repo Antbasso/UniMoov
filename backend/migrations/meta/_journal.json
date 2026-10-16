@@ -43,6 +43,13 @@
       "when": 1792148267423,
       "tag": "0005_ride_lifecycle_and_wallet",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792153430595,
+      "tag": "0006_trust_cancellations_disputes",
+      "breakpoints": true
     }
   ]
 }

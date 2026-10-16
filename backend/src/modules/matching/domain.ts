@@ -1,4 +1,5 @@
 import { distanceMeters, type LatLon } from '../../shared/geo.js';
+import { rankingCost } from '../trust/domain.js';
 
 /**
  * Matching v1 (cahier §3, §4 ; architecture §4) : fonctions pures, sans base ni réseau.
@@ -25,6 +26,8 @@ export interface MatchParams {
   avgSpeedKmh: number;
   /** Écart maximal entre les horaires du conducteur et du passager. */
   arrivalWindowMinutes: number;
+  /** Détour fictif ajouté au classement pour un score nul (cahier §4, §7). */
+  reliabilityWeightSeconds: number;
 }
 
 export interface PlannedPassenger {
@@ -130,8 +133,8 @@ export interface Candidate {
 
 /**
  * Conducteurs possibles pour un passager (fonction `rankCandidates`) : horaire compatible,
- * détour sous le seuil du conducteur ; classés par détour croissant puis fiabilité du
- * conducteur décroissante.
+ * détour sous le seuil du conducteur ; classés par détour combiné au score de fiabilité du
+ * conducteur (`rankingCost`).
  */
 export function rankCandidates(
   passenger: Need,
@@ -144,16 +147,16 @@ export function rankCandidates(
     .filter((d) => isTimeCompatible(d.time, passenger.time, params))
     .map((driver) => ({ driver, detourSeconds: detourSeconds(driver.home, [passenger.home], params) }))
     .filter((c) => c.detourSeconds <= c.driver.vehicle!.maxDetourMinutes * 60)
-    .sort(
-      (a, b) =>
-        a.detourSeconds - b.detourSeconds || b.driver.reliability - a.driver.reliability || byId(a.driver, b.driver),
-    );
+    .map((c) => ({ c, cost: rankingCost(c.detourSeconds, [c.driver.reliability], params.reliabilityWeightSeconds) }))
+    .sort((a, b) => a.cost - b.cost || b.c.driver.reliability - a.c.driver.reliability || byId(a.c.driver, b.c.driver))
+    .map(({ c }) => c);
 }
 
 /**
- * Propositions d'un créneau (jour + sens), un trajet par conducteur. Conflit sur les places : on garde le plus court
- * détour, départagé par le score de fiabilité du passager (cahier §4). Chaque ajout est
- * revérifié contre le seuil du conducteur avec tous ses passagers.
+ * Propositions d'un créneau (jour + sens), un trajet par conducteur. Conflit sur les places :
+ * le plus court détour combiné aux scores de fiabilité du passager et du conducteur passe en
+ * premier (cahier §4, §7). Chaque ajout est revérifié contre le seuil du conducteur avec
+ * tous ses passagers (détour réel).
  */
 export function matchSlot(
   needs: readonly Need[],
@@ -166,10 +169,16 @@ export function matchSlot(
   const passengers = needs.filter((n) => roles.get(n.userId) === 'passenger');
 
   const pairs = passengers
-    .flatMap((passenger) => rankCandidates(passenger, drivers, params, excluded).map((c) => ({ passenger, ...c })))
+    .flatMap((passenger) =>
+      rankCandidates(passenger, drivers, params, excluded).map((c) => ({
+        passenger,
+        ...c,
+        cost: rankingCost(c.detourSeconds, [passenger.reliability, c.driver.reliability], params.reliabilityWeightSeconds),
+      })),
+    )
     .sort(
       (a, b) =>
-        a.detourSeconds - b.detourSeconds ||
+        a.cost - b.cost ||
         b.passenger.reliability - a.passenger.reliability ||
         byId(a.passenger, b.passenger) ||
         byId(a.driver, b.driver),

@@ -628,5 +628,181 @@
   "errorTopupFailed": "La recharge a été refusée.",
   "finishConfirmTitle": "Terminer le trajet ?",
   "finishConfirmBody": "Le suivi s'arrête pour tout le monde et les passagers dont la présence n'est pas validée sont comptés absents.",
-  "finishConfirmCancel": "Continuer le trajet"
+  "finishConfirmCancel": "Continuer le trajet",
+  "cancelMyPlace": "Annuler ma place",
+  "cancelRide": "Annuler le trajet",
+  "cancelSheetTitle": "Annuler ce trajet ?",
+  "cancelTierEarly": "Tu préviens tôt : ton score baisse un peu.",
+  "cancelTierMedium": "Le départ approche : ton score baisse davantage.",
+  "cancelTierLate": "Départ imminent : ton score baisse nettement.",
+  "cancelPassengerEffect": "Le conducteur est prévenu et ta place est proposée à quelqu'un d'autre.",
+  "cancelDriverEffect": "Tes passagers sont prévenus et on leur cherche une autre voiture.",
+  "cancelKeep": "Garder mon trajet",
+  "cancelDone": "Trajet annulé.",
+  "ratingTitle": "Noter le trajet",
+  "ratingIntro": "Facultatif. Ta note compte dans le score de fiabilité de la personne.",
+  "ratingStar": "{stars} sur 5 pour {name}",
+  "@ratingStar": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ratingGiven": "Ta note : {stars} sur 5",
+  "@ratingGiven": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingDone": "Note enregistrée.",
+  "ratingClosed": "La notation de ce trajet est fermée.",
+  "ratingDriver": "Conducteur",
+  "ratingPassenger": "Passager",
+  "profileReliability": "Fiabilité",
+  "profileReliabilityBody": "Ton score, ce qui le compose, et les pénalités que tu peux contester.",
+  "reliabilityTitle": "Ma fiabilité",
+  "reliabilityIntro": "Ton score aide à composer des trajets fiables, il ne t'exclut jamais. Il se calcule sur les {days} derniers jours.",
+  "@reliabilityIntro": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityScore": "{score} sur 5",
+  "@reliabilityScore": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "reliabilityScoreLabel": "Score de fiabilité",
+  "reliabilityCompleted": "{count, plural, =0{Aucun trajet mené à bien} =1{1 trajet mené à bien} other{{count} trajets menés à bien}}",
+  "@reliabilityCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityCancellations": "{count, plural, =0{Aucune annulation} =1{1 annulation} other{{count} annulations}}",
+  "@reliabilityCancellations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityNoShows": "{count, plural, =0{Aucune absence} =1{1 absence} other{{count} absences}}",
+  "@reliabilityNoShows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reliabilityRatings": "{count, plural, =1{1 note, {average} sur 5} other{{count} notes, moyenne {average} sur 5}}",
+  "@reliabilityRatings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "average": {
+        "type": "String"
+      }
+    }
+  },
+  "reliabilityNoRatings": "Pas encore de note",
+  "reliabilityEventsTitle": "Ce qui a compté dans ton score",
+  "reliabilityEmpty": "Aucune annulation ni absence sur les {days} derniers jours.",
+  "eventCancelEarly": "Annulation prévenue tôt",
+  "eventCancelMedium": "Annulation peu avant le départ",
+  "eventCancelLate": "Annulation au dernier moment",
+  "eventNoShow": "Absence au rendez-vous",
+  "eventCorrection": "Pénalité corrigée après vérification",
+  "eventRideOn": "Trajet du {day}",
+  "@eventRideOn": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "contest": "Contester",
+  "rideProblem": "Un problème sur ce trajet ?",
+  "rideAbsent": "Ta présence n'a pas été validée : ce trajet compte comme une absence.",
+  "disputeTitle": "Un problème sur ce trajet ?",
+  "disputeIntro": "On vérifie d'abord ce que l'app a enregistré : heure d'annulation, présence au rendez-vous. Si ça ne suffit pas, l'équipe Uni-Moov te répond par mail.",
+  "disputeReasonLabel": "Motif",
+  "disputeReasonCancellation": "Je conteste la pénalité d'annulation",
+  "disputeReasonAbsent": "Mon absence est une erreur",
+  "disputeReasonPayment": "Un souci de paiement",
+  "disputeReasonDriver": "Un souci avec le conducteur",
+  "disputeReasonOther": "Autre chose",
+  "disputeMessageLabel": "Explique en quelques mots (facultatif)",
+  "disputeSend": "Envoyer",
+  "disputeYours": "Tes demandes sur ce trajet",
+  "disputeWithTeam": "Transmis à l'équipe Uni-Moov, réponse par mail.",
+  "disputeEscalate": "Je ne suis pas d'accord",
+  "disputeEscalated": "Demande transmise à l'équipe.",
+  "disputeUpheld": "Décision maintenue",
+  "disputeCorrected": "Corrigé",
+  "disputePending": "En cours d'examen",
+  "explainPenaltyMatches": "Les horodatages confirment l'heure de ton annulation : la pénalité est maintenue.",
+  "explainPenaltyRecomputed": "La pénalité ne correspondait pas aux horodatages : elle est corrigée.",
+  "explainNoPenalty": "Aucune pénalité n'a été appliquée pour ce trajet.",
+  "explainPresenceValidated": "Ta présence avait bien été validée : la pénalité est retirée.",
+  "explainDriverConfirmed": "Le conducteur t'a déclaré à bord sans validation par GPS : l'équipe va trancher.",
+  "explainNoPresence": "Aucune validation de présence n'a été enregistrée : l'absence est maintenue.",
+  "explainNotAbsent": "Aucune absence n'est enregistrée pour toi sur ce trajet.",
+  "explainNeedsHuman": "L'équipe Uni-Moov examine ta demande et te répond par mail.",
+  "reportAction": "Signaler une personne",
+  "reportIntro": "Ton signalement reste confidentiel : seule l'équipe Uni-Moov le lit et peut te recontacter par mail.",
+  "reportWho": "Qui ?",
+  "reportWhy": "Pourquoi ?",
+  "reportDangerous": "Conduite dangereuse",
+  "reportInappropriate": "Comportement déplacé",
+  "reportFake": "Faux profil",
+  "reportOther": "Autre chose",
+  "reportSend": "Envoyer le signalement",
+  "reportDone": "Signalement envoyé.",
+  "errorNotAccepted": "Tu n'as pas accepté ce trajet.",
+  "errorAlreadyRated": "Tu as déjà noté cette personne.",
+  "errorNotRateable": "Tu ne peux pas noter cette personne pour ce trajet.",
+  "errorRatingClosed": "La notation de ce trajet est fermée.",
+  "errorRideNotCompleted": "Ce trajet n'est pas terminé.",
+  "errorDisputeExists": "Tu as déjà signalé ce problème pour ce trajet.",
+  "errorDisputeClosed": "Le délai pour signaler un problème sur ce trajet est passé.",
+  "errorDisputeNotApplicable": "Ce motif ne correspond pas à ce trajet.",
+  "errorReportLimit": "Tu as atteint le nombre de signalements du jour.",
+  "ratingSend": "Envoyer ma note ({stars} sur 5)",
+  "@ratingSend": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "cancelSheetTitlePassenger": "Annuler ta place ?",
+  "cancelDonePassenger": "Ta place est annulée.",
+  "@reliabilityEmpty": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "eventContestClosed": "Délai de contestation dépassé.",
+  "disputeWhy": "Dis-nous pourquoi (facultatif)",
+  "disputeSendTeam": "Envoyer à l'équipe",
+  "disputeAnother": "Signaler un autre problème",
+  "disputeChooseReason": "Choisis un motif pour continuer.",
+  "reportEmergency": "En cas de danger immédiat, appelle le 112."
 }

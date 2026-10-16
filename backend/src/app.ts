@@ -38,6 +38,10 @@ import { ProfileRepo } from './modules/profile/repo.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { ProfileService } from './modules/profile/service.js';
 import { SettingsService } from './modules/settings/service.js';
+import { TrustRepo } from './modules/trust/repo.js';
+import { trustRoutes } from './modules/trust/routes.js';
+import { TrustService } from './modules/trust/service.js';
+import { LogNotifier, type Notifier } from './shared/notifications/notifier.js';
 import { authenticatePlugin } from './plugins/authenticate.js';
 import { SecretBox } from './shared/crypto.js';
 import { AppError, errorBody } from './shared/errors.js';
@@ -52,7 +56,7 @@ import type { PaymentProvider } from './shared/payments/payment-provider.js';
 declare module 'fastify' {
   interface FastifyInstance {
     /** Services utilisés par les tâches planifiées (présents si les modules sont montés). */
-    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle };
+    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService };
   }
 }
 
@@ -70,6 +74,8 @@ export interface AppModules {
   routingDailyQuota?: number;
   /** Prestataire de paiement (factice tant que l'équipe n'a pas fourni de compte). */
   payments: PaymentProvider;
+  /** Notifications (journal en v1, push FCM en M6) ; injectable pour les tests. */
+  notifier?: Notifier;
   /** Lecture d'un lien ICS ; par défaut téléchargement protégé contre le SSRF. */
   fetchIcs?: (url: string) => Promise<string>;
   clock?: () => Date;
@@ -174,13 +180,21 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing));
     const wallet = new WalletService(new PaymentsRepo(modules.db), modules.payments, settings);
     const hub = new TrackingHub();
+    const trust = new TrustService(new TrustRepo(modules.db), settings, modules.mail, clock);
+    const notifier = modules.notifier ?? new LogNotifier((data, message) => app.log.info(data, message));
     // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),
+      trust,
     );
     const tracking = new TrackingService(hub, lifecycle, ridesRepo, settings, () => clock().getTime());
-    const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock, (rideId) =>
-      ridesService.onRideChanged(rideId),
+    const matchingService = new MatchingService(
+      new MatchingRepo(modules.db),
+      settings,
+      clock,
+      (rideId) => ridesService.onRideChanged(rideId),
+      trust,
+      notifier,
     );
     const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
       await matchingService.onProfileChanged(userId);
@@ -195,7 +209,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle });
+    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(
@@ -206,6 +220,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(matchingRoutes, { service: matchingService });
         await api.register(ridesRoutes, { service: ridesService, lifecycle });
         await api.register(walletRoutes, { service: wallet });
+        await api.register(trustRoutes, { service: trust });
         await api.register(trackingRoutes, {
           service: tracking,
           isActiveUser: (userId) => authRepo.isActiveUser(userId),

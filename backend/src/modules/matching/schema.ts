@@ -68,3 +68,7 @@ export const suggestionsResponse = z.strictObject({
   ),
 });
 export const inviteParams = z.object({ id: z.uuid(), userId: z.uuid() });
+
+const cancelTier = z.enum(['early', 'medium', 'late']);
+export const cancellationResponse = z.strictObject({ role: z.enum(['driver', 'passenger']), tier: cancelTier });
+export const cancelResponse = z.strictObject({ tier: cancelTier });

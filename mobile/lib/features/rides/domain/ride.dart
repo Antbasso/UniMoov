@@ -94,6 +94,7 @@ class RideDetails {
     required this.routeEstimated,
     required this.route,
     required this.stops,
+    this.myStatus = 'accepted',
     this.distanceM,
     this.durationS,
     this.price,
@@ -106,6 +107,7 @@ class RideDetails {
     time: DateTime.parse(json['time'] as String),
     status: json['status'] as String,
     isDriver: json['role'] == 'driver',
+    myStatus: json['myStatus'] as String? ?? 'accepted',
     distanceM: json['distanceM'] as int?,
     durationS: json['durationS'] as int?,
     routeEstimated: json['routeEstimated'] as bool,
@@ -125,6 +127,9 @@ class RideDetails {
   final DateTime time;
   final String status;
   final bool isDriver;
+
+  /// Mon statut sur ce trajet : `absent` après une clôture sans validation de présence.
+  final String myStatus;
   final int? distanceM;
   final int? durationS;
 
@@ -142,6 +147,7 @@ class RideDetails {
   bool get editable => status == 'confirmed';
   bool get inProgress => status == 'in_progress';
   bool get completed => status == 'completed';
+  bool get markedAbsent => myStatus == 'absent';
 
   /// Arrêt du conducteur (départ à l'aller, arrivée au retour).
   RideStop? get driverStop => stops.where((s) => s.kind == StopKind.driver).firstOrNull;

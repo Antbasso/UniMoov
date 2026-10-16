@@ -15,6 +15,7 @@ const params: MatchParams = {
   roadFactor: 1.3,
   avgSpeedKmh: 40,
   arrivalWindowMinutes: 30,
+  reliabilityWeightSeconds: 300,
 };
 
 // Repères réels autour d'Annecy.
@@ -143,6 +144,18 @@ describe('rankCandidates', () => {
     expect(tie.map((c) => c.driver.userId)).toEqual(['a', 'b']);
   });
 
+  it('le score influence le classement : un détour un peu plus long mais bien noté passe devant', () => {
+    const drivers = [driver('nearLow', 'seynod', 3, 30, { reliability: 0.2 }), driver('fairHigh', 'meythet', 3, 30, { reliability: 1 })];
+    expect(rankCandidates(passenger, drivers, params)[0]!.driver.userId).toBe('fairHigh');
+    // Sans poids de fiabilité : seul le détour compte.
+    expect(rankCandidates(passenger, drivers, { ...params, reliabilityWeightSeconds: 0 })[0]!.driver.userId).toBe('nearLow');
+  });
+
+  it('le seuil de détour reste vérifié sur le détour réel, pas sur le coût de classement', () => {
+    // Détour réel d'environ 46 s sous un seuil de 1 minute, malgré un score nul (coût 346 s).
+    expect(rankCandidates(passenger, [driver('d', 'seynod', 3, 1, { reliability: 0 })], params)).toHaveLength(1);
+  });
+
   it('écarte le détour au-dessus du seuil, l’horaire incompatible et les refus', () => {
     expect(rankCandidates(need('s', 'sevrier'), [driver('d', 'seynod', 3, 5)], params)).toEqual([]);
     expect(rankCandidates({ ...passenger, time: at('09:00') }, [driver('d', 'seynod')], params)).toEqual([]);
@@ -190,6 +203,20 @@ describe('matchSlot', () => {
       params,
     );
     expect(rides[0]!.passengers.map((p) => p.userId)).toEqual(['high']);
+  });
+
+  it('conflit sur la dernière place : le score du passager compte avec le détour', () => {
+    const { rides, unmatched } = matchSlot(
+      [
+        driver('d', 'seynod', 1, 30),
+        need('nearLow', 'cranGevrier', { reliability: 0.1 }),
+        need('fairHigh', 'meythet', { reliability: 1 }),
+      ],
+      'to_campus',
+      params,
+    );
+    expect(rides[0]!.passengers.map((p) => p.userId)).toEqual(['fairHigh']);
+    expect(unmatched).toEqual(['nearLow']);
   });
 
   it('le détour cumulé reste sous le seuil du conducteur', () => {

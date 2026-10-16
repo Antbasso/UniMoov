@@ -5,6 +5,7 @@ import { createDatabase, type Database } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { FakeGeocodingProvider } from '../../src/shared/geocoding/fake-geocoding-provider.js';
 import { MemoryMailProvider } from '../../src/shared/mail/memory-mail-provider.js';
+import { MemoryNotifier } from '../../src/shared/notifications/notifier.js';
 import { FakePaymentProvider } from '../../src/shared/payments/payment-provider.js';
 import { FetchFailedError } from '../../src/shared/safe-fetch.js';
 import { prepareTestDatabase } from './test-database.js';
@@ -21,6 +22,7 @@ export interface TestContext {
   mail: MemoryMailProvider;
   geocoding: FakeGeocodingProvider;
   payments: FakePaymentProvider;
+  notifier: MemoryNotifier;
   /** Faux agendas ICS servis par URL (aucun accès réseau dans les tests). */
   icsFeeds: Map<string, string>;
   /** Horloge des services (codes, pauses) ; avance avec `advance`. */
@@ -40,6 +42,7 @@ export async function setupTestContext(
   const mail = new MemoryMailProvider();
   const geocoding = new FakeGeocodingProvider();
   const payments = new FakePaymentProvider();
+  const notifier = new MemoryNotifier();
   const icsFeeds = new Map<string, string>();
   const clock = {
     now: start,
@@ -63,6 +66,7 @@ export async function setupTestContext(
       mail,
       geocoding,
       payments,
+      notifier,
       clock: () => clock.now,
       rateLimit,
     },
@@ -73,6 +77,7 @@ export async function setupTestContext(
     mail,
     geocoding,
     payments,
+    notifier,
     icsFeeds,
     clock,
     close: async () => {

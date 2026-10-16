@@ -3,6 +3,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { CalendarService } from './modules/calendar/service.js';
 import type { MatchingService } from './modules/matching/service.js';
 import type { RideLifecycle } from './modules/rides/lifecycle.js';
+import type { TrustService } from './modules/trust/service.js';
 import { addDaysIso, isoWeekOf, parisDateOf } from './shared/time.js';
 
 /**
@@ -14,7 +15,7 @@ import { addDaysIso, isoWeekOf, parisDateOf } from './shared/time.js';
  */
 export async function startJobs(
   databaseUrl: string,
-  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle },
+  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService },
   log: FastifyBaseLogger,
   clock: () => Date = () => new Date(),
 ): Promise<() => Promise<void>> {
@@ -26,6 +27,8 @@ export async function startJobs(
   await boss.createQueue('weekly-matching');
   await boss.createQueue('trace-purge');
   await boss.createQueue('stale-rides');
+  await boss.createQueue('reliability-refresh');
+  await boss.schedule('reliability-refresh', '15 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('stale-rides', '0 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('trace-purge', '30 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('calendar-sync', '0 5 * * *', null, { tz: 'Europe/Paris' });
@@ -45,6 +48,10 @@ export async function startJobs(
   await boss.work('stale-rides', async () => {
     const closed = await services.lifecycle.closeStale();
     if (closed > 0) log.info({ closed }, 'stale rides closed');
+  });
+  await boss.work('reliability-refresh', async () => {
+    const refreshed = await services.trust.refreshExpired();
+    log.info({ refreshed }, 'reliability scores refreshed');
   });
   await boss.work('trace-purge', async () => {
     const deleted = await services.lifecycle.purgeTraces();

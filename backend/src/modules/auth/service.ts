@@ -70,9 +70,10 @@ export class AuthService {
     lastName: string;
     password: string;
   }): Promise<TokensResponse> {
-    const { repo, clock, secret } = this.deps;
+    const { repo, clock, secret, settings } = this.deps;
     const email = normalizeEmail(input.universityEmail);
     const now = clock();
+    const prior = await settings.get('reliability.prior');
 
     const userId = await repo.transaction(async (tx) => {
       const stored = await repo.latestCode(email, tx);
@@ -94,6 +95,8 @@ export class AuthService {
           lastName: input.lastName,
           passwordHash,
           campusId: await repo.defaultCampusId(tx),
+          // Score de départ réglable (cahier §7), pas la valeur par défaut de la colonne.
+          reliabilityScore: prior,
           now,
         },
         tx,
