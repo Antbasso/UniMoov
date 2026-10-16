@@ -29,6 +29,7 @@ services:
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-estimate}
       ORS_API_KEY: ${ORS_API_KEY:-}
       ROUTING_DAILY_QUOTA: ${ROUTING_DAILY_QUOTA:-2000}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
     ports:

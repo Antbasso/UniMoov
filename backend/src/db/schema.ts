@@ -176,6 +176,9 @@ export const rides = pgTable('rides', {
   durationS: integer('duration_s'),
   routeEstimated: boolean('route_estimated').notNull().default(false),
   plannedAt: timestamp('planned_at', { withTimezone: true }),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  finalTotalCostCents: integer('final_total_cost_cents'),
   estimatedTotalCostCents: integer('estimated_total_cost_cents'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -196,6 +199,8 @@ export const rideParticipants = pgTable(
     useMeetingPoint: boolean('use_meeting_point').notNull().default(false),
     stopOrder: smallint('stop_order'),
     eta: timestamp('eta', { withTimezone: true }),
+    presenceValidatedAt: timestamp('presence_validated_at', { withTimezone: true }),
+    amountCents: integer('amount_cents'),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.rideId, t.userId] })],

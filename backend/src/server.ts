@@ -6,6 +6,7 @@ import { BanGeocodingProvider } from './shared/geocoding/ban-geocoding-provider.
 import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-provider.js';
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
 import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
+import { FakePaymentProvider } from './shared/payments/payment-provider.js';
 import { ConsoleMailProvider } from './shared/mail/console-mail-provider.js';
 
 const config = loadConfig();
@@ -30,6 +31,8 @@ const app = await buildApp({
     // Développement uniquement (refusé en production par la config).
     mail: new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
+    // Développement uniquement (refusé en production par la config) ; prestataire réel en M4b.
+    payments: new FakePaymentProvider(),
     ...(config.ROUTING_PROVIDER === 'ors' && config.ORS_API_KEY
       ? { routing: new OrsRoutingProvider(config.ORS_API_KEY), routingDailyQuota: config.ROUTING_DAILY_QUOTA }
       : {}),

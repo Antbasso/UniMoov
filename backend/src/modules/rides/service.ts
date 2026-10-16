@@ -23,6 +23,9 @@ export interface StopView {
   lon: number;
   eta: Date | null;
   isMeetingPoint: boolean;
+  /** Passager : monté (signalé par le conducteur), présence validée par proximité. */
+  pickedUp: boolean;
+  presenceValidated: boolean;
 }
 
 export interface PriceView extends PriceEstimate {
@@ -115,7 +118,7 @@ export class RidesService {
     });
   }
 
-  private async estimate(ride: RideInfo, distanceM: number | null, persons: number): Promise<PriceEstimate | null> {
+  async estimate(ride: RideInfo, distanceM: number | null, persons: number): Promise<PriceEstimate | null> {
     if (distanceM === null || ride.consumptionLPer100km === null) return null;
     return estimatePrice({
       consumptionLPer100km: ride.consumptionLPer100km,
@@ -165,6 +168,8 @@ export class RidesService {
       // Aller : arrivée à l'heure cible ; retour : départ à l'heure cible.
       eta: ride.targetTime,
       isMeetingPoint: false,
+      pickedUp: false,
+      presenceValidated: false,
     };
     // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
     // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
@@ -185,6 +190,8 @@ export class RidesService {
         lon: point.lon,
         eta: m.eta,
         isMeetingPoint: pickup.isMeetingPoint,
+        pickedUp: m.status === 'picked_up',
+        presenceValidated: m.presenceValidatedAt !== null,
       };
     };
     const driverStop = driver ? person(driver, 'driver') : null;

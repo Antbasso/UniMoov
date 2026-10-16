@@ -1,4 +1,5 @@
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
@@ -23,7 +24,14 @@ import { AuthService } from './modules/auth/service.js';
 import { AUTH_POLICY } from './modules/auth/policy.js';
 import { healthRoutes } from './modules/health/routes.js';
 import type { PingDb } from './modules/health/service.js';
+import { PaymentsRepo } from './modules/payments/repo.js';
+import { walletRoutes } from './modules/payments/routes.js';
+import { WalletService } from './modules/payments/service.js';
+import { RideLifecycle } from './modules/rides/lifecycle.js';
 import { RidesRepo } from './modules/rides/repo.js';
+import { TrackingHub } from './modules/tracking/hub.js';
+import { trackingRoutes } from './modules/tracking/routes.js';
+import { TrackingService } from './modules/tracking/service.js';
 import { ridesRoutes } from './modules/rides/routes.js';
 import { RidesService } from './modules/rides/service.js';
 import { ProfileRepo } from './modules/profile/repo.js';
@@ -39,11 +47,12 @@ import type { MailProvider } from './shared/mail/mail-provider.js';
 import { EstimateRoutingProvider } from './shared/routing/estimate.js';
 import { GuardedRoutingProvider } from './shared/routing/guarded-routing-provider.js';
 import type { RoutingProvider } from './shared/routing/routing-provider.js';
+import type { PaymentProvider } from './shared/payments/payment-provider.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
     /** Services utilisés par les tâches planifiées (présents si les modules sont montés). */
-    services?: { calendar: CalendarService; matching: MatchingService };
+    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle };
   }
 }
 
@@ -59,6 +68,8 @@ export interface AppModules {
   routing?: RoutingProvider;
   /** Appels quotidiens autorisés au fournisseur (palier gratuit). */
   routingDailyQuota?: number;
+  /** Prestataire de paiement (factice tant que l'équipe n'a pas fourni de compte). */
+  payments: PaymentProvider;
   /** Lecture d'un lien ICS ; par défaut téléchargement protégé contre le SSRF. */
   fetchIcs?: (url: string) => Promise<string>;
   clock?: () => Date;
@@ -159,7 +170,15 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           onEvent: (event) => app.log.warn({ event }, 'routing provider'),
         })
       : estimate;
-    const ridesService = new RidesService(new RidesRepo(modules.db), routing, settings, clock, Boolean(modules.routing));
+    const ridesRepo = new RidesRepo(modules.db);
+    const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing));
+    const wallet = new WalletService(new PaymentsRepo(modules.db), modules.payments, settings);
+    const hub = new TrackingHub();
+    // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
+    const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
+      tracking.invalidate(rideId),
+    );
+    const tracking = new TrackingService(hub, lifecycle, ridesRepo, settings, () => clock().getTime());
     const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock, (rideId) =>
       ridesService.onRideChanged(rideId),
     );
@@ -176,7 +195,8 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService });
+    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle });
+    await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(
       async (api) => {
@@ -184,7 +204,12 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(profileRoutes, { service: profileService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
-        await api.register(ridesRoutes, { service: ridesService });
+        await api.register(ridesRoutes, { service: ridesService, lifecycle });
+        await api.register(walletRoutes, { service: wallet });
+        await api.register(trackingRoutes, {
+          service: tracking,
+          isActiveUser: (userId) => authRepo.isActiveUser(userId),
+        });
       },
       { prefix: '/api/v1' },
     );

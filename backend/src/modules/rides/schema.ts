@@ -15,6 +15,8 @@ const stop = z.strictObject({
   lon: z.number(),
   eta: z.date().nullable(),
   isMeetingPoint: z.boolean(),
+  pickedUp: z.boolean(),
+  presenceValidated: z.boolean(),
 });
 
 export const price = z.strictObject({
@@ -53,4 +55,29 @@ export const pickupBody = z.object({
   label: z.string().trim().min(1).max(120).optional(),
   lat: z.number().min(-85).max(85).optional(),
   lon: z.number().min(-180).max(180).optional(),
+});
+
+export const participantParams = z.object({ id: z.uuid(), userId: z.uuid() });
+export const presenceResponse = z.object({ payment: z.enum(['paid', 'failed', 'already']) });
+
+export const navigationResponse = z.strictObject({
+  stops: z.array(
+    z.strictObject({
+      order: z.number().int(),
+      kind: z.enum(['passenger', 'destination']),
+      userId: z.uuid().nullable(),
+      firstName: z.string().nullable(),
+      label: z.string(),
+      lat: z.number(),
+      lon: z.number(),
+      eta: z.date().nullable(),
+      pickedUp: z.boolean(),
+    }),
+  ),
+  links: z.strictObject({
+    googleMaps: z.string(),
+    appleMaps: z.string(),
+    waze: z.strictObject({ nextStop: z.string() }),
+  }),
+  supportsMultiStop: z.strictObject({ googleMaps: z.boolean(), appleMaps: z.boolean(), waze: z.boolean() }),
 });

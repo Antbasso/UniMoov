@@ -36,6 +36,13 @@
       "when": 1792101847463,
       "tag": "0004_rides_plan_and_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792148267423,
+      "tag": "0005_ride_lifecycle_and_wallet",
+      "breakpoints": true
     }
   ]
 }

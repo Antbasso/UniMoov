@@ -1,0 +1,77 @@
+import type { LatLon } from '../../shared/geo.js';
+
+/** Connexion WebSocket d'un participant (sous-ensemble de `ws`). */
+export interface LiveSocket {
+  send(data: string): void;
+  close(code?: number, reason?: string): void;
+}
+
+export interface LiveClient {
+  userId: string;
+  socket: LiveSocket;
+  lastPositionAt: number;
+}
+
+export interface LivePosition extends LatLon {
+  ts: Date;
+  receivedAt: number;
+}
+
+/** Codes de fermeture (docs/api.md). */
+export const WS_CLOSE = {
+  unauthorized: 4401,
+  forbidden: 4403,
+  notStarted: 4409,
+  closed: 4410,
+} as const;
+
+/**
+ * Salles en mémoire, une par trajet en cours (architecture §6) : connexions et dernière
+ * position de chacun. Rien n'est gardé après la clôture.
+ */
+export class TrackingHub {
+  private readonly rooms = new Map<string, Set<LiveClient>>();
+  private readonly positions = new Map<string, Map<string, LivePosition>>();
+
+  join(rideId: string, client: LiveClient): void {
+    const room = this.rooms.get(rideId) ?? new Set();
+    room.add(client);
+    this.rooms.set(rideId, room);
+  }
+
+  leave(rideId: string, client: LiveClient): void {
+    this.rooms.get(rideId)?.delete(client);
+  }
+
+  clients(rideId: string): LiveClient[] {
+    return [...(this.rooms.get(rideId) ?? [])];
+  }
+
+  send(rideId: string, message: object, to: (userId: string) => boolean = () => true): void {
+    const data = JSON.stringify(message);
+    for (const client of this.rooms.get(rideId) ?? []) {
+      if (to(client.userId)) client.socket.send(data);
+    }
+  }
+
+  setPosition(rideId: string, userId: string, position: LivePosition): void {
+    const room = this.positions.get(rideId) ?? new Map<string, LivePosition>();
+    room.set(userId, position);
+    this.positions.set(rideId, room);
+  }
+
+  position(rideId: string, userId: string): LivePosition | undefined {
+    return this.positions.get(rideId)?.get(userId);
+  }
+
+  /** Clôture : connexions fermées, positions oubliées (seule la trace réduite reste en base). */
+  close(rideId: string): void {
+    for (const client of this.rooms.get(rideId) ?? []) client.socket.close(WS_CLOSE.closed, 'ride_closed');
+    this.rooms.delete(rideId);
+    this.positions.delete(rideId);
+  }
+
+  isOpen(rideId: string): boolean {
+    return (this.rooms.get(rideId)?.size ?? 0) > 0;
+  }
+}
