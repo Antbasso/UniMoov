@@ -91,11 +91,11 @@ describe('GuardedRoutingProvider', () => {
   };
   const fallback: RoutingProvider = { route: (points) => Promise.resolve(estimateRoute(points, params)) };
 
-  it('met en cache par coordonnées arrondies (~100 m)', async () => {
+  it('met en cache par coordonnées arrondies (~10 m)', async () => {
     const primary = fake();
     const guard = new GuardedRoutingProvider(primary, fallback, { dailyQuota: 10 });
-    await guard.route([{ lat: 45.8861, lon: 6.0891 }, c]);
-    await guard.route([{ lat: 45.8863, lon: 6.0893 }, c]);
+    await guard.route([{ lat: 45.88612, lon: 6.08912 }, c]);
+    await guard.route([{ lat: 45.88614, lon: 6.08914 }, c]);
     expect(primary.calls).toBe(1);
     await guard.route([b, c]);
     expect(primary.calls).toBe(2);

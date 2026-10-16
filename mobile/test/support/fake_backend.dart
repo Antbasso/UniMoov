@@ -266,9 +266,15 @@ class FakeBackend implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, Rid
   final Map<String, Suggestions> suggestionsById = {};
   final List<String> invited = [];
 
+  /// Erreur au prochain chargement d'un trajet seulement (rechargement après une action).
+  ApiException? failNextRide;
+
   @override
   Future<RideDetails> ride(String id) async {
     _maybeFail();
+    final rideError = failNextRide;
+    failNextRide = null;
+    if (rideError != null) throw rideError;
     final ride = rides[id];
     if (ride == null) throw const ApiException('forbidden', '', statusCode: 403);
     return ride;
@@ -490,7 +496,8 @@ RideDetails rideFixture({
       kind: StopKind.passenger,
       userId: 'passenger-3',
       firstName: 'Hugo',
-      label: 'Centre, 74960 Cran-Gevrier',
+      // Vu par un autre passager : secteur seulement (le serveur retire l'adresse).
+      label: isDriver ? 'Centre, 74960 Cran-Gevrier' : '',
       lat: 45.905,
       lon: 6.103,
       eta: DateTime.utc(2026, 10, 19, 5, 53),

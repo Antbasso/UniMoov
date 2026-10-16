@@ -373,7 +373,11 @@ export class MatchingService {
     const busy = await this.repo.busyUsers(ride.day, ride.direction, db);
     const declines = await this.repo.declines(ride.day, ride.direction, db);
     const needs = (await this.repo.needsForDay(ride.day, db)).filter(
-      (n) => n.campusId === ride.campusId && !busy.has(n.userId) && !declines.has(`${ride.driverId}|${n.userId}`),
+      (n) =>
+        n.campusId === ride.campusId &&
+        n.roleMode !== 'always_driver' &&
+        !busy.has(n.userId) &&
+        !declines.has(`${ride.driverId}|${n.userId}`),
     );
     const pauses = await this.repo.pausesFor(
       needs.map((n) => n.userId),

@@ -528,5 +528,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "rideStopApproximate": "Position approximative"
 }

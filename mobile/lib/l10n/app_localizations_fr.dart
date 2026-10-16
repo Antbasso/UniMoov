@@ -905,4 +905,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String suggestionPriceCompared(String price, String current) {
     return 'Avec cette personne : $price par passager au lieu de $current';
   }
+
+  @override
+  String get rideStopApproximate => 'Position approximative';
 }

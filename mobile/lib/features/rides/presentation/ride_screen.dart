@@ -214,7 +214,10 @@ class _StopRow extends StatelessWidget {
       _ when isMe => l10n.rideYou,
       _ => stop.fullName ?? '',
     };
-    final place = stop.kind == StopKind.campus ? null : stop.label;
+    // Domicile d'un autre passager : le serveur ne donne que le secteur, sans adresse.
+    final place = stop.kind == StopKind.campus
+        ? null
+        : (stop.label.isEmpty ? l10n.rideStopApproximate : stop.label);
     final time = stop.eta == null ? null : formatTime(stop.eta!, l10n.localeName);
 
     return Semantics(

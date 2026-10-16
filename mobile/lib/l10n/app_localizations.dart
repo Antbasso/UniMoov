@@ -1593,6 +1593,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Avec cette personne : {price} par passager au lieu de {current}'**
   String suggestionPriceCompared(String price, String current);
+
+  /// No description provided for @rideStopApproximate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Position approximative'**
+  String get rideStopApproximate;
 }
 
 class _AppLocalizationsDelegate

@@ -15,7 +15,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Devant le fournisseur d'itinéraires (docs/couts.md) : cache mémoire LRU par coordonnées
- * arrondies (~100 m), compteur quotidien avec alerte à 80 % du quota, et repli sur
+ * arrondies (~10 m, un point de rendez-vous déplacé change le tracé), compteur quotidien avec alerte à 80 % du quota, et repli sur
  * l'estimation locale en cas de panne ou de quota épuisé : un trajet a toujours un plan.
  */
 export class GuardedRoutingProvider implements RoutingProvider {
@@ -31,7 +31,7 @@ export class GuardedRoutingProvider implements RoutingProvider {
 
   async route(points: readonly LatLon[]): Promise<RouteResult> {
     const now = (this.options.now ?? Date.now)();
-    const key = points.map((p) => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`).join(';');
+    const key = points.map((p) => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`).join(';');
     const hit = this.cache.get(key);
     if (hit && hit.expiresAt > now) {
       this.cache.delete(key);

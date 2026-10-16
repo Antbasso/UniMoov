@@ -77,12 +77,17 @@ export function passageTimes(direction: Direction, targetTime: Date, legs: reado
 }
 
 /**
- * Clé des entrées d'un plan (passagers acceptés et points de prise en charge) : un plan
+ * Clé des entrées d'un plan (départ, arrivée, passagers acceptés et leurs points) : un plan
  * calculé n'est enregistré que si ces entrées n'ont pas changé entre-temps.
  */
-export function planKey(stops: readonly { userId: string; point: LatLon }[]): string {
-  return [...stops]
+export function planKey(inputs: {
+  start: LatLon;
+  end: LatLon;
+  stops: readonly { userId: string; point: LatLon }[];
+}): string {
+  const at = (p: LatLon) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+  const stops = [...inputs.stops]
     .sort((a, b) => a.userId.localeCompare(b.userId))
-    .map((s) => `${s.userId}@${s.point.lat.toFixed(6)},${s.point.lon.toFixed(6)}`)
-    .join('|');
+    .map((s) => `${s.userId}@${at(s.point)}`);
+  return [at(inputs.start), at(inputs.end), ...stops].join('|');
 }

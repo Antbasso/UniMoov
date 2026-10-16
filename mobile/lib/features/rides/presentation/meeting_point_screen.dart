@@ -59,17 +59,29 @@ class _MeetingPointScreenState extends ConsumerState<MeetingPointScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
-    final ride = ref.watch(rideProvider(widget.id)).value;
+    final rideState = ref.watch(rideProvider(widget.id));
     final myId = ref.watch(meProvider.select((me) => me.value?.id));
-    final myStop = ride?.stopOf(myId);
-    if (ride == null || myStop == null) {
+    final myStop = rideState.value?.stopOf(myId);
+    if (myStop == null) {
       return UmPage(
         appBar: AppBar(),
         children: [
-          Semantics(
-            label: l10n.loading,
-            child: LinearProgressIndicator(color: c.brand),
-          ),
+          if (rideState case AsyncError(:final error)) ...[
+            UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
+            const SizedBox(height: UmSpace.s3),
+            UmButton(
+              label: l10n.retry,
+              variant: UmButtonVariant.ghost,
+              onPressed: () => ref.invalidate(rideProvider(widget.id)),
+            ),
+          ] else if (rideState.hasValue)
+            // Trajet chargé mais sans arrêt à moi : rien à placer.
+            Text(l10n.errorForbidden, style: UmText.body.copyWith(color: c.inkMuted))
+          else
+            Semantics(
+              label: l10n.loading,
+              child: LinearProgressIndicator(color: c.brand),
+            ),
         ],
       );
     }

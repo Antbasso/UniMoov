@@ -32,6 +32,7 @@ void main() {
     expect(find.text('Nathan Petit'), findsOneWidget); // conducteur : nom complet
     expect(find.text('Toi'), findsOneWidget);
     expect(find.text('Hugo'), findsOneWidget); // autre passager : prénom seulement
+    expect(find.text('Position approximative'), findsOneWidget); // et secteur, sans adresse
     expect(find.text("Campus d'Annecy (USMB)"), findsOneWidget);
     expect(find.text('Tu paies'), findsOneWidget);
     expect(find.textContaining('0,76'), findsOneWidget);
@@ -101,6 +102,21 @@ void main() {
     await tester.tap(find.byTooltip('Retour'));
     await tester.pumpAndSettle();
     expect(find.text('Théo'), findsOneWidget); // ajouté à la proposition
+  });
+
+  testWidgets('rechargement raté après enregistrement : succès affiché, puis réessayer', (
+    tester,
+  ) async {
+    await openRide(tester);
+    await tapText(tester, 'Choisir un point de rendez-vous');
+    await tester.enterText(fieldLabeled('Nom du point'), 'Arrêt Mairie');
+    await tester.pump();
+    backend.failNextRide = const ApiException('network_error', '');
+    await tapText(tester, 'Enregistrer ce point');
+    expect(find.text('Point de rendez-vous enregistré.'), findsOneWidget);
+    expect(find.text('Réessayer'), findsOneWidget);
+    await tapText(tester, 'Réessayer');
+    expect(find.text('Arrêt Mairie'), findsOneWidget);
   });
 
   testWidgets('erreur au chargement du trajet, puis réessayer', (tester) async {

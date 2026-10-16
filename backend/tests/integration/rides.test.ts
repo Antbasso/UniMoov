@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runSeed } from '../../src/db/seed.js';
 import { DEMO_PASSWORD, seedUsers } from '../../src/db/seed-data.js';
 import { publicSector } from '../../src/modules/matching/service.js';
-import { sectorOf } from '../../src/shared/geo.js';
+import { distanceMeters, sectorOf } from '../../src/shared/geo.js';
 import { bearer, setupTestContext, type TestContext, type Tokens } from './helpers.js';
 
 /**
@@ -150,7 +150,21 @@ describe('carte d’un trajet confirmé', () => {
     const byName = new Map(view.stops.map((s) => [s.firstName, s]));
     expect(byName.get('Léa')).toMatchObject({ lastName: 'Martin', label: user('Léa').homeAddress });
     expect(byName.get('Hugo')!.lastName).toBe('Bernard');
-    expect(byName.get('Inès')).toMatchObject({ lastName: null, label: user('Inès').homeAddress });
+    // Entre passagers, pas d'acceptation mutuelle : secteur seulement, sans adresse (cahier §4, §14).
+    const ines = byName.get('Inès')!;
+    expect(ines).toMatchObject({ lastName: null, label: '' });
+    expect({ lat: ines.lat, lon: ines.lon }).toEqual(publicSector(sectorOf(user('Inès'))));
+    expect(JSON.stringify(view)).not.toContain(user('Inès').homeAddress);
+    for (const [lat, lon] of view.route) {
+      expect(distanceMeters({ lat, lon }, user('Inès'))).toBeGreaterThan(500);
+    }
+    // Le conducteur, lui, voit l'adresse exacte de chacun.
+    const driverView = await ride('Léa', mondayId);
+    expect(driverView.stops.find((s) => s.firstName === 'Inès')).toMatchObject({
+      label: user('Inès').homeAddress,
+      lat: user('Inès').lat,
+      lon: user('Inès').lon,
+    });
     // Le plan a été recalculé avec Inès : trois personnes se partagent le coût.
     expect(view.stops.map((s) => s.firstName)).toEqual(['Léa', 'Hugo', 'Inès', null]);
     expect(view.price!.persons).toBe(3);
@@ -172,6 +186,26 @@ describe('carte d’un trajet confirmé', () => {
     const tuesday = await proposal('Léa', TUESDAY, 'to_campus');
     expect((await call('Léa', 'POST', `/proposals/${tuesday.id}/accept`)).statusCode).toBe(200);
     expect((await call('Léa', 'GET', `/rides/${tuesday.id}`)).statusCode).toBe(409);
+  });
+});
+
+describe('changement d’adresse après confirmation', () => {
+  it('le plan est recalculé avec la nouvelle adresse du passager', async () => {
+    const before = await ride('Léa', mondayId);
+    // Hugo déménage à Annecy (adresse connue du géocodeur factice).
+    const moved = await call('Hugo', 'PUT', '/me/address', { address: '12 rue de la Paix, Annecy' });
+    expect(moved.statusCode).toBe(200);
+    const after = await ride('Léa', mondayId);
+    const hugo = after.stops.find((s) => s.firstName === 'Hugo')!;
+    expect([hugo.lat, hugo.lon]).toEqual([45.9003, 6.1251]);
+    expect(after.route).toContainEqual([45.9003, 6.1251]);
+    expect(after.distanceM).not.toBe(before.distanceM);
+    // Retour à l'adresse du seed pour la suite.
+    await ctx.database.pool.query(
+      `UPDATE users SET home_address = $1, home_location = ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography WHERE id = $4`,
+      [user('Hugo').homeAddress, user('Hugo').lat, user('Hugo').lon, user('Hugo').id],
+    );
+    await ctx.database.pool.query(`UPDATE rides SET planned_at = NULL WHERE id = $1`, [mondayId]);
   });
 });
 

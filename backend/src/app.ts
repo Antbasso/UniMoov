@@ -159,13 +159,15 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           onEvent: (event) => app.log.warn({ event }, 'routing provider'),
         })
       : estimate;
-    const ridesService = new RidesService(new RidesRepo(modules.db), routing, settings, clock);
+    const ridesService = new RidesService(new RidesRepo(modules.db), routing, settings, clock, Boolean(modules.routing));
     const matchingService = new MatchingService(new MatchingRepo(modules.db), settings, clock, (rideId) =>
       ridesService.onRideChanged(rideId),
     );
-    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, (userId) =>
-      matchingService.onProfileChanged(userId),
-    );
+    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
+      await matchingService.onProfileChanged(userId);
+      // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
+      await ridesService.onUserChanged(userId);
+    });
     const calendarService = new CalendarService({
       repo: new CalendarRepo(modules.db),
       box: new SecretBox(modules.calendarKey),

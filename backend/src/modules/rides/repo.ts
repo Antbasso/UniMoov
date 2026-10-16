@@ -164,7 +164,8 @@ export class RidesRepo {
       estimated: boolean;
       totalCostCents: number | null;
       stops: { userId: string; order: number; eta: Date }[];
-      now: Date;
+      /** Null : plan provisoire (estimé), à recalculer. */
+      now: Date | null;
     },
     tx: Tx,
   ): Promise<void> {
@@ -199,6 +200,15 @@ export class RidesRepo {
         pickup_label = ${pickup?.label ?? null},
         pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null}
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
+  /** Trajets confirmés à venir où l'utilisateur est accepté. */
+  async upcomingConfirmedRides(userId: string, fromDay: string): Promise<string[]> {
+    const { rows } = await this.db.execute<{ id: string }>(sql`
+      SELECT r.id FROM rides r JOIN ride_participants p ON p.ride_id = r.id
+      WHERE p.user_id = ${userId} AND p.status IN ('accepted', 'picked_up')
+        AND r.status = 'confirmed' AND r.day >= ${fromDay}`);
+    return rows.map((r) => r.id);
   }
 
   /** Le plan doit être recalculé (arrêts modifiés). */

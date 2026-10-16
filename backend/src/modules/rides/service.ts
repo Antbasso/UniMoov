@@ -1,7 +1,9 @@
 import { AppError } from '../../shared/errors.js';
-import { distanceMeters, type LatLon } from '../../shared/geo.js';
+import { distanceMeters, type LatLon, SECTOR_SIZE_M, sectorOf } from '../../shared/geo.js';
+import { publicSector } from '../matching/service.js';
 import type { RoutingProvider } from '../../shared/routing/routing-provider.js';
 import { estimatePrice, type PriceEstimate } from '../pricing/domain.js';
+import { parisDateOf } from '../../shared/time.js';
 import type { SettingsService } from '../settings/service.js';
 import { type Direction, orderStops, passageTimes, planKey } from './domain.js';
 import { isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
@@ -56,7 +58,16 @@ export class RidesService {
     private readonly routing: RoutingProvider,
     private readonly settings: SettingsService,
     private readonly clock: () => Date,
+    /** Un vrai fournisseur existe : un plan estimé (panne, quota) sera recalculé plus tard. */
+    private readonly retryEstimated = false,
   ) {}
+
+  /** Adresse d'un participant modifiée : ses trajets confirmés à venir sont recalculés. */
+  async onUserChanged(userId: string): Promise<void> {
+    for (const rideId of await this.repo.upcomingConfirmedRides(userId, parisDateOf(this.clock()))) {
+      await this.onRideChanged(rideId);
+    }
+  }
 
   /** Arrêts d'un trajet confirmé modifiés : nouveau plan. Une erreur laisse le plan à recalculer. */
   async onRideChanged(rideId: string): Promise<void> {
@@ -83,7 +94,7 @@ export class RidesService {
       const current = await this.repo.ride(rideId, tx, true);
       if (!current) return;
       const now = planInputs(current, await this.repo.members(rideId, tx));
-      if (!now || planKey(now.stops) !== planKey(inputs.stops)) return;
+      if (!now || planKey(now) !== planKey(inputs)) return;
       await this.repo.savePlan(
         rideId,
         {
@@ -96,7 +107,8 @@ export class RidesService {
             { userId: ride.driverId, order: 0, eta: ride.direction === 'to_campus' ? times[0]! : times.at(-1)! },
             ...ordered.map((s, i) => ({ userId: s.userId, order: i + 1, eta: times[i + 1]! })),
           ],
-          now: this.clock(),
+          // Tracé estimé alors qu'un fournisseur existe : on retentera à la prochaine lecture.
+          now: route.estimated && this.retryEstimated ? null : this.clock(),
         },
         tx,
       );
@@ -154,17 +166,23 @@ export class RidesService {
       eta: ride.targetTime,
       isMeetingPoint: false,
     };
+    // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
+    // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
+    const hidden: LatLon[] = [];
     const person = (m: Member, kind: 'driver' | 'passenger'): Omit<StopView, 'order'> | null => {
       const pickup = kind === 'driver' ? (m.home ? { point: m.home, label: m.homeLabel ?? '', isMeetingPoint: false } : null) : pickupOf(m);
       if (!pickup) return null;
+      const coPassengerHome = me.role === 'passenger' && kind === 'passenger' && m.userId !== me.userId && !pickup.isMeetingPoint;
+      if (coPassengerHome) hidden.push(pickup.point);
+      const point = coPassengerHome ? publicSector(sectorOf(pickup.point)) : pickup.point;
       return {
         kind,
         userId: m.userId,
         firstName: m.firstName,
         lastName: lastNameFor(m),
-        label: pickup.label,
-        lat: pickup.point.lat,
-        lon: pickup.point.lon,
+        label: coPassengerHome ? '' : pickup.label,
+        lat: point.lat,
+        lon: point.lon,
         eta: m.eta,
         isMeetingPoint: pickup.isMeetingPoint,
       };
@@ -189,7 +207,10 @@ export class RidesService {
       distanceM: ride.distanceM,
       durationS: ride.durationS,
       routeEstimated: ride.routeEstimated,
-      route: ride.plannedAt ? await this.repo.routeGeometry(rideId) : [],
+      // Le tracé ne doit pas trahir un domicile masqué : on retire ses abords.
+      route: (ride.plannedAt || ride.distanceM !== null ? await this.repo.routeGeometry(rideId) : []).filter(
+        ([lat, lon]) => hidden.every((h) => distanceMeters(h, { lat, lon }) > SECTOR_SIZE_M),
+      ),
       stops,
       price: estimate ? priceView(estimate, me.role) : null,
     };
@@ -208,25 +229,28 @@ export class RidesService {
     rideId: string,
     input: { useMeetingPoint: boolean; label?: string | undefined; lat?: number | undefined; lon?: number | undefined },
   ): Promise<void> {
-    const ride = await this.repo.ride(rideId);
-    if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
-    const me = (await this.repo.members(rideId)).find((m) => m.userId === userId && isAccepted(m));
-    if (!me || me.role !== 'passenger') throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
-    if (LOCKED_STATUSES.has(ride.status)) throw new AppError(409, 'ride_locked', 'Ce trajet ne peut plus être modifié');
+    const max = await this.settings.get('rides.meetingPointMaxMeters');
+    // Sous le verrou du trajet : un départ simultané ne laisse pas passer la modification.
+    await this.repo.transaction(async (tx) => {
+      const ride = await this.repo.ride(rideId, tx, true);
+      if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      const me = (await this.repo.members(rideId, tx)).find((m) => m.userId === userId && isAccepted(m));
+      if (!me || me.role !== 'passenger') throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
+      if (LOCKED_STATUSES.has(ride.status)) throw new AppError(409, 'ride_locked', 'Ce trajet ne peut plus être modifié');
 
-    let pickup: { label: string; point: LatLon } | null = null;
-    if (input.useMeetingPoint) {
-      const label = input.label?.trim();
-      if (!label || input.lat === undefined || input.lon === undefined) {
-        throw new AppError(400, 'validation_error', 'Indique le point de rendez-vous');
+      let pickup: { label: string; point: LatLon } | null = null;
+      if (input.useMeetingPoint) {
+        const label = input.label?.trim();
+        if (!label || input.lat === undefined || input.lon === undefined) {
+          throw new AppError(400, 'validation_error', 'Indique le point de rendez-vous');
+        }
+        pickup = { label, point: { lat: input.lat, lon: input.lon } };
+        if (!me.home || distanceMeters(me.home, pickup.point) > max) {
+          throw new AppError(422, 'meeting_point_too_far', 'Choisis un point plus proche de chez toi');
+        }
       }
-      pickup = { label, point: { lat: input.lat, lon: input.lon } };
-      const max = await this.settings.get('rides.meetingPointMaxMeters');
-      if (!me.home || distanceMeters(me.home, pickup.point) > max) {
-        throw new AppError(422, 'meeting_point_too_far', 'Choisis un point plus proche de chez toi');
-      }
-    }
-    await this.repo.setPickup(rideId, userId, pickup);
+      await this.repo.setPickup(rideId, userId, pickup, tx);
+    });
     await this.onRideChanged(rideId);
   }
 }

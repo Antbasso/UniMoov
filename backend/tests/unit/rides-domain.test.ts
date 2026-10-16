@@ -74,10 +74,16 @@ describe('passageTimes', () => {
 });
 
 describe('planKey', () => {
-  it('ne dépend pas de l’ordre et change si un point bouge', () => {
-    const a = planKey([stop('a', annecy), stop('c', cranGevrier)]);
-    expect(planKey([stop('c', cranGevrier), stop('a', annecy)])).toBe(a);
-    expect(planKey([stop('a', annecy), stop('c', meythet)])).not.toBe(a);
-    expect(planKey([stop('a', annecy)])).not.toBe(a);
+  const key = (stops: ReturnType<typeof stop>[], start = seynod) => planKey({ start, end: campus, stops });
+
+  it('ne dépend pas de l’ordre des passagers et change si un point bouge', () => {
+    const a = key([stop('a', annecy), stop('c', cranGevrier)]);
+    expect(key([stop('c', cranGevrier), stop('a', annecy)])).toBe(a);
+    expect(key([stop('a', annecy), stop('c', meythet)])).not.toBe(a);
+    expect(key([stop('a', annecy)])).not.toBe(a);
+  });
+
+  it('change si le conducteur déménage (départ ou arrivée)', () => {
+    expect(key([stop('a', annecy)], meythet)).not.toBe(key([stop('a', annecy)]));
   });
 });
