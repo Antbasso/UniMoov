@@ -45,7 +45,7 @@ export const reliabilityResponse = z.strictObject({
 });
 
 export const disputeBody = z.object({ reason: disputeReason, message });
-export const escalateBody = z.object({ message }).optional();
+export const escalateBody = z.object({ message }).nullish();
 
 export const disputeResponse = z.strictObject({
   id: z.uuid(),

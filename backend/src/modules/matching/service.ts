@@ -422,8 +422,9 @@ export class MatchingService {
   private async rehome(passengerId: string, cancelled: RideRow): Promise<void> {
     const rideId = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, cancelled.day);
-      // La régénération du jour lui a peut-être déjà trouvé une voiture.
-      if ((await this.repo.busyUsers(cancelled.day, cancelled.direction, tx)).has(passengerId)) return null;
+      // La régénération du jour lui a peut-être déjà trouvé une voiture : on le prévient.
+      const [already] = await this.repo.otherActiveRides(passengerId, cancelled.day, cancelled.direction, cancelled.id, tx);
+      if (already) return already.ride_id;
       const [best] = await this.joinable(passengerId, cancelled.day, cancelled.direction, cancelled.id, tx, undefined, cancelled.targetTime);
       if (!best) return null;
       await this.repo.addPassenger(best.rideId, passengerId, best.driver.detourMinutes * 60, tx, 'proposed');
