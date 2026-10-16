@@ -42,6 +42,7 @@ export interface RideView {
   time: Date;
   status: string;
   role: 'driver' | 'passenger';
+  myStatus: string;
   seatsTotal: number;
   distanceM: number | null;
   durationS: number | null;
@@ -134,7 +135,10 @@ export class RidesService {
     const ride = await this.repo.ride(rideId);
     if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
     const members = await this.repo.members(rideId);
-    const me = members.find((m) => m.userId === userId && isAccepted(m));
+    // Un passager compté absent garde l'accès au trajet clôturé (litige, cahier §10).
+    const me = members.find(
+      (m) => m.userId === userId && (isAccepted(m) || (m.status === 'absent' && ride.status === 'completed')),
+    );
     if (!me) throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
     if (!VISIBLE_STATUSES.has(ride.status)) {
       throw new AppError(409, 'ride_not_confirmed', "Ce trajet n'est pas encore confirmé");
@@ -210,6 +214,7 @@ export class RidesService {
       time: ride.targetTime,
       status: ride.status,
       role: me.role,
+      myStatus: me.status,
       seatsTotal: ride.seatsTotal,
       distanceM: ride.distanceM,
       durationS: ride.durationS,

@@ -4,6 +4,8 @@ import { addDaysIso, isoWeekOf, parisDateOf, parisToUtc, weekDays } from '../../
 import { estimateRoute } from '../../shared/routing/estimate.js';
 import { estimatePrice } from '../pricing/domain.js';
 import { isPausedOn } from '../profile/domain.js';
+import { type CancelTier, rankingCost } from '../trust/domain.js';
+import type { Notifier } from '../../shared/notifications/notifier.js';
 import type { SettingsService } from '../settings/service.js';
 import {
   detourSeconds,
@@ -95,6 +97,14 @@ function publicPerson(p: ParticipantRow, detourS: number | null = p.detourS): Pu
   };
 }
 
+/** Pénalité d'annulation (module confiance), inscrite dans la même transaction. */
+export interface CancellationPolicy {
+  cancellationTier(rideTime: Date): Promise<CancelTier>;
+  penalizeCancellation(userId: string, rideId: string, rideTime: Date, db: DbOrTx): Promise<CancelTier>;
+}
+
+const silentNotifier: Notifier = { notify: () => Promise.resolve() };
+
 export class MatchingService {
   constructor(
     private readonly repo: MatchingRepo,
@@ -102,6 +112,8 @@ export class MatchingService {
     private readonly clock: () => Date,
     /** Arrêts d'un trajet confirmé modifiés : nouveau plan (tracé, heures, prix). */
     private readonly onRideChanged: (rideId: string) => Promise<void> = () => Promise.resolve(),
+    private readonly policy?: CancellationPolicy,
+    private readonly notifier: Notifier = silentNotifier,
   ) {}
 
   private today(): string {
@@ -114,6 +126,7 @@ export class MatchingService {
       roadFactor: await this.settings.get('matching.roadFactor'),
       avgSpeedKmh: await this.settings.get('matching.avgSpeedKmh'),
       arrivalWindowMinutes: await this.settings.get('matching.arrivalWindowMinutes'),
+      reliabilityWeightSeconds: await this.settings.get('matching.reliabilityWeightSeconds'),
     };
   }
 
@@ -290,7 +303,7 @@ export class MatchingService {
   /**
    * Refuser une proposition encore ouverte. Passager : la paire n'est plus reproposée ce
    * jour-là. Conducteur : le trajet est annulé et ses passagers sont relancés.
-   * Après acceptation, c'est une annulation (jalon M5).
+   * Après acceptation, c'est une annulation (`cancel`), avec pénalité.
    */
   async decline(userId: string, rideId: string): Promise<void> {
     const peek = this.assertOpen(await this.repo.peekRide(rideId));
@@ -317,6 +330,106 @@ export class MatchingService {
       return ride;
     });
     if (ride) await this.regenerateDay(ride.day);
+  }
+
+  private requirePolicy(): CancellationPolicy {
+    if (!this.policy) throw new Error('Politique d’annulation non configurée');
+    return this.policy;
+  }
+
+  /** Avant d'annuler : palier de pénalité si l'annulation avait lieu maintenant (cahier §8). */
+  async cancellation(userId: string, rideId: string): Promise<{ role: 'driver' | 'passenger'; tier: CancelTier }> {
+    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
+    if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
+    if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
+    return { role: me.role, tier: await this.requirePolicy().cancellationTier(ride.targetTime) };
+  }
+
+  /**
+   * Annulation après acceptation (cahier §8) : pénalité dégressive selon le délai,
+   * notification immédiate des autres, recherche automatique de remplaçant. Passager : sa
+   * place est proposée au meilleur passager disponible. Conducteur : le trajet est annulé
+   * et chaque passager reçoit une autre voiture si possible.
+   */
+  async cancel(userId: string, rideId: string): Promise<{ tier: CancelTier }> {
+    const policy = this.requirePolicy();
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const outcome = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      const parts = await this.repo.participants([rideId], tx);
+      const me = parts.find((p) => p.userId === userId);
+      if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
+      const now = this.clock();
+      const tier = await policy.penalizeCancellation(userId, rideId, ride.targetTime, tx);
+      const others = parts.filter((p) => p.userId !== userId && p.status === 'accepted');
+
+      if (me.role === 'passenger') {
+        await this.repo.cancelParticipant(rideId, userId, now, tx);
+        // Ni lui ni ce conducteur ne se revoient proposés ce jour-là.
+        await this.repo.recordDecline(userId, ride.driverId, ride.day, ride.direction, tx);
+        if (ride.status === 'confirmed' && !others.some((p) => p.role === 'passenger')) {
+          await this.repo.setRideStatus(rideId, 'proposed', tx);
+        }
+        await this.repo.invalidatePlan(rideId, tx);
+        return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed: [] as string[] };
+      }
+      await this.repo.setRideStatus(rideId, 'cancelled', tx);
+      await this.repo.cancelParticipants(rideId, now, tx);
+      for (const p of parts.filter((x) => x.role === 'passenger')) {
+        await this.repo.recordDecline(userId, p.userId, ride.day, ride.direction, tx);
+      }
+      const freed = parts.filter((p) => p.role === 'passenger' && ACTIVE(p)).map((p) => p.userId);
+      return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed };
+    });
+
+    // Après la transaction : rien de ce qui suit ne remet l'annulation en cause.
+    if (outcome.notify.length > 0) {
+      await this.notifier.notify(outcome.notify, { type: 'ride_cancelled', rideId, by: outcome.role }).catch(() => undefined);
+    }
+    if (outcome.role === 'passenger') {
+      await this.onRideChanged(rideId).catch(() => undefined);
+      await this.proposeReplacement(rideId).catch(() => undefined);
+    } else {
+      await this.regenerateDay(outcome.ride.day).catch(() => undefined);
+      for (const passengerId of outcome.freed) {
+        await this.rehome(passengerId, outcome.ride).catch(() => undefined);
+      }
+    }
+    return { tier: outcome.tier };
+  }
+
+  /** Place libérée : le passager suggéré le mieux placé reçoit une proposition. */
+  private async proposeReplacement(rideId: string): Promise<void> {
+    const peek = await this.repo.peekRide(rideId);
+    if (!peek) return;
+    const invited = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = await this.repo.findRide(rideId, tx);
+      if (!ride || ride.day < this.today() || (ride.status !== 'proposed' && ride.status !== 'confirmed')) return null;
+      const view = await this.suggestionsFor(ride, tx);
+      const pick = view.seatsLeft > 0 ? view.suggestions.find((s) => s.withinDetourLimit) : undefined;
+      if (!pick) return null;
+      await this.repo.addPassenger(rideId, pick.person.userId, pick.person.detourMinutes * 60, tx, 'proposed');
+      return pick.person.userId;
+    });
+    if (invited) await this.notifier.notify([invited], { type: 'replacement_proposed', rideId });
+  }
+
+  /** Passager dont le conducteur a annulé : la meilleure autre voiture lui est proposée. */
+  private async rehome(passengerId: string, cancelled: RideRow): Promise<void> {
+    const rideId = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, cancelled.day);
+      // La régénération du jour lui a peut-être déjà trouvé une voiture.
+      if ((await this.repo.busyUsers(cancelled.day, cancelled.direction, tx)).has(passengerId)) return null;
+      const [best] = await this.joinable(passengerId, cancelled.day, cancelled.direction, cancelled.id, tx, undefined, cancelled.targetTime);
+      if (!best) return null;
+      await this.repo.addPassenger(best.rideId, passengerId, best.driver.detourMinutes * 60, tx, 'proposed');
+      return best.rideId;
+    });
+    if (rideId) await this.notifier.notify([passengerId], { type: 'replacement_proposed', rideId });
   }
 
   /** « Voir d'autres propositions » : autres voitures compatibles pour le même créneau. */
@@ -438,7 +551,12 @@ export class MatchingService {
           },
         };
       })
-      .sort((a, b) => a.extra - b.extra || b.reliability - a.reliability || a.suggestion.person.userId.localeCompare(b.suggestion.person.userId))
+      .sort(
+        (a, b) =>
+          rankingCost(a.extra, [a.reliability], params.reliabilityWeightSeconds) -
+            rankingCost(b.extra, [b.reliability], params.reliabilityWeightSeconds) ||
+          a.suggestion.person.userId.localeCompare(b.suggestion.person.userId),
+      )
       .slice(0, MAX_SUGGESTIONS)
       .map((s) => s.suggestion);
 
@@ -480,7 +598,7 @@ export class MatchingService {
 
     const parts = await this.repo.participants(rides.map((r) => r.id), db);
     const people = await this.repo.homesAndVehicles([...new Set(parts.map((p) => p.userId))], db);
-    const results: (JoinableRide & { extra: number; reliability: number })[] = [];
+    const results: (JoinableRide & { cost: number })[] = [];
 
     for (const ride of rides) {
       const rideParts = parts.filter((p) => p.rideId === ride.id);
@@ -505,12 +623,9 @@ export class MatchingService {
         time: ride.targetTime,
         seatsLeft: ride.seatsTotal - others.length,
         driver: publicPerson(driver, after - before),
-        extra: after - before,
-        reliability: driver.reliability,
+        cost: rankingCost(after - before, [driver.reliability], params.reliabilityWeightSeconds),
       });
     }
-    return results
-      .sort((a, b) => a.extra - b.extra || b.reliability - a.reliability || a.rideId.localeCompare(b.rideId))
-      .map(({ extra: _extra, reliability: _reliability, ...rest }) => rest);
+    return results.sort((a, b) => a.cost - b.cost || a.rideId.localeCompare(b.rideId)).map(({ cost: _cost, ...rest }) => rest);
   }
 }

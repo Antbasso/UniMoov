@@ -21,6 +21,25 @@ const settingSchemas = {
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
   'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),
   'tracking.traceRetentionDays': z.number().int().min(1).max(365),
+  'reliability.prior': z.number().min(0).max(1),
+  'reliability.priorWeight': z.number().min(0).max(100),
+  'reliability.ratingShare': z.number().min(0).max(1),
+  'reliability.windowDays': z.number().int().min(7).max(730),
+  'reliability.penalties': z
+    .object({
+      earlyHours: z.number().min(0).max(168),
+      lateHours: z.number().min(0).max(168),
+      early: z.number().min(0).max(5),
+      medium: z.number().min(0).max(5),
+      late: z.number().min(0).max(5),
+      noShow: z.number().min(0).max(5),
+    })
+    .refine((p) => p.lateHours <= p.earlyHours, 'lateHours doit être inférieur à earlyHours'),
+  'matching.reliabilityWeightSeconds': z.number().int().min(0).max(3600),
+  'ratings.windowDays': z.number().int().min(1).max(60),
+  'disputes.windowDays': z.number().int().min(1).max(90),
+  'reports.dailyLimit': z.number().int().min(1).max(100),
+  'support.email': z.email(),
 } as const;
 
 type SettingKey = keyof typeof settingSchemas;

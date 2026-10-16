@@ -225,7 +225,7 @@ export class RidesRepo {
   async setParticipant(
     rideId: string,
     userId: string,
-    fields: { status?: 'picked_up' | 'absent'; presenceValidatedAt?: Date; amountCents?: number },
+    fields: { status?: 'picked_up' | 'absent'; pickedUpAt?: Date; presenceValidatedAt?: Date; amountCents?: number },
     tx: Tx,
   ): Promise<void> {
     await tx

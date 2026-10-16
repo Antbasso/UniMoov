@@ -347,8 +347,15 @@ export class MatchingRepo {
     await db.update(rides).set({ plannedAt: null }).where(eq(rides.id, rideId));
   }
 
-  async setRideStatus(rideId: string, status: 'confirmed' | 'cancelled', db: DbOrTx = this.db) {
+  async setRideStatus(rideId: string, status: 'proposed' | 'confirmed' | 'cancelled', db: DbOrTx = this.db) {
     await db.update(rides).set({ status }).where(eq(rides.id, rideId));
+  }
+
+  async cancelParticipant(rideId: string, userId: string, now: Date, db: DbOrTx = this.db) {
+    await db
+      .update(rideParticipants)
+      .set({ status: 'cancelled', cancelledAt: now })
+      .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, userId)));
   }
 
   async cancelParticipants(rideId: string, now: Date, db: DbOrTx = this.db) {

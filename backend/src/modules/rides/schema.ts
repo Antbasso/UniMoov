@@ -38,6 +38,8 @@ export const ride = z.strictObject({
   time: z.date(),
   status: z.string(),
   role: z.enum(['driver', 'passenger']),
+  /** Statut de la personne qui lit : `absent` après une clôture sans validation de présence. */
+  myStatus: z.string(),
   seatsTotal: z.number().int(),
   distanceM: z.number().int().nullable(),
   durationS: z.number().int().nullable(),

@@ -6,6 +6,7 @@ import type { SettingsService } from '../settings/service.js';
 import { PRESENCE_FRESH_MS, type TrackingHub } from '../tracking/hub.js';
 import { isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 import type { RidesService } from './service.js';
+import type { TrustService } from '../trust/service.js';
 
 /** Trajet en cours vu par le suivi en direct (mis en cache par le service de suivi). */
 export interface LiveRide {
@@ -30,6 +31,8 @@ export class RideLifecycle {
     private readonly clock: () => Date,
     /** Appelé quand l'état d'un trajet en cours change (cache du suivi à rafraîchir). */
     private readonly onLiveChanged: (rideId: string) => void = () => undefined,
+    /** Score de fiabilité : trajet mené à bien ou absence, dans la transaction de clôture. */
+    private readonly trust?: Pick<TrustService, 'onRideFinished'>,
   ) {}
 
   private async load(rideId: string) {
@@ -126,7 +129,7 @@ export class RideLifecycle {
     // Sous le verrou du trajet : une clôture simultanée n'est pas écrasée.
     const done = await this.repo.transaction(async (tx) => {
       if ((await this.repo.ride(rideId, tx, true))?.status !== 'in_progress') return false;
-      await this.repo.setParticipant(rideId, passengerId, { status: 'picked_up' }, tx);
+      await this.repo.setParticipant(rideId, passengerId, { status: 'picked_up', pickedUpAt: this.clock() }, tx);
       return true;
     });
     if (!done) throw new AppError(409, 'ride_not_started', "Le trajet n'a pas commencé");
@@ -192,11 +195,19 @@ export class RideLifecycle {
       if (ride?.status !== 'in_progress') return false;
       const members = await this.repo.members(rideId, tx);
       const present = members.filter((m) => m.role === 'passenger' && m.presenceValidatedAt);
+      const noShow = members.filter((m) => m.role === 'passenger' && isAccepted(m) && !m.presenceValidatedAt);
       const price = await this.rides.estimate(ride, ride.distanceM, present.length + 1);
       await this.repo.setRideStatus(rideId, 'completed', { endedAt: this.clock(), finalTotalCostCents: price?.totalCostCents ?? null }, tx);
-      for (const absent of await this.wallet.releaseRemaining(rideId, tx)) {
-        await this.repo.setParticipant(rideId, absent, { status: 'absent' }, tx);
+      await this.wallet.releaseRemaining(rideId, tx);
+      // Absence constatée : présence non validée par proximité (cahier §9).
+      for (const absent of noShow) {
+        await this.repo.setParticipant(rideId, absent.userId, { status: 'absent' }, tx);
       }
+      await this.trust?.onRideFinished(
+        rideId,
+        { completed: [ride.driverId, ...present.map((m) => m.userId)], noShow: noShow.map((m) => m.userId) },
+        tx,
+      );
       return true;
     });
     if (!closed) return;
