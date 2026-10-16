@@ -17,12 +17,17 @@ export interface PaymentProvider {
   }>;
 }
 
+/** Même clé d'idempotence, autres paramètres : refusé (comme chez un vrai prestataire). */
+export class IdempotencyConflictError extends Error {
+  override readonly name = 'IdempotencyConflictError';
+}
+
 /**
  * Fournisseur factice complet (AGENTS.md) : recharge, retrait, échec à la demande. Aucun
  * appel réseau ; le même appel (même clé) renvoie le même résultat.
  */
 export class FakePaymentProvider implements PaymentProvider {
-  private readonly results = new Map<string, { providerRef: string; status: ProviderStatus }>();
+  private readonly results = new Map<string, { providerRef: string; status: ProviderStatus; amountCents: number }>();
   /** Montants refusés (simulation d'échec). */
   readonly failingAmounts = new Set<number>();
   calls = 0;
@@ -30,13 +35,18 @@ export class FakePaymentProvider implements PaymentProvider {
   private run(prefix: string, amountCents: number, key: string) {
     this.calls++;
     const known = this.results.get(key);
-    if (known) return Promise.resolve(known);
+    if (known) {
+      // Comme un vrai prestataire : même clé, autres paramètres = refus.
+      if (known.amountCents !== amountCents) return Promise.reject(new IdempotencyConflictError(key));
+      return Promise.resolve({ providerRef: known.providerRef, status: known.status });
+    }
     const result = {
       providerRef: `fake_${prefix}_${this.results.size + 1}`,
       status: (this.failingAmounts.has(amountCents) ? 'failed' : 'succeeded') as ProviderStatus,
+      amountCents,
     };
     this.results.set(key, result);
-    return Promise.resolve(result);
+    return Promise.resolve({ providerRef: result.providerRef, status: result.status });
   }
 
   createTopup(input: { userId: string; amountCents: number; idempotencyKey: string }) {

@@ -22,8 +22,9 @@ abstract interface class LiveConnector {
   Future<LiveConnection> connect(String rideId);
 }
 
-/// Codes après lesquels on ne se reconnecte pas.
-const liveFinalCodes = {4401, 4403, 4409, 4410};
+/// Codes après lesquels on ne se reconnecte pas. 4401 (jeton expiré) n'en fait pas partie :
+/// la reconnexion renouvelle le jeton.
+const liveFinalCodes = {4403, 4409, 4410};
 
 class WebSocketLiveConnector implements LiveConnector {
   const WebSocketLiveConnector(this._tokens);

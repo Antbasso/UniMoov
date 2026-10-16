@@ -10,18 +10,35 @@ import '../../../l10n/app_localizations.dart';
 import '../data/wallet_api.dart';
 import '../domain/wallet.dart';
 
+/// Clé de la recharge en cours, gardée même si l'écran est quitté : une requête sans réponse
+/// (réseau coupé) puis réessayée ne recharge qu'une fois. Renouvelée quand l'issue est connue.
+class PendingTopupKey extends Notifier<String> {
+  @override
+  String build() => newIdempotencyKey();
+
+  void rotate() => state = newIdempotencyKey();
+}
+
+final pendingTopupKeyProvider = NotifierProvider<PendingTopupKey, String>(PendingTopupKey.new);
+
 /// Portefeuille (cahier §5) ; le parcours complet de recharge et de retrait arrive en M4b.
 class WalletController extends AsyncNotifier<Wallet> {
-  /// Une clé par intention de recharge : un double appui ne recharge qu'une fois.
-  String _pendingKey = newIdempotencyKey();
-
   @override
   Future<Wallet> build() => ref.watch(walletApiProvider).wallet();
 
   Future<void> topup(int amountCents) async {
-    final wallet = await ref.read(walletApiProvider).topup(amountCents, _pendingKey);
-    _pendingKey = newIdempotencyKey();
-    if (ref.mounted) state = AsyncData(wallet);
+    final keys = ref.read(pendingTopupKeyProvider.notifier);
+    try {
+      final wallet = await ref
+          .read(walletApiProvider)
+          .topup(amountCents, ref.read(pendingTopupKeyProvider));
+      keys.rotate();
+      if (ref.mounted) state = AsyncData(wallet);
+    } on ApiException catch (error) {
+      // Refus définitif du prestataire : la prochaine tentative est une nouvelle recharge.
+      if (error.code == 'topup_failed' || error.code == 'idempotency_conflict') keys.rotate();
+      rethrow;
+    }
   }
 }
 

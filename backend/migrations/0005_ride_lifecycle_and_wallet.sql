@@ -20,5 +20,7 @@ INSERT INTO app_settings (key, value) VALUES
   -- Arrivée détectée quand le conducteur est à moins de ce rayon de la destination.
   ('tracking.arrivalRadiusMeters', '200'),
   -- Départ possible à partir de ce délai avant l'heure du trajet.
-  ('rides.startWindowMinutes', '120')
+  ('rides.startWindowMinutes', '120'),
+  -- Trajet encore « en cours » tant d'heures après l'heure prévue : clôturé automatiquement.
+  ('rides.staleAfterHours', '6')
 ON CONFLICT (key) DO NOTHING;

@@ -3,7 +3,7 @@ import { distanceMeters } from '../../shared/geo.js';
 import type { LiveRide, RideLifecycle } from '../rides/lifecycle.js';
 import type { RidesRepo } from '../rides/repo.js';
 import type { SettingsService } from '../settings/service.js';
-import { type LiveClient, type LiveSocket, type TrackingHub, WS_CLOSE } from './hub.js';
+import { type LiveClient, type LiveSocket, PRESENCE_FRESH_MS, type TrackingHub, WS_CLOSE } from './hub.js';
 
 const positionMessage = z.object({
   type: z.literal('position'),
@@ -18,8 +18,6 @@ const positionMessage = z.object({
 const MIN_INTERVAL_MS = 2000;
 /** Trace pour les litiges : un point toutes les 30 s (docs/couts.md). */
 const TRACE_INTERVAL_MS = 30_000;
-/** Au-delà, une position n'est plus assez fraîche pour valider une présence. */
-const FRESH_MS = 60_000;
 
 /**
  * Suivi en direct (architecture §6) : position diffusée aux seuls participants du trajet
@@ -41,6 +39,10 @@ export class TrackingService {
   /** L'état d'un trajet a changé (départ, montée, présence, clôture) : relu au besoin. */
   invalidate(rideId: string): void {
     this.state.delete(rideId);
+    // Salle fermée (clôture) : plus rien à garder pour ce trajet.
+    if (!this.hub.isOpen(rideId)) {
+      for (const key of this.lastTrace.keys()) if (key.startsWith(`${rideId}:`)) this.lastTrace.delete(key);
+    }
   }
 
   private async live(rideId: string): Promise<LiveRide | null> {
@@ -96,7 +98,8 @@ export class TrackingService {
     const live = await this.live(rideId);
     if (!live) return;
     const { lat, lon } = parsed.data;
-    const ts = new Date(parsed.data.ts);
+    // Heure du serveur : le client ne choisit ni l'horodatage de la trace ni sa durée de conservation.
+    const ts = new Date(now);
     const userId = client.userId;
     this.hub.setPosition(rideId, userId, { lat, lon, ts, receivedAt: now });
 
@@ -133,11 +136,11 @@ export class TrackingService {
   private async checkPresence(live: LiveRide, sender: string, now: number): Promise<void> {
     const radius = await this.settings.get('tracking.presenceRadiusMeters');
     const driver = this.hub.position(live.rideId, live.driverId);
-    if (!driver || now - driver.receivedAt > FRESH_MS) return;
+    if (!driver || now - driver.receivedAt > PRESENCE_FRESH_MS) return;
     const candidates = live.passengers.filter((p) => !p.validated && (sender === live.driverId || p.userId === sender));
     for (const p of candidates) {
       const pos = this.hub.position(live.rideId, p.userId);
-      if (!pos || now - pos.receivedAt > FRESH_MS || distanceMeters(pos, driver) > radius) continue;
+      if (!pos || now - pos.receivedAt > PRESENCE_FRESH_MS || distanceMeters(pos, driver) > radius) continue;
       p.validated = true;
       await this.lifecycle.validatePresence(live.rideId, p.userId);
     }

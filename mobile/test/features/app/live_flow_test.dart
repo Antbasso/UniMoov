@@ -243,19 +243,22 @@ void main() {
       expect(backend.balanceCents, 1000);
     });
 
-    testWidgets('recharge en erreur puis réessayée : une seule recharge (même clé)', (
-      tester,
-    ) async {
+    testWidgets('réseau coupé : même clé réessayée ; refus : nouvelle clé', (tester) async {
       await openWallet(tester);
+      // Réseau coupé : l'issue est inconnue, la même clé est réutilisée au prochain essai.
+      backend.failNext = const ApiException('network_error', '');
+      await tapTopup(tester);
+      await tapTopup(tester);
+      await tester.pump(const Duration(seconds: 5)); // le message disparaît
+      await tester.pumpAndSettle();
+      // Refus définitif : la clé est renouvelée, la recharge suivante est nouvelle.
       backend.failNext = const ApiException('topup_failed', '', statusCode: 402);
       await tapTopup(tester);
       expect(find.text('La recharge a été refusée.'), findsOneWidget);
-      await tapTopup(tester); // même clé : la recharge passe
-      await tester.pump(const Duration(seconds: 5)); // le message disparaît
-      await tester.pumpAndSettle();
-      await tapTopup(tester); // nouvelle recharge, nouvelle clé
+      await tapTopup(tester);
       expect(backend.topupKeys, hasLength(2));
       expect(backend.balanceCents, 2000);
+      expect(backend.topupKeys.length, 2);
     });
 
     testWidgets('golden portefeuille', (tester) async {

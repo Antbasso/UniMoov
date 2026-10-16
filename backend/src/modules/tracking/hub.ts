@@ -17,6 +17,9 @@ export interface LivePosition extends LatLon {
   receivedAt: number;
 }
 
+/** Au-delà, une position n'est plus assez fraîche pour valider une présence. */
+export const PRESENCE_FRESH_MS = 60_000;
+
 /** Codes de fermeture (docs/api.md). */
 export const WS_CLOSE = {
   unauthorized: 4401,
@@ -40,7 +43,9 @@ export class TrackingHub {
   }
 
   leave(rideId: string, client: LiveClient): void {
-    this.rooms.get(rideId)?.delete(client);
+    const room = this.rooms.get(rideId);
+    room?.delete(client);
+    if (room?.size === 0) this.rooms.delete(rideId);
   }
 
   clients(rideId: string): LiveClient[] {

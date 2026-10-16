@@ -3,7 +3,7 @@ import { distanceMeters, type LatLon } from '../../shared/geo.js';
 import { navigationLinks, SUPPORTS_MULTI_STOP } from '../navigation/links.js';
 import type { WalletService } from '../payments/service.js';
 import type { SettingsService } from '../settings/service.js';
-import type { TrackingHub } from '../tracking/hub.js';
+import { PRESENCE_FRESH_MS, type TrackingHub } from '../tracking/hub.js';
 import { isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 import type { RidesService } from './service.js';
 
@@ -83,8 +83,13 @@ export class RideLifecycle {
     if (ride.status === 'in_progress') return;
     if (ride.status !== 'confirmed') throw new AppError(409, 'ride_not_confirmed', "Ce trajet n'est pas confirmé");
     const window = await this.settings.get('rides.startWindowMinutes');
-    if (this.clock().getTime() < ride.targetTime.getTime() - window * 60_000) {
+    const staleHours = await this.settings.get('rides.staleAfterHours');
+    const now = this.clock().getTime();
+    if (now < ride.targetTime.getTime() - window * 60_000) {
       throw new AppError(409, 'too_early', 'Trop tôt pour démarrer ce trajet');
+    }
+    if (now > ride.targetTime.getTime() + staleHours * 3_600_000) {
+      throw new AppError(409, 'too_late', 'Ce trajet est passé');
     }
     const passengers = members.filter((m) => m.role === 'passenger' && isAccepted(m));
     const price = await this.rides.estimate(ride, ride.distanceM, passengers.length + 1);
@@ -92,6 +97,8 @@ export class RideLifecycle {
       const current = await this.repo.ride(rideId, tx, true);
       if (current?.status !== 'confirmed') return;
       await this.repo.setRideStatus(rideId, 'in_progress', { startedAt: this.clock() }, tx);
+      // Tous les portefeuilles d'un coup, dans l'ordre des identifiants : pas d'interblocage.
+      await this.wallet.lockWallets([ride.driverId, ...passengers.map((p) => p.userId)], tx);
       for (const p of passengers) {
         await this.wallet.holdForRide(
           {
@@ -116,7 +123,13 @@ export class RideLifecycle {
     if (ride.status !== 'in_progress') throw new AppError(409, 'ride_not_started', "Le trajet n'a pas commencé");
     const passenger = members.find((m) => m.userId === passengerId && m.role === 'passenger' && isAccepted(m));
     if (!passenger) throw new AppError(404, 'not_found', 'Ressource introuvable');
-    await this.repo.transaction((tx) => this.repo.setParticipant(rideId, passengerId, { status: 'picked_up' }, tx));
+    // Sous le verrou du trajet : une clôture simultanée n'est pas écrasée.
+    const done = await this.repo.transaction(async (tx) => {
+      if ((await this.repo.ride(rideId, tx, true))?.status !== 'in_progress') return false;
+      await this.repo.setParticipant(rideId, passengerId, { status: 'picked_up' }, tx);
+      return true;
+    });
+    if (!done) throw new AppError(409, 'ride_not_started', "Le trajet n'a pas commencé");
     this.onLiveChanged(rideId);
     this.hub.send(rideId, { type: 'stop_picked_up', userId: passengerId });
   }
@@ -155,7 +168,10 @@ export class RideLifecycle {
     const mine = this.hub.position(rideId, userId);
     const driver = this.hub.position(rideId, ride.driverId);
     const radius = await this.settings.get('tracking.presenceRadiusMeters');
-    if (!mine || !driver || distanceMeters(mine, driver) > radius) {
+    const now = this.clock().getTime();
+    // Mêmes règles que la validation automatique : positions récentes et proches.
+    const fresh = (p: { receivedAt: number } | undefined) => p !== undefined && now - p.receivedAt <= PRESENCE_FRESH_MS;
+    if (!mine || !driver || !fresh(mine) || !fresh(driver) || distanceMeters(mine, driver) > radius) {
       throw new AppError(409, 'presence_not_confirmed', 'Ton téléphone et celui du conducteur doivent être proches');
     }
     return this.validatePresence(rideId, userId);
@@ -215,6 +231,14 @@ export class RideLifecycle {
       links: navigationLinks(remaining.length > 0 ? remaining : ordered.slice(-1)),
       supportsMultiStop: { googleMaps: SUPPORTS_MULTI_STOP.google_maps, appleMaps: SUPPORTS_MULTI_STOP.apple_maps, waze: SUPPORTS_MULTI_STOP.waze },
     };
+  }
+
+  /** Trajets restés « en cours » bien après l'heure prévue (oubli, téléphone éteint) : clôturés. */
+  async closeStale(): Promise<number> {
+    const hours = await this.settings.get('rides.staleAfterHours');
+    const ids = await this.repo.staleInProgress(new Date(this.clock().getTime() - hours * 3_600_000));
+    for (const id of ids) await this.finish(id, null);
+    return ids.length;
   }
 
   async purgeTraces(): Promise<number> {

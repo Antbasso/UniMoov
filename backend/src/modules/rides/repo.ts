@@ -242,6 +242,13 @@ export class RidesRepo {
       ON CONFLICT DO NOTHING`);
   }
 
+  async staleInProgress(targetBefore: Date): Promise<string[]> {
+    const { rows } = await this.db.execute<{ id: string }>(
+      sql`SELECT id FROM rides WHERE status = 'in_progress' AND target_time < ${targetBefore}`,
+    );
+    return rows.map((r) => r.id);
+  }
+
   async purgeTraces(before: Date): Promise<number> {
     const result = await this.db.execute(sql`DELETE FROM position_trace WHERE recorded_at < ${before}`);
     return result.rowCount ?? 0;

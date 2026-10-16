@@ -104,6 +104,10 @@ describe('portefeuille', () => {
     const small = await call('Hugo', 'POST', '/wallet/topups', { amountCents: 100 }, { 'idempotency-key': 'recharge-hugo-0002' });
     expect(small.json<{ error: { code: string } }>().error.code).toBe('topup_too_small');
     expect((await call('Hugo', 'POST', '/wallet/topups', { amountCents: 1000 })).statusCode).toBe(400);
+    // Même clé, autre montant : refusé, rien de crédité.
+    const conflict = await call('Hugo', 'POST', '/wallet/topups', { amountCents: 2000 }, key);
+    expect(conflict.json<{ error: { code: string } }>().error.code).toBe('idempotency_conflict');
+    expect((await wallet('Hugo')).balanceCents).toBe(1000);
   });
 
   it('recharge refusée par le prestataire : rien n’est crédité', async () => {
@@ -137,6 +141,14 @@ describe('trajet en cours', () => {
     const w = await wallet('Hugo');
     expect(w.heldCents).toBe(Math.ceil((view.price.youPayCents * 120) / 100));
     expect(w.balanceCents).toBe(1000 - w.heldCents);
+  });
+
+  it('une fois parti, on ne monte plus en route : accepter ou refuser est impossible', async () => {
+    // Chloé était encore « proposée » sur ce trajet.
+    const accept = await call('Chloé', 'POST', `/proposals/${rideId}/accept`);
+    expect(accept.json<{ error: { code: string } }>().error.code).toBe('ride_unavailable');
+    expect((await call('Chloé', 'POST', `/proposals/${rideId}/decline`)).statusCode).toBe(409);
+    expect(await (await connect('Chloé', rideId)).closed).toBe(4403);
   });
 
   it('le passager voit la position du conducteur en direct, avec son heure de passage', async () => {
@@ -208,13 +220,29 @@ describe('trajet en cours', () => {
     expect(nav.links.waze.nextStop).toContain(user('Inès').lat.toFixed(6));
   });
 
-  it('présence demandée trop loin du conducteur : refusée', async () => {
+  it('présence demandée trop loin du conducteur, ou avec des positions trop anciennes : refusée', async () => {
     const ines = await connect('Inès', rideId);
     await waitFor(() => ines.messages.find((m) => m.type === 'ready'));
     await sendPosition(ines, { lat: user('Inès').lat, lon: user('Inès').lon });
     const response = await call('Inès', 'POST', `/rides/${rideId}/presence`);
     expect(response.json<{ error: { code: string } }>().error.code).toBe('presence_not_confirmed');
+
+    // Proches, mais la position du conducteur date de plus d'une minute.
+    await sendPosition(ines, { lat: 45.89, lon: 6.095 });
+    ctx.clock.advance(61_000);
+    await sendPosition(ines, { lat: 45.89, lon: 6.095 });
+    const stale = await call('Inès', 'POST', `/rides/${rideId}/presence`);
+    expect(stale.json<{ error: { code: string } }>().error.code).toBe('presence_not_confirmed');
     ines.ws.terminate();
+  });
+
+  it('l’horodatage de la trace est celui du serveur, jamais celui envoyé par le client', async () => {
+    lea.ws.send(JSON.stringify({ type: 'position', lat: 45.9, lon: 6.1, ts: '2099-01-01T00:00:00.000Z' }));
+    ctx.clock.advance(31_000);
+    lea.ws.send(JSON.stringify({ type: 'position', lat: 45.9, lon: 6.1, ts: '2099-01-01T00:00:00.000Z' }));
+    await new Promise((r) => setTimeout(r, 100));
+    const { rows } = await ctx.database.pool.query<{ latest: Date }>(`SELECT max(recorded_at) AS latest FROM position_trace`);
+    expect(new Date(rows[0]!.latest).getTime()).toBeLessThanOrEqual(ctx.clock.now.getTime());
   });
 });
 
@@ -235,6 +263,23 @@ describe('clôture', () => {
     expect(Object.fromEntries(rows.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'absent' });
     // Clôture rejouée : sans effet.
     expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
+  });
+
+  it('trajet oublié « en cours » : clôturé automatiquement, départ refusé longtemps après', async () => {
+    const tuesday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
+      .proposals.find((p) => p.day === '2026-10-20' && p.direction === 'to_campus')!.id;
+    for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${tuesday}/accept`);
+    ctx.clock.now = new Date('2026-10-20T05:30:00Z');
+    expect((await call('Léa', 'POST', `/rides/${tuesday}/start`)).statusCode).toBe(204);
+    ctx.clock.now = new Date('2026-10-20T13:00:00Z');
+    expect(await ctx.app.services!.lifecycle.closeStale()).toBe(1);
+    expect((await call('Léa', 'GET', `/rides/${tuesday}`)).json<{ status: string }>().status).toBe('completed');
+
+    const wednesday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
+      .proposals.find((p) => p.day === '2026-10-21' && p.direction === 'to_campus')!.id;
+    for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${wednesday}/accept`);
+    ctx.clock.now = new Date('2026-10-21T14:00:00Z');
+    expect((await call('Léa', 'POST', `/rides/${wednesday}/start`)).json<{ error: { code: string } }>().error.code).toBe('too_late');
   });
 
   it('trace réduite gardée pour les litiges, puis purgée après la rétention', async () => {

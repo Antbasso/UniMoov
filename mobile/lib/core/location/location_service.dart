@@ -65,7 +65,8 @@ class GeolocatorLocationService implements LocationService {
         distanceFilter: 10,
         allowBackgroundLocationUpdates: true,
         showBackgroundLocationIndicator: true,
-        pauseLocationUpdatesAutomatically: true,
+        // Pendant un trajet seulement : iOS ne doit pas suspendre les positions à l'arrêt.
+        pauseLocationUpdatesAutomatically: false,
       ),
       _ => const LocationSettings(distanceFilter: 10),
     };

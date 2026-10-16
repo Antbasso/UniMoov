@@ -58,9 +58,13 @@ void main() {
     connector.last.serverClose(1006);
     await Future<void>.delayed(const Duration(milliseconds: 1100));
     expect(connector.connections, hasLength(2));
-    connector.last.serverClose(4410);
+    // Jeton expiré : on se reconnecte (le jeton est renouvelé par l'appel au trajet).
+    connector.last.serverClose(4401);
     await Future<void>.delayed(const Duration(milliseconds: 2200));
-    expect(connector.connections, hasLength(2));
+    expect(connector.connections, hasLength(3));
+    connector.last.serverClose(4410);
+    await Future<void>.delayed(const Duration(milliseconds: 4200));
+    expect(connector.connections, hasLength(3));
     expect(container.read(liveRideProvider('ride-1')).ended, isTrue);
   });
 

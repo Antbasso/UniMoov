@@ -20,6 +20,28 @@ export const trackingRoutes: FastifyPluginAsyncZod<{
       schema: { params: z.object({ rideId: z.uuid() }), querystring: z.object({ token: z.string().min(1) }) },
     },
     async (socket, request) => {
+      const rideId = request.params.rideId;
+      // Écoute posée tout de suite : les messages reçus pendant les vérifications sont gardés,
+      // puis traités dans l'ordre ; toute erreur est journalisée, jamais remontée au processus.
+      const pending: string[] = [];
+      let client: Awaited<ReturnType<TrackingService['connect']>> = null;
+      let closed = false;
+      let chain = Promise.resolve();
+      const handle = (c: NonNullable<typeof client>, text: string) => {
+        chain = chain
+          .then(() => service.onMessage(rideId, c, text))
+          .catch((err: unknown) => request.log.error({ err }, 'tracking message'));
+      };
+      socket.on('message', (data: Buffer) => {
+        const text = data.toString();
+        if (client) handle(client, text);
+        else if (pending.length < 20) pending.push(text);
+      });
+      socket.on('close', () => {
+        closed = true;
+        if (client) service.disconnect(rideId, client);
+      });
+
       let userId: string;
       try {
         const payload = app.jwt.verify<{ sub: string }>(request.query.token);
@@ -29,26 +51,14 @@ export const trackingRoutes: FastifyPluginAsyncZod<{
         socket.close(WS_CLOSE.unauthorized, 'unauthorized');
         return;
       }
-      const rideId = request.params.rideId;
-      // Messages reçus pendant la vérification d'accès : traités ensuite, dans l'ordre.
-      const pending: string[] = [];
-      let client: Awaited<ReturnType<TrackingService['connect']>> = null;
-      let chain = Promise.resolve();
-      socket.on('message', (data: Buffer) => {
-        const text = data.toString();
-        if (!client) {
-          pending.push(text);
-          return;
-        }
-        const c = client;
-        chain = chain.then(() => service.onMessage(rideId, c, text)).catch((err: unknown) => request.log.error({ err }, 'tracking message'));
-      });
-      socket.on('close', () => {
-        if (client) service.disconnect(rideId, client);
-      });
       client = await service.connect(rideId, userId, socket);
-      const c = client;
-      if (c) for (const text of pending.splice(0)) chain = chain.then(() => service.onMessage(rideId, c, text));
+      if (!client) return;
+      // Fermé pendant la vérification : on ne laisse pas une connexion morte dans la salle.
+      if (closed) {
+        service.disconnect(rideId, client);
+        return;
+      }
+      for (const text of pending.splice(0)) handle(client, text);
     },
   );
   return Promise.resolve();

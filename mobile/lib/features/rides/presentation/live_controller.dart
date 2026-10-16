@@ -3,8 +3,10 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/clock.dart';
 import '../../../core/location/location_service.dart';
 import '../data/live_channel.dart';
+import '../data/rides_api.dart';
 import '../domain/ride.dart';
 import 'rides_controller.dart';
 
@@ -59,6 +61,10 @@ class LiveState {
 /// Après 30 s sans nouvelle position : « dernière position connue » (architecture §6).
 const staleAfter = Duration(seconds: 30);
 
+/// Immobile, le téléphone n'envoie plus rien : la dernière position est renvoyée à ce rythme,
+/// pour que la présence puisse être validée quand le conducteur arrive.
+const heartbeat = Duration(seconds: 15);
+
 /// Suivi en direct (WebSocket) et envoi de ma position pendant le trajet. Reconnexion avec
 /// délai croissant ; arrêt définitif à la clôture ou si l'accès est refusé.
 class LiveRideController extends Notifier<LiveState> {
@@ -69,6 +75,8 @@ class LiveRideController extends Notifier<LiveState> {
   StreamSubscription<LiveEvent>? _events;
   StreamSubscription<GeoPoint>? _positions;
   Timer? _retry;
+  Timer? _heartbeat;
+  GeoPoint? _lastFix;
   int _attempt = 0;
   bool _disposed = false;
 
@@ -82,6 +90,9 @@ class LiveRideController extends Notifier<LiveState> {
   Future<void> _connect() async {
     if (_disposed) return;
     try {
+      // Appel authentifié d'abord : le jeton d'accès (15 min) est renouvelé s'il a expiré.
+      await ref.read(ridesApiProvider).ride(rideId);
+      if (_disposed) return;
       final connection = await ref.read(liveConnectorProvider).connect(rideId);
       if (_disposed) {
         await connection.close();
@@ -127,6 +138,7 @@ class LiveRideController extends Notifier<LiveState> {
     if (code != null && liveFinalCodes.contains(code)) {
       unawaited(_positions?.cancel());
       _positions = null;
+      _heartbeat?.cancel();
       state = state.copyWith(sharing: false, ended: code == 4410 || state.ended);
       return;
     }
@@ -151,13 +163,23 @@ class LiveRideController extends Notifier<LiveState> {
     if (await location.status() != LocationAccess.granted) return;
     _positions = location
         .positions(notificationTitle: notificationTitle, notificationText: notificationText)
-        .listen((p) => _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at));
+        .listen((p) {
+          _lastFix = p;
+          _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at);
+        });
+    _heartbeat = Timer.periodic(heartbeat, (_) {
+      final fix = _lastFix;
+      if (fix != null) {
+        _connection?.sendPosition(lat: fix.lat, lon: fix.lon, at: ref.read(clockProvider)());
+      }
+    });
     state = state.copyWith(sharing: true);
   }
 
   void _stop() {
     _disposed = true;
     _retry?.cancel();
+    _heartbeat?.cancel();
     unawaited(_events?.cancel());
     unawaited(_positions?.cancel());
     unawaited(_connection?.close());

@@ -1,5 +1,5 @@
 import { AppError } from '../../shared/errors.js';
-import type { PaymentProvider } from '../../shared/payments/payment-provider.js';
+import { IdempotencyConflictError, type PaymentProvider } from '../../shared/payments/payment-provider.js';
 import type { SettingsService } from '../settings/service.js';
 import { chargeEntries, holdAmount, holdEntries, isBalanced, releaseEntries, topupEntries, userAccount } from './domain.js';
 import type { PaymentsRepo, Tx } from './repo.js';
@@ -23,6 +23,11 @@ export class WalletService {
     private readonly settings: SettingsService,
   ) {}
 
+  /** Verrou des portefeuilles (dans l'ordre des identifiants), à prendre avant toute opération. */
+  lockWallets(userIds: readonly string[], tx: Tx): Promise<void> {
+    return this.repo.lockWallets(userIds, tx);
+  }
+
   async wallet(userId: string): Promise<WalletView> {
     return { ...(await this.repo.wallet(userId)), history: await this.repo.history(userId) };
   }
@@ -32,7 +37,12 @@ export class WalletService {
     const min = await this.settings.get('wallet.minTopupCents');
     if (amountCents < min) throw new AppError(400, 'topup_too_small', 'Montant de recharge trop faible');
     const key = `topup:${userId}:${idempotencyKey}`;
-    const result = await this.provider.createTopup({ userId, amountCents, idempotencyKey: key });
+    const result = await this.provider.createTopup({ userId, amountCents, idempotencyKey: key }).catch((error: unknown) => {
+      if (error instanceof IdempotencyConflictError) {
+        throw new AppError(409, 'idempotency_conflict', 'Cette recharge a déjà été demandée avec un autre montant');
+      }
+      throw error;
+    });
     await this.repo.transaction(async (tx) => {
       await this.repo.lockWallets([userId], tx);
       await this.repo.insertTopup(userId, amountCents, result.providerRef, result.status, tx);

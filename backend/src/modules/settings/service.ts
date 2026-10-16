@@ -15,6 +15,7 @@ const settingSchemas = {
   'pricing.commissionCentsPerPassenger': z.number().int().min(0).max(500),
   'rides.meetingPointMaxMeters': z.number().int().min(100).max(20_000),
   'rides.startWindowMinutes': z.number().int().min(0).max(24 * 60),
+  'rides.staleAfterHours': z.number().int().min(1).max(72),
   'wallet.minTopupCents': z.number().int().min(1).max(100_000),
   'wallet.holdMarginPercent': z.number().min(0).max(100),
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
