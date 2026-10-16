@@ -95,8 +95,12 @@ class RideMap extends ConsumerWidget {
           if (background != null)
             VectorTileLayer(
               tileProviders: TileProviders({_source: background.tiles}),
+              // Pas de maximumZoom : au-delà du zoom 14 de l'extrait, les tuiles sont agrandies
+              // au lieu de disparaître (écran du point de rendez-vous, zoom 16).
               theme: background.theme,
-              maximumZoom: background.tiles.maximumZoom.toDouble(),
+              // Rendu vectoriel direct : net à tout zoom, sans images intermédiaires annulées
+              // (et signalées comme erreurs) quand on quitte la carte.
+              layerMode: VectorTileLayerMode.vector,
             ),
           if (line.length >= 2)
             PolylineLayer(
