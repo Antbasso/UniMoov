@@ -194,6 +194,12 @@ CREATE TABLE wallet_ledger (
 );
 CREATE INDEX wallet_ledger_account_idx ON wallet_ledger (account, created_at);
 CREATE INDEX wallet_ledger_ride_idx ON wallet_ledger (ride_id);
+CREATE INDEX wallet_ledger_operation_idx ON wallet_ledger (operation_id);
+-- Écriture seule garantie par la base (migration 0005) : UPDATE et DELETE refusés.
+CREATE FUNCTION wallet_ledger_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'wallet_ledger est en écriture seule'; END; $$;
+CREATE TRIGGER wallet_ledger_no_update BEFORE UPDATE OR DELETE ON wallet_ledger
+  FOR EACH ROW EXECUTE FUNCTION wallet_ledger_append_only();
 
 CREATE TABLE topups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -221,6 +227,8 @@ CREATE TABLE payments (                          -- un enregistrement par passag
   share_cents integer NOT NULL CHECK (share_cents >= 0),       -- part des frais, versée au conducteur
   commission_cents integer NOT NULL DEFAULT 0,                  -- ajoutée au prix, versée à UniMoov
   status text NOT NULL DEFAULT 'held',           -- held | paid | failed | refunded
+  held_cents integer NOT NULL DEFAULT 0 CHECK (held_cents >= 0),  -- retenu au départ
+  paid_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (ride_id, payer_id)
 );
@@ -232,6 +240,7 @@ CREATE TABLE position_trace (             -- rétention courte, pour les litiges
   location geography(Point,4326) NOT NULL,
   PRIMARY KEY (ride_id, user_id, recorded_at)
 );
+CREATE INDEX position_trace_recorded_idx ON position_trace (recorded_at);
 
 CREATE TABLE conversations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
