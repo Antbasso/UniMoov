@@ -53,5 +53,5 @@ INSERT INTO app_settings (key, value) VALUES
   ('ratings.windowDays', '7'),
   ('disputes.windowDays', '14'),
   ('reports.dailyLimit', '5'),
-  ('support.email', '"contact@uni-moov.fr"')
+  ('support.email', '"unimoov.support@gmail.com"')
 ON CONFLICT (key) DO NOTHING;

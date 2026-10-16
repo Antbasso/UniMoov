@@ -10,7 +10,7 @@ import { bearer, setupTestContext, type TestContext, type Tokens } from './helpe
 let ctx: TestContext;
 const tokens = new Map<string, Tokens>();
 const user = (firstName: string) => seedUsers.find((u) => u.firstName === firstName)!;
-const SUPPORT = 'contact@uni-moov.fr';
+const SUPPORT = 'unimoov.support@gmail.com';
 
 async function login(firstName: string): Promise<Tokens> {
   const cached = tokens.get(firstName);
