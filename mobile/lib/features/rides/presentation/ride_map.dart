@@ -1,20 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_pmtiles/flutter_map_pmtiles.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_map_tiles_pmtiles/vector_map_tiles_pmtiles.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import '../../../core/theme/um_theme.dart';
 import '../domain/ride.dart';
 
-/// Fond de carte OpenStreetMap en PMTiles raster, servi en statique (docs/couts.md).
-/// Sans URL (développement, tests), la carte montre tracé et arrêts sur un fond uni.
+/// Fond de carte OpenStreetMap : extrait PMTiles vectoriel (schéma OpenMapTiles) servi en
+/// statique (docs/couts.md). Sans URL (développement, tests), la carte montre tracé et
+/// arrêts sur un fond uni.
 const pmtilesUrl = String.fromEnvironment('PMTILES_URL');
 
-final mapTilesProvider = FutureProvider<TileProvider?>((ref) async {
+/// Source des tuiles dans le style OpenMapTiles.
+const _source = 'openmaptiles';
+
+class MapBackground {
+  const MapBackground(this.tiles, this.theme);
+
+  final VectorTileProvider tiles;
+  final vtr.Theme theme;
+}
+
+/// Style clair OpenMapTiles fourni par vector_tile_renderer, sans la couche de relief
+/// ombré (un fichier raster à part, absent) : seule notre source vectorielle est lue.
+vtr.Theme openMapTilesTheme() => vtr.ProvidedThemes.lightTheme().copyWith(
+  types: {...vtr.ThemeLayerType.values}..remove(vtr.ThemeLayerType.raster),
+);
+
+final mapBackgroundProvider = FutureProvider<MapBackground?>((ref) async {
   if (pmtilesUrl.isEmpty) return null;
   try {
-    return await PmTilesTileProvider.fromSource(pmtilesUrl);
+    final tiles = await PmTilesVectorTileProvider.fromSource(pmtilesUrl);
+    return MapBackground(tiles, openMapTilesTheme());
   } on Object {
     // Fond indisponible : la carte reste utilisable sans lui.
     return null;
@@ -46,7 +66,7 @@ class RideMap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.umColors;
-    final tiles = ref.watch(mapTilesProvider).value;
+    final background = ref.watch(mapBackgroundProvider).value;
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
     final points = [...line, for (final s in stops) LatLng(s.lat, s.lon), ?pin];
 
@@ -72,7 +92,12 @@ class RideMap extends ConsumerWidget {
           onTap: onTap == null ? null : (_, point) => onTap!(point),
         ),
         children: [
-          if (tiles != null) TileLayer(tileProvider: tiles, userAgentPackageName: 'fr.unimoov.app'),
+          if (background != null)
+            VectorTileLayer(
+              tileProviders: TileProviders({_source: background.tiles}),
+              theme: background.theme,
+              maximumZoom: background.tiles.maximumZoom.toDouble(),
+            ),
           if (line.length >= 2)
             PolylineLayer(
               polylines: [
@@ -105,7 +130,8 @@ class RideMap extends ConsumerWidget {
                 ),
             ],
           ),
-          if (tiles != null) const SimpleAttributionWidget(source: Text('OpenStreetMap')),
+          if (background != null)
+            const SimpleAttributionWidget(source: Text('OpenStreetMap, OpenMapTiles')),
         ],
       ),
     );

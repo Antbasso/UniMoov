@@ -6,3 +6,6 @@ coverage/
 *.log
 build/
 .dart_tool/
+
+# Fonds de carte (fichiers lourds, servis en statique)
+*.pmtiles
