@@ -908,4 +908,206 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rideStopApproximate => 'Position approximative';
+
+  @override
+  String get rideInProgress => 'Trajet en cours';
+
+  @override
+  String get rideCompleted => 'Trajet terminé';
+
+  @override
+  String liveDriverEta(String time) {
+    return 'Le conducteur arrive vers $time';
+  }
+
+  @override
+  String liveLastKnown(String time) {
+    return 'Dernière position connue à $time';
+  }
+
+  @override
+  String get liveWaiting => 'En attente de la position du conducteur.';
+
+  @override
+  String get liveReconnecting => 'Connexion au suivi en direct…';
+
+  @override
+  String get liveEnded => 'Le suivi en direct est terminé.';
+
+  @override
+  String get presenceValidated => 'Présence validée';
+
+  @override
+  String get presencePaid => 'Présence validée, trajet payé';
+
+  @override
+  String get presenceUnpaid =>
+      'Présence validée, paiement en attente : recharge ton portefeuille';
+
+  @override
+  String get confirmPresence => 'Valider ma présence';
+
+  @override
+  String get presenceDone => 'Présence validée. Bon trajet.';
+
+  @override
+  String get shareLocation => 'Partager ma position';
+
+  @override
+  String get finishRide => 'Terminer le trajet';
+
+  @override
+  String get openDeparture => 'Écran de départ';
+
+  @override
+  String get departureTitle => 'Départ';
+
+  @override
+  String get departureIntro =>
+      'Vérifie l\'ordre des arrêts, puis démarre : tes passagers te verront arriver.';
+
+  @override
+  String get startRide => 'Démarrer le trajet';
+
+  @override
+  String get launchNavigation => 'Lancer la navigation';
+
+  @override
+  String get nextStop => 'Arrêt suivant';
+
+  @override
+  String get changeNavApp => 'Changer d\'application GPS';
+
+  @override
+  String get navAppChoose => 'Avec quelle application ?';
+
+  @override
+  String get navAppGoogleMaps => 'Google Maps';
+
+  @override
+  String get navAppWaze => 'Waze';
+
+  @override
+  String get navAppAppleMaps => 'Plans';
+
+  @override
+  String get navAppNone => 'Aucune application GPS trouvée sur ce téléphone.';
+
+  @override
+  String get navOpenFailed => 'Impossible d\'ouvrir l\'application GPS.';
+
+  @override
+  String get wazeStopByStop =>
+      'Waze ne prend qu\'une destination : tu iras d\'arrêt en arrêt.';
+
+  @override
+  String get pickedUp => 'Monté';
+
+  @override
+  String get markPickedUp => 'Monté à bord';
+
+  @override
+  String pickedUpSemantic(String name) {
+    return 'Marquer $name comme monté à bord';
+  }
+
+  @override
+  String get destination => 'Destination';
+
+  @override
+  String get locationTitle => 'Partage ta position pendant le trajet';
+
+  @override
+  String get locationBody =>
+      'Les participants de ce trajet voient où tu es, seulement pendant le trajet. Le partage s\'arrête à l\'arrivée. Ta position valide aussi ta présence, ce qui déclenche le paiement.';
+
+  @override
+  String get locationBackground =>
+      'Pour que le suivi continue écran éteint, une notification reste affichée pendant le trajet.';
+
+  @override
+  String get locationAllow => 'Autoriser la position';
+
+  @override
+  String get locationLater => 'Plus tard';
+
+  @override
+  String get locationDenied =>
+      'Sans ta position, le suivi et la validation de présence ne marchent pas. Active-la pour Uni-Moov dans les réglages du téléphone.';
+
+  @override
+  String get locationOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get locationNotificationTitle => 'Trajet Uni-Moov en cours';
+
+  @override
+  String get locationNotificationText =>
+      'Ta position est partagée avec ton trajet jusqu\'à l\'arrivée.';
+
+  @override
+  String get profileWallet => 'Portefeuille';
+
+  @override
+  String get walletTitle => 'Ton portefeuille';
+
+  @override
+  String get walletIntro =>
+      'Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.';
+
+  @override
+  String get walletBalance => 'Disponible';
+
+  @override
+  String walletHeld(String amount) {
+    return '$amount retenus pour un trajet en cours';
+  }
+
+  @override
+  String walletTopup(String amount) {
+    return 'Recharger $amount';
+  }
+
+  @override
+  String get walletTopupDone => 'Portefeuille rechargé.';
+
+  @override
+  String get walletHistory => 'Historique';
+
+  @override
+  String get walletEmpty => 'Aucune opération pour l\'instant.';
+
+  @override
+  String get walletKindTopup => 'Recharge';
+
+  @override
+  String get walletKindRideCharge => 'Trajet payé';
+
+  @override
+  String get walletKindRideCredit => 'Trajet reçu';
+
+  @override
+  String get walletKindPayout => 'Retrait';
+
+  @override
+  String get walletKindRefund => 'Remboursement';
+
+  @override
+  String get walletFake => 'Mode test : aucun argent réel n\'est prélevé.';
+
+  @override
+  String get errorTooEarly => 'Trop tôt pour démarrer ce trajet.';
+
+  @override
+  String get errorRideNotStarted => 'Le trajet n\'a pas encore commencé.';
+
+  @override
+  String get errorPresenceNotConfirmed =>
+      'Ton téléphone et celui du conducteur doivent être proches.';
+
+  @override
+  String get errorTopupTooSmall => 'Montant de recharge trop faible.';
+
+  @override
+  String get errorTopupFailed => 'La recharge a été refusée.';
 }

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
+import '../../../core/clock.dart';
 import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -12,6 +16,8 @@ import '../../profile/presentation/me_controller.dart';
 import '../../proposals/domain/proposal.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../domain/ride.dart';
+import 'live_actions.dart';
+import 'live_controller.dart';
 import 'ride_map.dart';
 import 'rides_controller.dart';
 
@@ -28,8 +34,8 @@ class RideScreen extends ConsumerWidget {
     final c = context.umColors;
     final ride = ref.watch(rideProvider(id));
 
+    // Erreur d'abord (même avec un ancien contenu) ; pendant un rechargement, le contenu reste affiché.
     return switch (ride) {
-      AsyncData(:final value) => _RideContent(ride: value),
       AsyncError(:final error) => UmPage(
         appBar: AppBar(),
         children: [
@@ -42,6 +48,7 @@ class RideScreen extends ConsumerWidget {
           ),
         ],
       ),
+      AsyncValue(:final value?) => _RideContent(ride: value),
       _ => UmPage(
         appBar: AppBar(),
         children: [
@@ -55,13 +62,39 @@ class RideScreen extends ConsumerWidget {
   }
 }
 
-class _RideContent extends ConsumerWidget {
+class _RideContent extends ConsumerStatefulWidget {
   const _RideContent({required this.ride});
 
   final RideDetails ride;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RideContent> createState() => _RideContentState();
+}
+
+class _RideContentState extends ConsumerState<_RideContent> {
+  bool _busy = false;
+  String? _errorCode;
+
+  /// Action sur le trajet (présence, clôture) : chargement, puis message ou erreur.
+  Future<void> _act(Future<void> Function() action, {String? done}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _busy = true;
+      _errorCode = null;
+    });
+    try {
+      await action();
+      if (done != null) messenger.showSnackBar(SnackBar(content: Text(done)));
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ride = widget.ride;
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final myId = ref.watch(meProvider.select((me) => me.value?.id));
@@ -70,8 +103,39 @@ class _RideContent extends ConsumerWidget {
         ? l10n.proposalTitleTo(day)
         : l10n.proposalTitleFrom(day);
     final myStop = ride.stopOf(myId);
-
+    final live = ride.inProgress ? ref.watch(liveRideProvider(ride.id)) : null;
+    final driverId = ride.driverStop?.userId;
+    final driverLive = driverId == null ? null : live?.positions[driverId];
+    final controller = ref.read(rideProvider(ride.id).notifier);
     final footer = <Widget>[
+      if (ride.isDriver && (ride.editable || ride.inProgress))
+        UmButton(
+          label: l10n.openDeparture,
+          icon: Icons.navigation_outlined,
+          expand: true,
+          onPressed: () => context.push(AppRoutes.rideDeparture(ride.id)),
+        ),
+      if (!ride.isDriver && ride.inProgress && myStop != null && !myStop.presenceValidated)
+        UmButton(
+          label: l10n.confirmPresence,
+          expand: true,
+          loading: _busy,
+          onPressed: _busy ? null : () => _act(controller.confirmPresence, done: l10n.presenceDone),
+        ),
+      if (!ride.isDriver && ride.inProgress && live != null && !live.sharing)
+        UmButton(
+          label: l10n.shareLocation,
+          variant: UmButtonVariant.secondary,
+          expand: true,
+          onPressed: () => shareLocation(context, ref, ride.id),
+        ),
+      if (!ride.isDriver && ride.inProgress)
+        UmButton(
+          label: l10n.finishRide,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          onPressed: _busy ? null : () => _act(controller.finish),
+        ),
       if (ride.editable && ride.isDriver)
         UmButton(
           label: l10n.rideAddPassengers,
@@ -101,6 +165,7 @@ class _RideContent extends ConsumerWidget {
                 route: ride.route,
                 dashed: ride.routeEstimated,
                 semanticLabel: l10n.rideMapLabel(ride.stops.length),
+                live: driverLive == null ? null : LatLng(driverLive.lat, driverLive.lon),
               ),
             ),
             Expanded(
@@ -116,12 +181,45 @@ class _RideContent extends ConsumerWidget {
                     const SizedBox(height: UmSpace.s3),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: UmChip(
-                        label: l10n.proposalConfirmed,
-                        icon: Icons.check_circle_outline_rounded,
-                        tone: UmChipTone.success,
-                      ),
+                      child: switch (ride.status) {
+                        'in_progress' => UmChip(
+                          label: l10n.rideInProgress,
+                          icon: Icons.near_me_outlined,
+                          tone: UmChipTone.success,
+                        ),
+                        'completed' => UmChip(label: l10n.rideCompleted, icon: Icons.flag_outlined),
+                        _ => UmChip(
+                          label: l10n.proposalConfirmed,
+                          icon: Icons.check_circle_outline_rounded,
+                          tone: UmChipTone.success,
+                        ),
+                      },
                     ),
+                    if (live != null && !ride.isDriver) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      _LiveBanner(
+                        live: live,
+                        driver: driverLive,
+                        myEta: myId == null ? null : live.etas[myId],
+                      ),
+                    ],
+                    if (myStop != null && myStop.presenceValidated && !ride.isDriver) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: UmChip(
+                          label: live?.presence[myId] == false
+                              ? l10n.presenceUnpaid
+                              : l10n.presencePaid,
+                          icon: Icons.verified_outlined,
+                          tone: UmChipTone.success,
+                        ),
+                      ),
+                    ],
+                    if (_errorCode != null) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      UmErrorText(apiErrorMessage(l10n, _errorCode)),
+                    ],
                     if (ride.routeEstimated) ...[
                       const SizedBox(height: UmSpace.s3),
                       Text(
@@ -148,6 +246,72 @@ class _RideContent extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(UmSpace.s6, 0, UmSpace.s6, UmSpace.s5),
                 child: Column(children: footer),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Passager : heure d'arrivée du conducteur, ou sa dernière position connue après 30 s.
+class _LiveBanner extends ConsumerStatefulWidget {
+  const _LiveBanner({required this.live, required this.driver, required this.myEta});
+
+  final LiveState live;
+  final LivePosition? driver;
+  final DateTime? myEta;
+
+  @override
+  ConsumerState<_LiveBanner> createState() => _LiveBannerState();
+}
+
+class _LiveBannerState extends ConsumerState<_LiveBanner> {
+  late final Timer _tick = Timer.periodic(const Duration(seconds: 10), (_) => setState(() {}));
+
+  @override
+  void initState() {
+    super.initState();
+    _tick;
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    final now = ref.watch(clockProvider)();
+    final driver = widget.driver;
+    final text = switch ((widget.live, driver)) {
+      (LiveState(ended: true), _) => l10n.liveEnded,
+      (_, final d?) when now.difference(d.at) > staleAfter => l10n.liveLastKnown(
+        formatTime(d.at, l10n.localeName),
+      ),
+      (_, _?) when widget.myEta != null => l10n.liveDriverEta(
+        formatTime(widget.myEta!, l10n.localeName),
+      ),
+      (LiveState(connected: false), _) => l10n.liveReconnecting,
+      _ => l10n.liveWaiting,
+    };
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(UmSpace.s3),
+        decoration: BoxDecoration(
+          color: c.surfaceTint,
+          borderRadius: BorderRadius.circular(UmRadius.sm),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.directions_car_rounded, size: UmSize.iconMd, color: c.brandStrong),
+            const SizedBox(width: UmSpace.s2),
+            Expanded(
+              child: Text(text, style: UmText.body.copyWith(color: c.ink)),
+            ),
           ],
         ),
       ),

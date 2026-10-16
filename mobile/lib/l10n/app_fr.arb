@@ -529,5 +529,101 @@
       }
     }
   },
-  "rideStopApproximate": "Position approximative"
+  "rideStopApproximate": "Position approximative",
+  "rideInProgress": "Trajet en cours",
+  "rideCompleted": "Trajet terminé",
+  "liveDriverEta": "Le conducteur arrive vers {time}",
+  "@liveDriverEta": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "liveLastKnown": "Dernière position connue à {time}",
+  "@liveLastKnown": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "liveWaiting": "En attente de la position du conducteur.",
+  "liveReconnecting": "Connexion au suivi en direct…",
+  "liveEnded": "Le suivi en direct est terminé.",
+  "presenceValidated": "Présence validée",
+  "presencePaid": "Présence validée, trajet payé",
+  "presenceUnpaid": "Présence validée, paiement en attente : recharge ton portefeuille",
+  "confirmPresence": "Valider ma présence",
+  "presenceDone": "Présence validée. Bon trajet.",
+  "shareLocation": "Partager ma position",
+  "finishRide": "Terminer le trajet",
+  "openDeparture": "Écran de départ",
+  "departureTitle": "Départ",
+  "departureIntro": "Vérifie l'ordre des arrêts, puis démarre : tes passagers te verront arriver.",
+  "startRide": "Démarrer le trajet",
+  "launchNavigation": "Lancer la navigation",
+  "nextStop": "Arrêt suivant",
+  "changeNavApp": "Changer d'application GPS",
+  "navAppChoose": "Avec quelle application ?",
+  "navAppGoogleMaps": "Google Maps",
+  "navAppWaze": "Waze",
+  "navAppAppleMaps": "Plans",
+  "navAppNone": "Aucune application GPS trouvée sur ce téléphone.",
+  "navOpenFailed": "Impossible d'ouvrir l'application GPS.",
+  "wazeStopByStop": "Waze ne prend qu'une destination : tu iras d'arrêt en arrêt.",
+  "pickedUp": "Monté",
+  "markPickedUp": "Monté à bord",
+  "pickedUpSemantic": "Marquer {name} comme monté à bord",
+  "@pickedUpSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "destination": "Destination",
+  "locationTitle": "Partage ta position pendant le trajet",
+  "locationBody": "Les participants de ce trajet voient où tu es, seulement pendant le trajet. Le partage s'arrête à l'arrivée. Ta position valide aussi ta présence, ce qui déclenche le paiement.",
+  "locationBackground": "Pour que le suivi continue écran éteint, une notification reste affichée pendant le trajet.",
+  "locationAllow": "Autoriser la position",
+  "locationLater": "Plus tard",
+  "locationDenied": "Sans ta position, le suivi et la validation de présence ne marchent pas. Active-la pour Uni-Moov dans les réglages du téléphone.",
+  "locationOpenSettings": "Ouvrir les réglages",
+  "locationNotificationTitle": "Trajet Uni-Moov en cours",
+  "locationNotificationText": "Ta position est partagée avec ton trajet jusqu'à l'arrivée.",
+  "profileWallet": "Portefeuille",
+  "walletTitle": "Ton portefeuille",
+  "walletIntro": "Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.",
+  "walletBalance": "Disponible",
+  "walletHeld": "{amount} retenus pour un trajet en cours",
+  "@walletHeld": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletTopup": "Recharger {amount}",
+  "@walletTopup": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletTopupDone": "Portefeuille rechargé.",
+  "walletHistory": "Historique",
+  "walletEmpty": "Aucune opération pour l'instant.",
+  "walletKindTopup": "Recharge",
+  "walletKindRideCharge": "Trajet payé",
+  "walletKindRideCredit": "Trajet reçu",
+  "walletKindPayout": "Retrait",
+  "walletKindRefund": "Remboursement",
+  "walletFake": "Mode test : aucun argent réel n'est prélevé.",
+  "errorTooEarly": "Trop tôt pour démarrer ce trajet.",
+  "errorRideNotStarted": "Le trajet n'a pas encore commencé.",
+  "errorPresenceNotConfirmed": "Ton téléphone et celui du conducteur doivent être proches.",
+  "errorTopupTooSmall": "Montant de recharge trop faible.",
+  "errorTopupFailed": "La recharge a été refusée."
 }

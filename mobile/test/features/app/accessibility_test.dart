@@ -176,6 +176,58 @@ void main() {
     });
   }
 
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets('M4 : départ, trajet en cours, position, portefeuille (${mode.name})', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final rides = rideBackend();
+      await rides.start('ride-1');
+      await rides.start('ride-2');
+      storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+      await launchApp(tester, backend: rides, storage: storage, themeMode: mode);
+      await tapText(tester, 'Voir', index: 0);
+      await tapText(tester, 'Voir la carte');
+      await expectAccessible(tester);
+      await tapText(tester, 'Partager ma position');
+      await expectAccessible(tester);
+      await launchApp(tester, backend: rides, storage: storage, themeMode: mode);
+      await tapText(tester, 'Voir', index: 1);
+      await tapText(tester, 'Voir la carte');
+      await tapText(tester, 'Écran de départ');
+      await expectAccessible(tester);
+      await launchApp(tester, backend: rides, storage: storage, themeMode: mode);
+      await tester.tap(find.byTooltip('Mon profil'));
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Modifier', index: 4);
+      await expectAccessible(tester);
+      handle.dispose();
+    });
+  }
+
+  testWidgets('M4 à 200 % : aucun débordement', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final rides = rideBackend();
+    await rides.start('ride-1');
+    await rides.start('ride-2');
+    storage.tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
+    await launchApp(tester, backend: rides, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    await tapText(tester, 'Voir la carte');
+    expect(tester.takeException(), isNull);
+    await launchApp(tester, backend: rides, storage: storage);
+    await tapText(tester, 'Voir', index: 1);
+    await tapText(tester, 'Voir la carte');
+    await tapText(tester, 'Écran de départ');
+    expect(tester.takeException(), isNull);
+    await launchApp(tester, backend: rides, storage: storage);
+    await tester.tap(find.byTooltip('Mon profil'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Modifier', index: 4);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('M3 à 200 % : aucun débordement', (tester) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);

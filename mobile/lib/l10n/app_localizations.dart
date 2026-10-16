@@ -1599,6 +1599,372 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Position approximative'**
   String get rideStopApproximate;
+
+  /// No description provided for @rideInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet en cours'**
+  String get rideInProgress;
+
+  /// No description provided for @rideCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet terminé'**
+  String get rideCompleted;
+
+  /// No description provided for @liveDriverEta.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le conducteur arrive vers {time}'**
+  String liveDriverEta(String time);
+
+  /// No description provided for @liveLastKnown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernière position connue à {time}'**
+  String liveLastKnown(String time);
+
+  /// No description provided for @liveWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de la position du conducteur.'**
+  String get liveWaiting;
+
+  /// No description provided for @liveReconnecting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion au suivi en direct…'**
+  String get liveReconnecting;
+
+  /// No description provided for @liveEnded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le suivi en direct est terminé.'**
+  String get liveEnded;
+
+  /// No description provided for @presenceValidated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Présence validée'**
+  String get presenceValidated;
+
+  /// No description provided for @presencePaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Présence validée, trajet payé'**
+  String get presencePaid;
+
+  /// No description provided for @presenceUnpaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Présence validée, paiement en attente : recharge ton portefeuille'**
+  String get presenceUnpaid;
+
+  /// No description provided for @confirmPresence.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider ma présence'**
+  String get confirmPresence;
+
+  /// No description provided for @presenceDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Présence validée. Bon trajet.'**
+  String get presenceDone;
+
+  /// No description provided for @shareLocation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager ma position'**
+  String get shareLocation;
+
+  /// No description provided for @finishRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer le trajet'**
+  String get finishRide;
+
+  /// No description provided for @openDeparture.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écran de départ'**
+  String get openDeparture;
+
+  /// No description provided for @departureTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ'**
+  String get departureTitle;
+
+  /// No description provided for @departureIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifie l\'ordre des arrêts, puis démarre : tes passagers te verront arriver.'**
+  String get departureIntro;
+
+  /// No description provided for @startRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Démarrer le trajet'**
+  String get startRide;
+
+  /// No description provided for @launchNavigation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer la navigation'**
+  String get launchNavigation;
+
+  /// No description provided for @nextStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêt suivant'**
+  String get nextStop;
+
+  /// No description provided for @changeNavApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer d\'application GPS'**
+  String get changeNavApp;
+
+  /// No description provided for @navAppChoose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec quelle application ?'**
+  String get navAppChoose;
+
+  /// No description provided for @navAppGoogleMaps.
+  ///
+  /// In fr, this message translates to:
+  /// **'Google Maps'**
+  String get navAppGoogleMaps;
+
+  /// No description provided for @navAppWaze.
+  ///
+  /// In fr, this message translates to:
+  /// **'Waze'**
+  String get navAppWaze;
+
+  /// No description provided for @navAppAppleMaps.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plans'**
+  String get navAppAppleMaps;
+
+  /// No description provided for @navAppNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application GPS trouvée sur ce téléphone.'**
+  String get navAppNone;
+
+  /// No description provided for @navOpenFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir l\'application GPS.'**
+  String get navOpenFailed;
+
+  /// No description provided for @wazeStopByStop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Waze ne prend qu\'une destination : tu iras d\'arrêt en arrêt.'**
+  String get wazeStopByStop;
+
+  /// No description provided for @pickedUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monté'**
+  String get pickedUp;
+
+  /// No description provided for @markPickedUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monté à bord'**
+  String get markPickedUp;
+
+  /// No description provided for @pickedUpSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer {name} comme monté à bord'**
+  String pickedUpSemantic(String name);
+
+  /// No description provided for @destination.
+  ///
+  /// In fr, this message translates to:
+  /// **'Destination'**
+  String get destination;
+
+  /// No description provided for @locationTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage ta position pendant le trajet'**
+  String get locationTitle;
+
+  /// No description provided for @locationBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les participants de ce trajet voient où tu es, seulement pendant le trajet. Le partage s\'arrête à l\'arrivée. Ta position valide aussi ta présence, ce qui déclenche le paiement.'**
+  String get locationBody;
+
+  /// No description provided for @locationBackground.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour que le suivi continue écran éteint, une notification reste affichée pendant le trajet.'**
+  String get locationBackground;
+
+  /// No description provided for @locationAllow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser la position'**
+  String get locationAllow;
+
+  /// No description provided for @locationLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get locationLater;
+
+  /// No description provided for @locationDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans ta position, le suivi et la validation de présence ne marchent pas. Active-la pour Uni-Moov dans les réglages du téléphone.'**
+  String get locationDenied;
+
+  /// No description provided for @locationOpenSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les réglages'**
+  String get locationOpenSettings;
+
+  /// No description provided for @locationNotificationTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet Uni-Moov en cours'**
+  String get locationNotificationTitle;
+
+  /// No description provided for @locationNotificationText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta position est partagée avec ton trajet jusqu\'à l\'arrivée.'**
+  String get locationNotificationText;
+
+  /// No description provided for @profileWallet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portefeuille'**
+  String get profileWallet;
+
+  /// No description provided for @walletTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton portefeuille'**
+  String get walletTitle;
+
+  /// No description provided for @walletIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.'**
+  String get walletIntro;
+
+  /// No description provided for @walletBalance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Disponible'**
+  String get walletBalance;
+
+  /// No description provided for @walletHeld.
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} retenus pour un trajet en cours'**
+  String walletHeld(String amount);
+
+  /// No description provided for @walletTopup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recharger {amount}'**
+  String walletTopup(String amount);
+
+  /// No description provided for @walletTopupDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portefeuille rechargé.'**
+  String get walletTopupDone;
+
+  /// No description provided for @walletHistory.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get walletHistory;
+
+  /// No description provided for @walletEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune opération pour l\'instant.'**
+  String get walletEmpty;
+
+  /// No description provided for @walletKindTopup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recharge'**
+  String get walletKindTopup;
+
+  /// No description provided for @walletKindRideCharge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet payé'**
+  String get walletKindRideCharge;
+
+  /// No description provided for @walletKindRideCredit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet reçu'**
+  String get walletKindRideCredit;
+
+  /// No description provided for @walletKindPayout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrait'**
+  String get walletKindPayout;
+
+  /// No description provided for @walletKindRefund.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remboursement'**
+  String get walletKindRefund;
+
+  /// No description provided for @walletFake.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode test : aucun argent réel n\'est prélevé.'**
+  String get walletFake;
+
+  /// No description provided for @errorTooEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop tôt pour démarrer ce trajet.'**
+  String get errorTooEarly;
+
+  /// No description provided for @errorRideNotStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le trajet n\'a pas encore commencé.'**
+  String get errorRideNotStarted;
+
+  /// No description provided for @errorPresenceNotConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton téléphone et celui du conducteur doivent être proches.'**
+  String get errorPresenceNotConfirmed;
+
+  /// No description provided for @errorTopupTooSmall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant de recharge trop faible.'**
+  String get errorTopupTooSmall;
+
+  /// No description provided for @errorTopupFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La recharge a été refusée.'**
+  String get errorTopupFailed;
 }
 
 class _AppLocalizationsDelegate

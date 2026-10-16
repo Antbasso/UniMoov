@@ -13,6 +13,7 @@ abstract interface class ProfileApi {
   Future<Me> setVehicle(Vehicle vehicle);
   Future<void> removeVehicle();
   Future<Me> setRoleMode(RoleMode mode);
+  Future<Me> setDefaultNavApp(String app);
   Future<Me> setStep(OnboardingStep step, StepStatus status);
   Future<List<Pause>> listPauses();
   Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks);
@@ -49,6 +50,10 @@ class DioProfileApi implements ProfileApi {
   @override
   Future<Me> setRoleMode(RoleMode mode) =>
       _me$(() => _dio.patch('$_me/preferences', data: {'roleMode': mode.wire}));
+
+  @override
+  Future<Me> setDefaultNavApp(String app) =>
+      _me$(() => _dio.patch('$_me/preferences', data: {'defaultNavApp': app}));
 
   @override
   Future<Me> setStep(OnboardingStep step, StepStatus status) =>

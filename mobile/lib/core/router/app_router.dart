@@ -15,9 +15,12 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/proposals/presentation/alternatives_screen.dart';
 import '../../features/proposals/presentation/proposal_screen.dart';
 import '../../features/proposals/presentation/search_screen.dart';
+import '../../features/rides/presentation/departure_screen.dart';
+import '../../features/rides/presentation/location_screen.dart';
 import '../../features/rides/presentation/meeting_point_screen.dart';
 import '../../features/rides/presentation/ride_screen.dart';
 import '../../features/rides/presentation/suggestions_screen.dart';
+import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
 import 'redirect.dart';
 
@@ -68,6 +71,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
+      GoRoute(path: AppRoutes.wallet, builder: (_, _) => const WalletScreen()),
       GoRoute(
         path: '/week/:week/proposals/:id',
         builder: (_, state) =>
@@ -91,6 +95,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'suggestions',
             builder: (_, state) => SuggestionsScreen(id: state.pathParameters['id']!),
           ),
+          GoRoute(
+            path: 'departure',
+            builder: (_, state) => DepartureScreen(id: state.pathParameters['id']!),
+          ),
+          GoRoute(path: 'location', builder: (_, _) => const LocationPermissionScreen()),
         ],
       ),
     ],
