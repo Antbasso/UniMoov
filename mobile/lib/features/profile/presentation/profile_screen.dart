@@ -77,6 +77,12 @@ class ProfileScreen extends ConsumerWidget {
           body: l10n.walletIntro,
           onEdit: () => context.push(AppRoutes.wallet),
         ),
+        _Section(
+          title: l10n.profileReliability,
+          body: l10n.profileReliabilityBody,
+          actionLabel: l10n.see,
+          onEdit: () => context.push(AppRoutes.reliability),
+        ),
         const _PausesSection(),
       ],
     );
@@ -84,11 +90,14 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.body, this.onEdit});
+  const _Section({required this.title, required this.body, this.onEdit, this.actionLabel});
 
   final String title;
   final String body;
   final VoidCallback? onEdit;
+
+  /// Libellé du bouton (« Modifier » par défaut).
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +112,7 @@ class _Section extends StatelessWidget {
             : Align(
                 alignment: Alignment.centerLeft,
                 child: UmButton(
-                  label: l10n.edit,
+                  label: actionLabel ?? l10n.edit,
                   variant: UmButtonVariant.secondary,
                   onPressed: onEdit,
                 ),

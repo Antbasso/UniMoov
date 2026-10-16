@@ -15,6 +15,12 @@ import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../proposals/domain/proposal.dart';
 import '../../proposals/presentation/formatting.dart';
+import '../../proposals/presentation/proposals_controller.dart';
+import '../../trust/domain/trust.dart';
+import '../../trust/presentation/cancel_sheet.dart';
+import '../../trust/presentation/rating_card.dart';
+import '../../trust/presentation/report_sheet.dart';
+import '../../trust/presentation/trust_info.dart';
 import '../domain/ride.dart';
 import 'live_actions.dart';
 import 'live_controller.dart';
@@ -92,6 +98,29 @@ class _RideContentState extends ConsumerState<_RideContent> {
     }
   }
 
+  /// Annulation après acceptation (cahier §8) : pénalité annoncée, puis retour à l'accueil.
+  Future<void> _cancel() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final done = AppLocalizations.of(context).cancelDone;
+    if (!await showCancelSheet(context, widget.ride.id)) return;
+    ref.invalidate(weekProposalsProvider);
+    messenger.showSnackBar(SnackBar(content: Text(done)));
+    router.go(AppRoutes.home);
+  }
+
+  Future<void> _report(String? myId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final done = AppLocalizations.of(context).reportDone;
+    final people = [
+      for (final s in widget.ride.stops)
+        if (s.userId case final id? when id != myId) (userId: id, name: s.fullName ?? ''),
+    ];
+    if (await showReportSheet(context, people)) {
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ride = widget.ride;
@@ -147,6 +176,32 @@ class _RideContentState extends ConsumerState<_RideContent> {
           expand: true,
           onPressed: () => context.push(AppRoutes.rideMeetingPoint(ride.id)),
         ),
+      if (ride.editable)
+        UmButton(
+          label: ride.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          onPressed: _cancel,
+        ),
+      if (ride.completed) ...[
+        UmButton(
+          label: l10n.rideProblem,
+          variant: UmButtonVariant.secondary,
+          expand: true,
+          onPressed: () => context.push(
+            AppRoutes.dispute(
+              ride.id,
+              reason: ride.markedAbsent ? DisputeReason.markedAbsent : null,
+            ),
+          ),
+        ),
+        UmButton(
+          label: l10n.reportAction,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          onPressed: () => _report(myId),
+        ),
+      ],
     ];
 
     return Scaffold(
@@ -214,6 +269,10 @@ class _RideContentState extends ConsumerState<_RideContent> {
                         ),
                       ),
                     ],
+                    if (ride.completed && ride.markedAbsent) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      TrustInfo(icon: Icons.person_off_outlined, text: l10n.rideAbsent),
+                    ],
                     if (_errorCode != null) ...[
                       const SizedBox(height: UmSpace.s3),
                       UmErrorText(apiErrorMessage(l10n, _errorCode)),
@@ -235,6 +294,10 @@ class _RideContentState extends ConsumerState<_RideContent> {
                     for (final stop in ride.stops) _StopRow(stop: stop, isMe: stop.userId == myId),
                     const SizedBox(height: UmSpace.s3),
                     _PriceCard(price: ride.price, isDriver: ride.isDriver),
+                    if (ride.completed && !ride.markedAbsent) ...[
+                      const SizedBox(height: UmSpace.s4),
+                      RatingCard(rideId: ride.id),
+                    ],
                   ],
                 ),
               ),

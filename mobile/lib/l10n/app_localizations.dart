@@ -1983,6 +1983,516 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Continuer le trajet'**
   String get finishConfirmCancel;
+
+  /// No description provided for @cancelMyPlace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler ma place'**
+  String get cancelMyPlace;
+
+  /// No description provided for @cancelRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler le trajet'**
+  String get cancelRide;
+
+  /// No description provided for @cancelSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler ce trajet ?'**
+  String get cancelSheetTitle;
+
+  /// No description provided for @cancelTierEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu préviens tôt : ton score de fiabilité baisse un peu.'**
+  String get cancelTierEarly;
+
+  /// No description provided for @cancelTierMedium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le départ approche : ton score de fiabilité baisse davantage.'**
+  String get cancelTierMedium;
+
+  /// No description provided for @cancelTierLate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ imminent : ton score de fiabilité baisse nettement. Les autres comptent sur toi.'**
+  String get cancelTierLate;
+
+  /// No description provided for @cancelPassengerEffect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le conducteur est prévenu et ta place est proposée à quelqu\'un d\'autre.'**
+  String get cancelPassengerEffect;
+
+  /// No description provided for @cancelDriverEffect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes passagers sont prévenus et on leur cherche une autre voiture.'**
+  String get cancelDriverEffect;
+
+  /// No description provided for @cancelConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer l\'annulation'**
+  String get cancelConfirm;
+
+  /// No description provided for @cancelKeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder mon trajet'**
+  String get cancelKeep;
+
+  /// No description provided for @cancelDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet annulé.'**
+  String get cancelDone;
+
+  /// No description provided for @ratingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Noter le trajet'**
+  String get ratingTitle;
+
+  /// No description provided for @ratingIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facultatif. Ta note compte dans le score de fiabilité.'**
+  String get ratingIntro;
+
+  /// No description provided for @ratingStar.
+  ///
+  /// In fr, this message translates to:
+  /// **'{stars} sur 5 pour {name}'**
+  String ratingStar(int stars, String name);
+
+  /// No description provided for @ratingGiven.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta note : {stars} sur 5'**
+  String ratingGiven(int stars);
+
+  /// No description provided for @ratingDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note enregistrée.'**
+  String get ratingDone;
+
+  /// No description provided for @ratingClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La notation de ce trajet est fermée.'**
+  String get ratingClosed;
+
+  /// No description provided for @ratingDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conducteur'**
+  String get ratingDriver;
+
+  /// No description provided for @ratingPassenger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passager'**
+  String get ratingPassenger;
+
+  /// No description provided for @profileReliability.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fiabilité'**
+  String get profileReliability;
+
+  /// No description provided for @profileReliabilityBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton score, ce qui le compose, et les pénalités que tu peux contester.'**
+  String get profileReliabilityBody;
+
+  /// No description provided for @reliabilityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ma fiabilité'**
+  String get reliabilityTitle;
+
+  /// No description provided for @reliabilityIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton score aide à composer des trajets fiables, il ne t\'exclut jamais. Il se calcule sur les {days} derniers jours.'**
+  String reliabilityIntro(int days);
+
+  /// No description provided for @reliabilityScore.
+  ///
+  /// In fr, this message translates to:
+  /// **'{score} sur 5'**
+  String reliabilityScore(String score);
+
+  /// No description provided for @reliabilityScoreLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Score de fiabilité'**
+  String get reliabilityScoreLabel;
+
+  /// No description provided for @reliabilityCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun trajet mené à bien} =1{1 trajet mené à bien} other{{count} trajets menés à bien}}'**
+  String reliabilityCompleted(int count);
+
+  /// No description provided for @reliabilityCancellations.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucune annulation} =1{1 annulation} other{{count} annulations}}'**
+  String reliabilityCancellations(int count);
+
+  /// No description provided for @reliabilityNoShows.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucune absence} =1{1 absence} other{{count} absences}}'**
+  String reliabilityNoShows(int count);
+
+  /// No description provided for @reliabilityRatings.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 note, {average} sur 5} other{{count} notes, moyenne {average} sur 5}}'**
+  String reliabilityRatings(int count, String average);
+
+  /// No description provided for @reliabilityNoRatings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore de note'**
+  String get reliabilityNoRatings;
+
+  /// No description provided for @reliabilityEventsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce qui pèse sur ton score'**
+  String get reliabilityEventsTitle;
+
+  /// No description provided for @reliabilityEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune annulation ni absence ces derniers mois.'**
+  String get reliabilityEmpty;
+
+  /// No description provided for @eventCancelEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulation prévenue tôt'**
+  String get eventCancelEarly;
+
+  /// No description provided for @eventCancelMedium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulation peu avant le départ'**
+  String get eventCancelMedium;
+
+  /// No description provided for @eventCancelLate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulation au dernier moment'**
+  String get eventCancelLate;
+
+  /// No description provided for @eventNoShow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Absence au rendez-vous'**
+  String get eventNoShow;
+
+  /// No description provided for @eventCorrection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pénalité corrigée après vérification'**
+  String get eventCorrection;
+
+  /// No description provided for @eventRideOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet du {day}'**
+  String eventRideOn(String day);
+
+  /// No description provided for @contest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contester'**
+  String get contest;
+
+  /// No description provided for @rideProblem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un problème sur ce trajet ?'**
+  String get rideProblem;
+
+  /// No description provided for @rideAbsent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta présence n\'a pas été validée : ce trajet compte comme une absence.'**
+  String get rideAbsent;
+
+  /// No description provided for @disputeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un problème sur ce trajet ?'**
+  String get disputeTitle;
+
+  /// No description provided for @disputeIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'On vérifie d\'abord les horodatages du serveur. Si ça ne suffit pas, l\'équipe Uni-Moov te répond par mail.'**
+  String get disputeIntro;
+
+  /// No description provided for @disputeReasonLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Motif'**
+  String get disputeReasonLabel;
+
+  /// No description provided for @disputeReasonCancellation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je conteste la pénalité d\'annulation'**
+  String get disputeReasonCancellation;
+
+  /// No description provided for @disputeReasonAbsent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon absence est une erreur'**
+  String get disputeReasonAbsent;
+
+  /// No description provided for @disputeReasonPayment.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un souci de paiement'**
+  String get disputeReasonPayment;
+
+  /// No description provided for @disputeReasonDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un souci avec le conducteur'**
+  String get disputeReasonDriver;
+
+  /// No description provided for @disputeReasonOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre chose'**
+  String get disputeReasonOther;
+
+  /// No description provided for @disputeMessageLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Explique en quelques mots (facultatif)'**
+  String get disputeMessageLabel;
+
+  /// No description provided for @disputeSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get disputeSend;
+
+  /// No description provided for @disputeYours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes demandes sur ce trajet'**
+  String get disputeYours;
+
+  /// No description provided for @disputeWithTeam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transmis à l\'équipe Uni-Moov, réponse par mail.'**
+  String get disputeWithTeam;
+
+  /// No description provided for @disputeEscalate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je ne suis pas d\'accord'**
+  String get disputeEscalate;
+
+  /// No description provided for @disputeEscalated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande transmise à l\'équipe.'**
+  String get disputeEscalated;
+
+  /// No description provided for @disputeUpheld.
+  ///
+  /// In fr, this message translates to:
+  /// **'Décision maintenue'**
+  String get disputeUpheld;
+
+  /// No description provided for @disputeCorrected.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corrigé'**
+  String get disputeCorrected;
+
+  /// No description provided for @disputePending.
+  ///
+  /// In fr, this message translates to:
+  /// **'À l\'équipe'**
+  String get disputePending;
+
+  /// No description provided for @explainPenaltyMatches.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les horodatages confirment l\'heure de ton annulation : la pénalité est maintenue.'**
+  String get explainPenaltyMatches;
+
+  /// No description provided for @explainPenaltyRecomputed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La pénalité ne correspondait pas aux horodatages : elle est corrigée.'**
+  String get explainPenaltyRecomputed;
+
+  /// No description provided for @explainNoPenalty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune pénalité n\'a été appliquée pour ce trajet.'**
+  String get explainNoPenalty;
+
+  /// No description provided for @explainPresenceValidated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta présence avait bien été validée : la pénalité est retirée.'**
+  String get explainPresenceValidated;
+
+  /// No description provided for @explainDriverConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le conducteur t\'a déclaré à bord sans validation par GPS : l\'équipe va trancher.'**
+  String get explainDriverConfirmed;
+
+  /// No description provided for @explainNoPresence.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.'**
+  String get explainNoPresence;
+
+  /// No description provided for @explainNotAbsent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune absence n\'est enregistrée pour toi sur ce trajet.'**
+  String get explainNotAbsent;
+
+  /// No description provided for @explainNeedsHuman.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'équipe Uni-Moov examine ta demande et te répond par mail.'**
+  String get explainNeedsHuman;
+
+  /// No description provided for @reportAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signaler une personne'**
+  String get reportAction;
+
+  /// No description provided for @reportIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton signalement reste confidentiel : seule l\'équipe Uni-Moov le lit.'**
+  String get reportIntro;
+
+  /// No description provided for @reportWho.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui ?'**
+  String get reportWho;
+
+  /// No description provided for @reportWhy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pourquoi ?'**
+  String get reportWhy;
+
+  /// No description provided for @reportDangerous.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conduite dangereuse'**
+  String get reportDangerous;
+
+  /// No description provided for @reportInappropriate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comportement déplacé'**
+  String get reportInappropriate;
+
+  /// No description provided for @reportFake.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faux profil'**
+  String get reportFake;
+
+  /// No description provided for @reportOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autre chose'**
+  String get reportOther;
+
+  /// No description provided for @reportSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le signalement'**
+  String get reportSend;
+
+  /// No description provided for @reportDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Signalement envoyé.'**
+  String get reportDone;
+
+  /// No description provided for @errorNotAccepted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas accepté ce trajet.'**
+  String get errorNotAccepted;
+
+  /// No description provided for @errorAlreadyRated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as déjà noté cette personne.'**
+  String get errorAlreadyRated;
+
+  /// No description provided for @errorNotRateable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne peux pas noter cette personne pour ce trajet.'**
+  String get errorNotRateable;
+
+  /// No description provided for @errorRatingClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La notation de ce trajet est fermée.'**
+  String get errorRatingClosed;
+
+  /// No description provided for @errorRideNotCompleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce trajet n\'est pas terminé.'**
+  String get errorRideNotCompleted;
+
+  /// No description provided for @errorDisputeExists.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as déjà signalé ce problème pour ce trajet.'**
+  String get errorDisputeExists;
+
+  /// No description provided for @errorDisputeClosed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le délai pour signaler un problème sur ce trajet est passé.'**
+  String get errorDisputeClosed;
+
+  /// No description provided for @errorDisputeNotApplicable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce motif ne correspond pas à ce trajet.'**
+  String get errorDisputeNotApplicable;
+
+  /// No description provided for @errorReportLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as atteint le nombre de signalements du jour.'**
+  String get errorReportLimit;
 }
 
 class _AppLocalizationsDelegate

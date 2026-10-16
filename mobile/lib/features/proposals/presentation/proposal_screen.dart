@@ -8,6 +8,7 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../trust/presentation/cancel_sheet.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
@@ -27,6 +28,17 @@ class ProposalScreen extends ConsumerStatefulWidget {
 class _ProposalScreenState extends ConsumerState<ProposalScreen> {
   bool _busy = false;
   String? _errorCode;
+
+  /// Annulation après acceptation : la feuille annonce la pénalité, puis la semaine est relue.
+  Future<void> _cancel(String id) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final done = AppLocalizations.of(context).cancelDone;
+    if (!await showCancelSheet(context, id)) return;
+    ref.invalidate(weekProposalsProvider);
+    messenger.showSnackBar(SnackBar(content: Text(done)));
+    if (router.canPop()) router.pop();
+  }
 
   Future<void> _run(Future<void> Function() action, {bool popAfter = false}) async {
     setState(() {
@@ -121,6 +133,14 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
             label: l10n.rideMapOpen,
             expand: true,
             onPressed: () => context.push(AppRoutes.ride(proposal.id)),
+          ),
+        // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
+        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled)
+          UmButton(
+            label: proposal.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
+            variant: UmButtonVariant.ghost,
+            expand: true,
+            onPressed: _busy ? null : () => _cancel(proposal.id),
           ),
         // Le conducteur engagé peut proposer des places, même avant la confirmation.
         if (proposal.isDriver &&

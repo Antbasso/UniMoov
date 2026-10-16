@@ -12,6 +12,7 @@ import 'package:unimoov/core/location/location_service.dart';
 import 'package:unimoov/features/rides/data/live_channel.dart';
 import 'package:unimoov/features/rides/data/nav_launcher.dart';
 import 'package:unimoov/features/rides/data/rides_api.dart';
+import 'package:unimoov/features/trust/data/trust_api.dart';
 import 'package:unimoov/features/wallet/data/wallet_api.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
 
@@ -47,6 +48,7 @@ Future<void> launchApp(
         proposalsApiProvider.overrideWithValue(backend),
         ridesApiProvider.overrideWithValue(backend),
         walletApiProvider.overrideWithValue(backend),
+        trustApiProvider.overrideWithValue(backend),
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),
         locationServiceProvider.overrideWithValue(location ?? FakeLocationService()),
         navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),

@@ -20,6 +20,9 @@ import '../../features/rides/presentation/location_screen.dart';
 import '../../features/rides/presentation/meeting_point_screen.dart';
 import '../../features/rides/presentation/ride_screen.dart';
 import '../../features/rides/presentation/suggestions_screen.dart';
+import '../../features/trust/domain/trust.dart';
+import '../../features/trust/presentation/dispute_screen.dart';
+import '../../features/trust/presentation/reliability_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
 import 'redirect.dart';
@@ -60,6 +63,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'address', builder: (_, _) => const EditAddressScreen()),
           GoRoute(path: 'vehicle', builder: (_, _) => const EditVehicleScreen()),
           GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
+          GoRoute(path: 'reliability', builder: (_, _) => const ReliabilityScreen()),
           GoRoute(
             path: 'schedule',
             builder: (_, _) => const ScheduleScreen(),
@@ -72,6 +76,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
       GoRoute(path: AppRoutes.wallet, builder: (_, _) => const WalletScreen()),
+      GoRoute(
+        path: '/disputes/:rideId',
+        builder: (_, state) {
+          final reason = state.uri.queryParameters['reason'];
+          return DisputeScreen(
+            rideId: state.pathParameters['rideId']!,
+            reason: DisputeReason.values.where((r) => r.wire == reason).firstOrNull,
+          );
+        },
+      ),
       GoRoute(
         path: '/week/:week/proposals/:id',
         builder: (_, state) =>
