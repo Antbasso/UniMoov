@@ -41,7 +41,7 @@ Document de référence pour la conformité du pilote d'Annecy. Responsable du t
 
 État vérifié le 17 octobre 2026 (fin de M7). Chaque ligne cochée a un test.
 
-- [x] Avant acceptation mutuelle : prénom, photo, secteur, horaire, score et détour seulement ; filtrage côté serveur par schémas stricts (`tests/integration/proposals.test.ts`).
+- [x] Avant acceptation mutuelle : prénom, photo, secteur, horaire, score et détour seulement ; filtrage côté serveur par schémas stricts ; un passager venu par la recherche n'accède au trajet qu'après l'accord du conducteur (`tests/integration/proposals.test.ts`).
 - [x] Position collectée et diffusée seulement pendant un trajet en cours, aux participants, arrêtée à la clôture ; trace purgée après 7 jours (`tests/integration/live-ride.test.ts`).
 - [x] Consentement explicite avant la connexion d'un agenda ; seuls début et fin de journée stockés (`tests/integration/calendar.test.ts`, `schedule_flow_test.dart`).
 - [x] Journaux sans donnée personnelle : ni IP, ni en-têtes, ni paramètres d'URL, erreurs sans le détail des valeurs ; Caddy sans journal d'accès (`tests/unit/health.test.ts`, `deploy/Caddyfile`).
@@ -49,8 +49,9 @@ Document de référence pour la conformité du pilote d'Annecy. Responsable du t
 - [x] Export des données (`tests/integration/account.test.ts`, `account_flow_test.dart`).
 - [x] Suppression du compte avec anonymisation de l'historique (`tests/integration/account.test.ts`, `account_flow_test.dart`).
 - [x] Durées de conservation appliquées par les tâches de nuit (chat, traces, codes, sessions, créneaux) (`tests/integration/chat.test.ts`, `account.test.ts`).
-- [x] Mots de passe hachés (argon2), codes à usage unique et courts, limites de débit (`tests/integration/auth.test.ts`, `rate-limit.test.ts`).
-- [x] Chiffrement en transit (HTTPS par Caddy) et des sauvegardes (`deploy/backup.sh`).
+- [x] Mots de passe hachés (argon2), codes à usage unique et courts, plafond de codes par adresse, blocage d'une adresse après trop d'échecs de connexion, limites de débit par personne (`tests/integration/auth.test.ts`, `rate-limit.test.ts`).
+- [x] Moindre privilège : en production, l'API se connecte à la base sans droits sur le schéma ni superutilisateur, et ne voit pas la phrase de passe des sauvegardes (`deploy/db-init/10-app-role.sh`, `docker-compose.prod.yml`).
+- [x] Chiffrement en transit (HTTPS par Caddy, exigé par l'app publiée) et des sauvegardes (`deploy/backup.sh`) ; sur le téléphone, jetons dans le trousseau propre à l'appareil, sauvegarde Android désactivée, fichier d'export effacé après partage.
 - [ ] Politique de confidentialité publiée et liée depuis l'inscription : texte à rédiger par l'équipe à partir de ce registre.
 - [ ] Hébergeur choisi et contrat de sous-traitance (DPA) accepté ; idem pour Brevo et le prestataire de paiement.
 - [ ] Information de l'université (DPO de l'USMB) avant le lancement du pilote.
