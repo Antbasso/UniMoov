@@ -35,14 +35,18 @@ export class AccountService {
   async delete(userId: string, password: string): Promise<void> {
     const { repo, clock } = this.deps;
     await this.deps.checkPassword(userId, password);
-    if (await repo.hasRideInProgress(userId)) {
+    // Compte fermé d'abord, sous verrou : ni recharge, ni départ, ni nouveau matching ensuite.
+    const outcome = await repo.lockOut(userId, clock());
+    if (outcome === 'ride_in_progress') {
       throw new AppError(409, 'ride_in_progress', 'Termine ton trajet en cours avant de supprimer ton compte');
     }
-    const wallet = await repo.walletCents(userId);
-    if (wallet.balanceCents !== 0 || wallet.heldCents !== 0) {
+    if (outcome === 'wallet_not_empty') {
       throw new AppError(409, 'wallet_not_empty', "Ton portefeuille n'est pas vide : récupère ton solde avant de supprimer ton compte");
     }
+    if (outcome === 'gone') throw new AppError(401, 'unauthorized', 'Connexion requise');
+    this.deps.disconnect(userId);
     // Les autres sont prévenus comme pour une annulation ordinaire et on leur cherche une place.
+    // Un échec (trajet changé entre-temps) ne bloque pas : l'anonymisation ferme ce qui reste.
     for (const p of await repo.upcomingParticipations(userId, clock())) {
       const step = p.status === 'accepted' ? this.deps.cancelRide(userId, p.rideId) : this.deps.declineRide(userId, p.rideId);
       await step.catch((err: unknown) => this.deps.log({ err }, 'account deletion: ride release failed'));

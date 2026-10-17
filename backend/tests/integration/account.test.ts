@@ -35,6 +35,7 @@ const errorCode = (response: { json: <T>() => T }) => response.json<{ error: { c
 
 let rideId: string;
 let rideChatId: string;
+let reportedMessageId: string;
 
 beforeAll(async () => {
   ctx = await setupTestContext(new Date('2026-10-18T10:00:00Z'));
@@ -50,6 +51,8 @@ beforeAll(async () => {
   const chat = await call('Inès', 'GET', `/rides/${rideId}/conversation`);
   rideChatId = chat.json<{ id: string }>().id;
   expect((await call('Inès', 'POST', `/conversations/${rideChatId}/messages`, { body: 'Je serai devant la boulangerie.' })).statusCode).toBe(201);
+  const reported = await call('Inès', 'POST', `/conversations/${rideChatId}/messages`, { body: 'Message insultant.' });
+  reportedMessageId = reported.json<{ id: string }>().id;
 });
 afterAll(async () => {
   await ctx.close();
@@ -72,6 +75,7 @@ describe('GET /me/export', () => {
     expect(data.profile).toMatchObject({ universityEmail: user('Hugo').email, firstName: 'Hugo' });
     expect(data.rides).toContainEqual(expect.objectContaining({ rideId, role: 'passenger', status: 'accepted' }));
     expect(data.wallet.balanceCents).toBe(0);
+    expect(response.json<Record<string, unknown>>()).toHaveProperty('positionTrace');
     expect(response.body).not.toMatch(/password|argon2|token_hash|encrypted_credentials|push_token/i);
     // Rien des autres : ni leur nom de famille ni leur adresse.
     expect(response.body).not.toContain(user('Léa').lastName);
@@ -91,7 +95,11 @@ describe('purge de nuit (minimisation)', () => {
       ago(10),
       ago(10),
     ]);
+    // Jeton déjà échangé mais pas expiré : gardé, sa réutilisation doit encore révéler un vol.
+    await q(`INSERT INTO refresh_tokens (user_id, family_id, token_hash, expires_at, used_at)
+             VALUES ($1, gen_random_uuid(), 'deja-utilise', $2, $3)`, [user('Hugo').id, new Date(now.getTime() + 86_400_000), ago(5)]);
     const purged = await ctx.app.services!.account.purgeExpired();
+    expect((await q(`SELECT 1 FROM refresh_tokens WHERE token_hash = 'deja-utilise'`)).rows).toHaveLength(1);
     expect(purged.verificationCodes).toBe(1);
     expect(purged.scheduleSlots).toBe(1);
     const { rows } = await q(`SELECT email FROM verification_codes WHERE email LIKE '%etu.univ-smb.fr' AND code_hash = 'h'`);
@@ -118,6 +126,10 @@ describe('DELETE /me', () => {
 
   it('supprime et anonymise ; les autres sont prévenus, le trajet continue sans elle', async () => {
     const ines = user('Inès');
+    await ctx.database.pool.query(
+      `INSERT INTO reports (reporter_id, target_user_id, target_message_id, reason) VALUES ($1, $2, $3, 'inappropriate_behaviour')`,
+      [user('Hugo').id, ines.id, reportedMessageId],
+    );
     const response = await call('Inès', 'DELETE', '/me', { password: DEMO_PASSWORD });
     expect(response.statusCode).toBe(204);
 
@@ -150,11 +162,13 @@ describe('DELETE /me', () => {
     expect(rows[0]).toMatchObject({ first_name: 'Ancien membre', last_name: '', password_hash: null, home_address: null, home_location: null });
     expect(rows[0]!.university_email).not.toBe(ines.email);
     expect(rows[0]!.deleted_at).not.toBeNull();
-    for (const table of ['vehicles', 'schedule_slots', 'manual_schedule_days', 'refresh_tokens', 'conversation_members', 'messages']) {
-      const column = table === 'messages' ? 'sender_id' : 'user_id';
-      const { rows: left } = await ctx.database.pool.query(`SELECT 1 FROM ${table} WHERE ${column} = $1`, [ines.id]);
+    for (const table of ['vehicles', 'schedule_slots', 'manual_schedule_days', 'refresh_tokens', 'conversation_members']) {
+      const { rows: left } = await ctx.database.pool.query(`SELECT 1 FROM ${table} WHERE user_id = $1`, [ines.id]);
       expect(left, table).toHaveLength(0);
     }
+    // Seul le message signalé reste, comme preuve pour l'équipe.
+    const { rows: kept } = await ctx.database.pool.query(`SELECT id FROM messages WHERE sender_id = $1`, [ines.id]);
+    expect(kept).toEqual([{ id: reportedMessageId }]);
     const { rows: history } = await ctx.database.pool.query(
       `SELECT status, pickup_label FROM ride_participants WHERE ride_id = $1 AND user_id = $2`,
       [rideId, ines.id],

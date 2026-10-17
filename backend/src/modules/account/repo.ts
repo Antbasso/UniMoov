@@ -8,13 +8,29 @@ type Row = Record<string, unknown>;
 export class AccountRepo {
   constructor(private readonly db: Db) {}
 
-  /** Trajet en cours où la personne est encore à bord ou attendue. */
-  async hasRideInProgress(userId: string): Promise<boolean> {
-    const { rows } = await this.db.execute(sql`
-      SELECT 1 FROM ride_participants rp JOIN rides r ON r.id = rp.ride_id
-      WHERE rp.user_id = ${userId} AND r.status = 'in_progress' AND rp.status IN ('accepted', 'picked_up')
-      LIMIT 1`);
-    return rows.length > 0;
+  /**
+   * Premier temps de la suppression, sous verrou du portefeuille : vérifie qu'aucun trajet n'est
+   * en cours et que le solde est nul, puis ferme le compte (`deleted_at`). Dès lors, plus de
+   * connexion, de requête, de recharge ni de matching : les trajets peuvent être libérés sans
+   * que la régénération des propositions ne le reprenne.
+   */
+  async lockOut(userId: string, now: Date): Promise<'locked' | 'ride_in_progress' | 'wallet_not_empty' | 'gone'> {
+    return this.db.transaction(async (tx: Tx) => {
+      const { rows: user } = await tx.execute(sql`
+        SELECT 1 FROM users WHERE id = ${userId} AND deleted_at IS NULL FOR UPDATE`);
+      if (user.length === 0) return 'gone';
+      const { rows: wallet } = await tx.execute<{ balance_cents: number; held_cents: number }>(sql`
+        SELECT balance_cents, held_cents FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
+      const { rows: riding } = await tx.execute(sql`
+        SELECT 1 FROM ride_participants rp JOIN rides r ON r.id = rp.ride_id
+        WHERE rp.user_id = ${userId} AND r.status = 'in_progress' AND rp.status IN ('accepted', 'picked_up')
+        LIMIT 1`);
+      if (riding.length > 0) return 'ride_in_progress';
+      if ((wallet[0]?.balance_cents ?? 0) !== 0 || (wallet[0]?.held_cents ?? 0) !== 0) return 'wallet_not_empty';
+      await tx.execute(sql`UPDATE users SET deleted_at = ${now} WHERE id = ${userId}`);
+      await tx.execute(sql`DELETE FROM refresh_tokens WHERE user_id = ${userId}`);
+      return 'locked';
+    });
   }
 
   async walletCents(userId: string): Promise<{ balanceCents: number; heldCents: number }> {
@@ -106,6 +122,10 @@ export class AccountRepo {
         SELECT m.conversation_id AS "conversationId", c.kind AS "conversationKind", m.body, m.created_at AS "createdAt"
         FROM messages m JOIN conversations c ON c.id = m.conversation_id
         WHERE m.sender_id = ${userId} ORDER BY m.created_at`),
+      positionTrace: await all(sql`
+        SELECT ride_id AS "rideId", recorded_at AS "recordedAt",
+               ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lon
+        FROM position_trace WHERE user_id = ${userId} ORDER BY recorded_at`),
       devices: await all(sql`
         SELECT platform, updated_at AS "updatedAt" FROM devices WHERE user_id = ${userId}`),
       notificationPreferences: await all(sql`
@@ -122,8 +142,8 @@ export class AccountRepo {
     const count = async (query: ReturnType<typeof sql>) => (await this.db.execute(query)).rowCount ?? 0;
     return {
       verificationCodes: await count(sql`DELETE FROM verification_codes WHERE expires_at < ${day(1)}`),
-      refreshTokens: await count(sql`
-        DELETE FROM refresh_tokens WHERE expires_at < ${now} OR revoked_at < ${day(1)} OR used_at < ${day(1)}`),
+      // Jetons utilisés ou révoqués gardés jusqu'à leur expiration : leur réutilisation révèle un vol.
+      refreshTokens: await count(sql`DELETE FROM refresh_tokens WHERE expires_at < ${now}`),
       scheduleSlots: await count(sql`DELETE FROM schedule_slots WHERE end_at < ${day(7)}`),
       searchQuota: await count(sql`DELETE FROM search_quota WHERE day < ${day(7)}::date`),
       rideReminders: await count(sql`DELETE FROM ride_reminders WHERE sent_at < ${day(7)}`),
@@ -138,7 +158,7 @@ export class AccountRepo {
   async anonymize(userId: string, now: Date): Promise<void> {
     await this.db.transaction(async (tx: Tx) => {
       const { rows } = await tx.execute<{ university_email: string }>(sql`
-        SELECT university_email FROM users WHERE id = ${userId} AND deleted_at IS NULL FOR UPDATE`);
+        SELECT university_email FROM users WHERE id = ${userId} FOR UPDATE`);
       const email = rows[0]?.university_email;
       if (email === undefined) return;
       await tx.execute(sql`DELETE FROM verification_codes WHERE email = ${email}`);
@@ -159,7 +179,10 @@ export class AccountRepo {
         await tx.execute(sql`DELETE FROM ${sql.identifier(table)} WHERE user_id = ${userId}`);
       }
       await tx.execute(sql`DELETE FROM proposal_declines WHERE user_id = ${userId} OR other_user_id = ${userId}`);
-      await tx.execute(sql`DELETE FROM messages WHERE sender_id = ${userId}`);
+      // Messages signalés gardés (sans nom) comme preuve pour l'équipe ; les autres effacés.
+      await tx.execute(sql`
+        DELETE FROM messages m WHERE m.sender_id = ${userId}
+          AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.target_message_id = m.id)`);
       await tx.execute(sql`UPDATE ratings SET comment = NULL WHERE rater_id = ${userId}`);
       await tx.execute(sql`UPDATE disputes SET message = NULL WHERE opened_by = ${userId}`);
       await tx.execute(sql`UPDATE reports SET message = NULL WHERE reporter_id = ${userId}`);
@@ -175,6 +198,11 @@ export class AccountRepo {
           AND (rp.user_id = ${userId} OR r.driver_id = ${userId})`);
       await tx.execute(sql`
         UPDATE ride_participants SET pickup_label = NULL, pickup_location = NULL WHERE user_id = ${userId}`);
+      // Le tracé passe par son point de prise en charge (ou part de chez lui s'il conduisait).
+      await tx.execute(sql`
+        UPDATE rides SET route = NULL
+        WHERE id IN (SELECT ride_id FROM ride_participants WHERE user_id = ${userId})
+          AND status IN ('completed', 'cancelled')`);
       await tx.execute(sql`
         UPDATE users SET university_email = ${`supprime-${userId}@invalid`}, password_hash = NULL,
           first_name = 'Ancien membre', last_name = '', photo_url = NULL, home_address = NULL,
