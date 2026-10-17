@@ -23,6 +23,11 @@ export class AccountService {
     return { exportedAt: this.deps.clock().toISOString(), ...(await this.deps.repo.export(userId)) };
   }
 
+  /** Tâche de nuit : codes, sessions, créneaux et compteurs périmés effacés. */
+  purgeExpired(): Promise<Record<string, number>> {
+    return this.deps.repo.purgeExpired(this.deps.clock());
+  }
+
   /**
    * Suppression définitive après confirmation par le mot de passe. Refusée pendant un trajet
    * en cours ou tant que le portefeuille n'est pas vide (l'argent appartient à la personne).

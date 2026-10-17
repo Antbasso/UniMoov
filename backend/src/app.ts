@@ -74,6 +74,7 @@ declare module 'fastify' {
       trust: TrustService;
       chat: ChatService;
       notifications: NotificationService;
+      account: AccountService;
     };
   }
 }
@@ -256,7 +257,15 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       log: (data, message) => app.log.error(data, message),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust, chat, notifications });
+    app.decorate('services', {
+      calendar: calendarService,
+      matching: matchingService,
+      lifecycle,
+      trust,
+      chat,
+      notifications,
+      account: accountService,
+    });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(

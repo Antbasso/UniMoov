@@ -78,6 +78,29 @@ describe('GET /me/export', () => {
   });
 });
 
+describe('purge de nuit (minimisation)', () => {
+  it('efface codes, sessions et créneaux périmés, garde ce qui sert encore', async () => {
+    const q = (text: string, values: unknown[] = []) => ctx.database.pool.query(text, values);
+    const now = ctx.clock.now;
+    const ago = (days: number) => new Date(now.getTime() - days * 86_400_000);
+    await q(`INSERT INTO verification_codes (email, code_hash, purpose, expires_at) VALUES
+             ('ancien@etu.univ-smb.fr', 'h', 'signup', $1), ('recent@etu.univ-smb.fr', 'h', 'signup', $2)`, [ago(3), now]);
+    await q(`INSERT INTO schedule_slots (user_id, day, start_at, end_at, source) VALUES ($1, $2, $3, $4, 'manual')`, [
+      user('Hugo').id,
+      ago(10).toISOString().slice(0, 10),
+      ago(10),
+      ago(10),
+    ]);
+    const purged = await ctx.app.services!.account.purgeExpired();
+    expect(purged.verificationCodes).toBe(1);
+    expect(purged.scheduleSlots).toBe(1);
+    const { rows } = await q(`SELECT email FROM verification_codes WHERE email LIKE '%etu.univ-smb.fr' AND code_hash = 'h'`);
+    expect(rows).toEqual([{ email: 'recent@etu.univ-smb.fr' }]);
+    // Les sessions en cours restent valides.
+    expect((await call('Hugo', 'GET', '/me')).statusCode).toBe(200);
+  });
+});
+
 describe('DELETE /me', () => {
   it('mauvais mot de passe : refusé, compte intact', async () => {
     const response = await call('Inès', 'DELETE', '/me', { password: 'pas-le-bon' });

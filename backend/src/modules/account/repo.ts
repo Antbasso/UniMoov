@@ -114,6 +114,24 @@ export class AccountRepo {
   }
 
   /**
+   * Minimisation : ce qui ne sert plus est effacé (docs/rgpd.md, « Durées de conservation »).
+   * Renvoie le nombre de lignes supprimées par table.
+   */
+  async purgeExpired(now: Date): Promise<Record<string, number>> {
+    const day = (days: number) => new Date(now.getTime() - days * 86_400_000);
+    const count = async (query: ReturnType<typeof sql>) => (await this.db.execute(query)).rowCount ?? 0;
+    return {
+      verificationCodes: await count(sql`DELETE FROM verification_codes WHERE expires_at < ${day(1)}`),
+      refreshTokens: await count(sql`
+        DELETE FROM refresh_tokens WHERE expires_at < ${now} OR revoked_at < ${day(1)} OR used_at < ${day(1)}`),
+      scheduleSlots: await count(sql`DELETE FROM schedule_slots WHERE end_at < ${day(7)}`),
+      searchQuota: await count(sql`DELETE FROM search_quota WHERE day < ${day(7)}::date`),
+      rideReminders: await count(sql`DELETE FROM ride_reminders WHERE sent_at < ${day(7)}`),
+      proposalDeclines: await count(sql`DELETE FROM proposal_declines WHERE day < ${day(7)}::date`),
+    };
+  }
+
+  /**
    * Suppression : les données personnelles sont effacées ; les trajets, paiements, notes et
    * écritures comptables restent, rattachés à un compte anonyme (comptabilité, litiges).
    */

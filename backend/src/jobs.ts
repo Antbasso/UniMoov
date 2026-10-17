@@ -6,6 +6,7 @@ import type { RideLifecycle } from './modules/rides/lifecycle.js';
 import type { TrustService } from './modules/trust/service.js';
 import type { ChatService } from './modules/chat/service.js';
 import type { NotificationService } from './modules/notifications/service.js';
+import type { AccountService } from './modules/account/service.js';
 import { addDaysIso, isoWeekOf, parisDateOf, weekDays } from './shared/time.js';
 
 /**
@@ -13,11 +14,12 @@ import { addDaysIso, isoWeekOf, parisDateOf, weekDays } from './shared/time.js';
  * - chaque nuit, resynchronisation des agendas ICS ;
  * - chaque vendredi soir, semaines types prolongées puis propositions de la semaine suivante ;
  * - chaque heure, trajets oubliés « en cours » clôturés ;
- * - chaque nuit, traces de position plus anciennes que `tracking.traceRetentionDays` supprimées.
+ * - chaque nuit, traces de position plus anciennes que `tracking.traceRetentionDays` supprimées ;
+ * - chaque nuit, codes, sessions, créneaux et compteurs périmés effacés (docs/rgpd.md).
  */
 export async function startJobs(
   databaseUrl: string,
-  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService; chat: ChatService; notifications: NotificationService },
+  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService; chat: ChatService; notifications: NotificationService; account: AccountService },
   log: FastifyBaseLogger,
   clock: () => Date = () => new Date(),
 ): Promise<() => Promise<void>> {
@@ -32,11 +34,13 @@ export async function startJobs(
   await boss.createQueue('reliability-refresh');
   await boss.createQueue('chat-retention');
   await boss.createQueue('ride-reminders');
+  await boss.createQueue('data-purge');
   await boss.schedule('chat-retention', '45 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('ride-reminders', '*/5 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('reliability-refresh', '15 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('stale-rides', '0 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('trace-purge', '30 4 * * *', null, { tz: 'Europe/Paris' });
+  await boss.schedule('data-purge', '50 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('calendar-sync', '0 5 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('weekly-matching', '0 18 * * 5', null, { tz: 'Europe/Paris' });
 
@@ -71,6 +75,10 @@ export async function startJobs(
   await boss.work('trace-purge', async () => {
     const deleted = await services.lifecycle.purgeTraces();
     log.info({ deleted }, 'position traces purged');
+  });
+
+  await boss.work('data-purge', async () => {
+    log.info(await services.account.purgeExpired(), 'expired data purged');
   });
 
   return () => boss.stop();
