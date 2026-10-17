@@ -12,6 +12,9 @@ import {
 } from 'fastify-type-provider-zod';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
+import { AccountRepo } from './modules/account/repo.js';
+import { accountRoutes } from './modules/account/routes.js';
+import { AccountService } from './modules/account/service.js';
 import { AuthRepo } from './modules/auth/repo.js';
 import { CalendarRepo } from './modules/calendar/repo.js';
 import { calendarRoutes } from './modules/calendar/routes.js';
@@ -242,6 +245,15 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
+    const accountService = new AccountService({
+      repo: new AccountRepo(modules.db),
+      checkPassword: (userId, password) => authService.checkPassword(userId, password),
+      cancelRide: (userId, rideId) => matchingService.cancel(userId, rideId),
+      declineRide: (userId, rideId) => matchingService.decline(userId, rideId),
+      disconnect: (userId) => userHub.disconnect(userId),
+      clock,
+      log: (data, message) => app.log.error(data, message),
+    });
     app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust, chat, notifications });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
@@ -249,6 +261,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       async (api) => {
         await api.register(authRoutes, { service: authService });
         await api.register(profileRoutes, { service: profileService });
+        await api.register(accountRoutes, { service: accountService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
         await api.register(ridesRoutes, { service: ridesService, lifecycle });

@@ -119,6 +119,16 @@ export class AuthService {
     return this.issueTokens(user.id, randomUUID());
   }
 
+  /** Confirmation d'une action sensible (suppression du compte) par le mot de passe. */
+  async checkPassword(userId: string, password: string): Promise<void> {
+    const passwordHash = await this.deps.repo.passwordHash(userId);
+    if (!passwordHash) {
+      await verify(await this.getDummyHash(), password);
+      throw new AppError(401, 'invalid_password', 'Mot de passe incorrect');
+    }
+    if (!(await verify(passwordHash, password))) throw new AppError(401, 'invalid_password', 'Mot de passe incorrect');
+  }
+
   /** Rotation : chaque jeton ne sert qu'une fois ; une réutilisation révoque toute la famille. */
   async refresh(refreshToken: string): Promise<TokensResponse> {
     const { repo, clock } = this.deps;

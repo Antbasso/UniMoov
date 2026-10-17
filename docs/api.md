@@ -13,7 +13,9 @@ Base : `/api/v1`, JSON, UTF-8. Authentification `Authorization: Bearer <jwt>` sa
 
 ## Profil
 - `GET /me` : profil privé (`home` avec adresse, coordonnées et secteur, `vehicle`, `roleMode`, `onboarding: { steps, nextStep, completed }`, `discoveryMode` tant que l'adresse ou le campus manque, `pausedToday`).
-- `PATCH /me` `{ firstName?, lastName? }` ; le mail n'est pas modifiable. `DELETE /me` (suppression) et `GET /me/export` (export RGPD) : M7.
+- `PATCH /me` `{ firstName?, lastName? }` ; le mail n'est pas modifiable.
+- `GET /me/export` → `200` JSON en pièce jointe (`uni-moov-mes-donnees.json`) : profil, véhicule, pauses, agenda (fournisseur et dates, jamais le lien), semaine type et créneaux, trajets, portefeuille (solde, écritures, recharges, retraits), paiements, notes données et reçues (sans l'identité de qui note), événements de fiabilité, litiges, signalements, messages envoyés, appareils (plateforme, sans le jeton), préférences de notification. Aucun mot de passe, jeton ni donnée d'une autre personne. 5 par heure.
+- `DELETE /me` `{ password }` → `204` : suppression définitive (docs/rgpd.md). `401 invalid_password`, `409 ride_in_progress` pendant un trajet en cours, `409 wallet_not_empty` tant que le solde n'est pas nul. Les trajets à venir sont libérés comme une annulation (les autres sont prévenus et relancés) ; nom, mail, adresse, véhicule, agenda, appareils, sessions et messages sont effacés ; trajets passés, paiements, notes et registre restent rattachés à un « Ancien membre » anonyme. Sessions et sockets fermés aussitôt ; l'adresse universitaire peut servir à une nouvelle inscription. 5 par 15 min.
 - `PUT /me/address` `{ address }` : géocode côté serveur, calcule `home_sector` ; `422 address_not_found`, `503 geocoding_unavailable`.
 - `PUT /me/vehicle` `{ consumptionLPer100km, defaultSeats, maxDetourMinutes }` (un seul véhicule), `DELETE /me/vehicle` (repasse en `always_passenger`).
 - `PATCH /me/preferences` `{ roleMode?, defaultNavApp? }` : `auto` et `always_driver` exigent un véhicule (`409 vehicle_required`). Détour max : dans le véhicule ; notifications : M6.

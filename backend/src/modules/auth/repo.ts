@@ -115,6 +115,14 @@ export class AuthRepo {
       .where(and(eq(refreshTokens.familyId, familyId), isNull(refreshTokens.revokedAt)));
   }
 
+  async passwordHash(id: string): Promise<string | null> {
+    const [user] = await this.db
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
+    return user?.passwordHash ?? null;
+  }
+
   async isActiveUser(id: string, db: DbOrTx = this.db): Promise<boolean> {
     const [user] = await db
       .select({ id: users.id })
