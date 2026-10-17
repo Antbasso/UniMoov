@@ -152,7 +152,7 @@ describe('trajet mené à bien et absences (cahier §7, §9)', () => {
   it('lundi matin : Inès présente, trajet clôturé, chacun gagne un trajet mené à bien', async () => {
     ctx.clock.now = new Date('2026-10-19T05:30:00Z');
     expect((await call('Léa', 'POST', `/rides/${monTo}/start`)).statusCode).toBe(204);
-    expect(await ctx.app.services!.lifecycle.validatePresence(monTo, user('Inès').id)).toBe('paid');
+    expect(await ctx.app.services!.lifecycle.validatePresence(monTo, user('Inès').id)).toBe('validated');
     expect((await call('Léa', 'POST', `/rides/${monTo}/finish`)).statusCode).toBe(204);
     expect((await reliability('Léa')).completedRides).toBe(1);
     expect((await reliability('Inès')).completedRides).toBe(1);
@@ -182,11 +182,10 @@ describe('trajet mené à bien et absences (cahier §7, §9)', () => {
     ctx.clock.now = new Date('2026-10-19T15:00:00Z');
     expect((await call('Léa', 'POST', `/rides/${monFrom}/start`)).statusCode).toBe(204);
     expect((await call('Léa', 'POST', `/rides/${monFrom}/participants/${user('Hugo').id}/picked-up`)).statusCode).toBe(204);
-    expect(await ctx.app.services!.lifecycle.validatePresence(monFrom, user('Inès').id)).toBe('paid');
+    expect(await ctx.app.services!.lifecycle.validatePresence(monFrom, user('Inès').id)).toBe('validated');
     const hugoBefore = (await reliability('Hugo')).score;
     // Clôture par la conductrice, une fois passées les heures de prise en charge.
     ctx.clock.now = new Date('2026-10-19T17:00:00Z');
-    expect((await call('Inès', 'POST', `/rides/${monFrom}/finish`)).statusCode).toBe(403);
     expect((await call('Léa', 'POST', `/rides/${monFrom}/finish`)).statusCode).toBe(204);
 
     const hugo = await reliability('Hugo');

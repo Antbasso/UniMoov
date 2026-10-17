@@ -143,7 +143,8 @@ export class TrackingService {
       if (me && !me.pickedUp) this.hub.send(rideId, message, (u) => u === live.driverId);
     }
     await this.checkPresence(live, userId, now);
-    if (userId === live.driverId) await this.checkArrival(live, { lat, lon });
+    await this.checkPassengerArrival(live, userId, { lat, lon }, trusted);
+    if (userId === live.driverId && trusted) await this.checkArrival(live, { lat, lon });
   }
 
   private async sendEtas(live: LiveRide, driver: { lat: number; lon: number }, at: Date): Promise<void> {
@@ -194,12 +195,27 @@ export class TrackingService {
     await this.lifecycle.validatePresence(live.rideId, p.userId);
   }
 
-  /** Arrivée détectée : clôture automatique (cahier §9). */
+  /**
+   * Passager présent arrivé à sa destination (campus à l'aller, point de dépose au retour) :
+   * vu par son propre téléphone, ou par la position vraisemblable du conducteur qui l'y dépose.
+   */
+  private async checkPassengerArrival(live: LiveRide, sender: string, at: { lat: number; lon: number }, trusted: boolean): Promise<void> {
+    const radius = await this.settings.get('tracking.arrivalRadiusMeters');
+    const byDriver = sender === live.driverId && trusted;
+    for (const p of live.passengers.filter((x) => x.validated && !x.ended && (byDriver || x.userId === sender))) {
+      if (distanceMeters(at, p.destination) > radius) continue;
+      p.arrived = true;
+      p.ended = true;
+      await this.lifecycle.arrive(live.rideId, p.userId);
+    }
+  }
+
+  /** Conducteur arrivé à la destination finale : clôture automatique (cahier §9). */
   private async checkArrival(live: LiveRide, driver: { lat: number; lon: number }): Promise<void> {
     const radius = await this.settings.get('tracking.arrivalRadiusMeters');
     if (distanceMeters(driver, live.destination) > radius) return;
     // Pas de clôture tant qu'un passager attend encore d'être pris.
-    if (live.passengers.some((p) => !p.pickedUp && !p.validated)) return;
-    await this.lifecycle.finish(live.rideId, null);
+    if (live.passengers.some((p) => !p.pickedUp && !p.validated && !p.ended)) return;
+    await this.lifecycle.driverArrived(live.rideId);
   }
 }

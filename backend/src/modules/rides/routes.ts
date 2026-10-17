@@ -56,7 +56,7 @@ export const ridesRoutes: FastifyPluginAsyncZod<{ service: RidesService; lifecyc
 
   // Présence demandée par le passager : comparaison des dernières positions des deux téléphones.
   app.post('/rides/:id/presence', { schema: { params: rideParams, response: { 200: presenceResponse } } }, async (request) => ({
-    payment: await lifecycle.requestPresence(request.userId, request.params.id),
+    status: await lifecycle.requestPresence(request.userId, request.params.id),
   }));
 
   app.post('/rides/:id/finish', noContent, async (request, reply) => {

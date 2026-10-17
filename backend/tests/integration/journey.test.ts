@@ -80,6 +80,11 @@ describe('parcours complet', () => {
     ids.ride = monday!.id;
     expect(list.body).not.toMatch(/Durand|Rue de la Paix/);
 
+    // Solde à zéro : pas de trajet ; une recharge, et c'est bon.
+    const broke = await call(yanis, 'POST', `/proposals/${ids.ride}/accept`);
+    expect(broke.statusCode).toBe(402);
+    expect(broke.json<{ error: { code: string } }>().error.code).toBe('insufficient_funds');
+    expect((await call(yanis, 'POST', '/wallet/topups', { amountCents: 1000 }, { 'idempotency-key': 'yanis-recharge-01' })).statusCode).toBe(201);
     expect((await call(yanis, 'POST', `/proposals/${ids.ride}/accept`)).statusCode).toBe(200);
     const accepted = await call(camille, 'POST', `/proposals/${ids.ride}/accept`);
     expect(accepted.json<{ rideStatus: string }>().rideStatus).toBe('confirmed');
@@ -87,8 +92,7 @@ describe('parcours complet', () => {
     expect((await call(yanis, 'GET', `/rides/${ids.ride}/conversation`)).statusCode).toBe(200);
   });
 
-  it('trajet : départ, présence validée par la proximité, paiement depuis le portefeuille', async () => {
-    expect((await call(yanis, 'POST', '/wallet/topups', { amountCents: 1000 }, { 'idempotency-key': 'yanis-recharge-01' })).statusCode).toBe(201);
+  it('trajet : départ, présence validée par la proximité, paiement à l’arrivée au campus', async () => {
     ctx.clock.now = new Date('2026-10-19T05:30:00Z');
     expect((await call(camille, 'POST', `/rides/${ids.ride}/start`)).statusCode).toBe(204);
 
@@ -107,12 +111,15 @@ describe('parcours complet', () => {
     await sendPosition(passenger, home);
     expect(await waitFor(() => passenger.messages.find((m) => m.type === 'presence_validated'))).toMatchObject({
       userId: ids.yanis,
-      payment: 'paid',
     });
+    // Présent, mais rien n'est encore payé : le prix final se calcule à l'arrivée.
+    expect((await call(yanis, 'GET', '/wallet')).json<{ heldCents: number }>().heldCents).toBeGreaterThan(0);
     expect((await call(camille, 'POST', `/rides/${ids.ride}/participants/${ids.yanis}/picked-up`)).statusCode).toBe(204);
 
-    // Clôture : le suivi s'arrête pour les deux.
-    expect((await call(camille, 'POST', `/rides/${ids.ride}/finish`)).statusCode).toBe(204);
+    // Arrivée au campus : passager arrivé, trajet clos pour tous, suivi arrêté.
+    const campus = { lat: 45.9195, lon: 6.158 };
+    ctx.clock.advance(12 * 60_000);
+    await sendPosition(driver, campus);
     expect(await driver.closed).toBe(4410);
     expect(await passenger.closed).toBe(4410);
 

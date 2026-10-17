@@ -249,6 +249,12 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       },
       trust,
       notifier,
+      async (userId, rideId, detourS) => {
+        const max = await ridesService.maxPassengerPrice(rideId, userId, detourS);
+        if (max !== null && (await wallet.wallet(userId)).balanceCents < max) {
+          throw new AppError(402, 'insufficient_funds', 'Solde insuffisant pour ce trajet : recharge ton portefeuille');
+        }
+      },
     );
     const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
       await matchingService.onProfileChanged(userId);
@@ -291,7 +297,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
         await api.register(ridesRoutes, { service: ridesService, lifecycle });
-        await api.register(walletRoutes, { service: wallet });
+        await api.register(walletRoutes, { service: wallet, clock });
         await api.register(trustRoutes, { service: trust });
         await api.register(chatRoutes, { service: chat });
         await api.register(notificationRoutes, { service: notifications });

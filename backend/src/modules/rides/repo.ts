@@ -40,6 +40,11 @@ export interface Member {
   stopOrder: number | null;
   eta: Date | null;
   presenceValidatedAt: Date | null;
+  /** Arrivé à destination (passager) : son trajet est payé à la clôture. */
+  arrivedAt: Date | null;
+  /** Trajet terminé de son côté (arrivé, ou sorti avant l'arrivée). */
+  endedAt: Date | null;
+  detourS: number | null;
 }
 
 export const isAccepted = (m: Member) => m.status === 'accepted' || m.status === 'picked_up';
@@ -124,12 +129,15 @@ export class RidesRepo {
       stop_order: number | null;
       eta: Date | null;
       presence_validated_at: Date | null;
+      arrived_at: Date | null;
+      ended_at: Date | null;
+      detour_s: number | null;
     }>(sql`
       SELECT p.user_id, p.role, p.status, u.first_name, u.last_name, u.photo_url,
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at
+             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -148,6 +156,9 @@ export class RidesRepo {
       stopOrder: r.stop_order,
       eta: r.eta ? new Date(r.eta) : null,
       presenceValidatedAt: r.presence_validated_at ? new Date(r.presence_validated_at) : null,
+      arrivedAt: r.arrived_at ? new Date(r.arrived_at) : null,
+      endedAt: r.ended_at ? new Date(r.ended_at) : null,
+      detourS: r.detour_s,
     }));
   }
 
@@ -241,6 +252,8 @@ export class RidesRepo {
       presenceValidatedAt?: Date;
       amountCents?: number;
       cancelledAt?: Date;
+      arrivedAt?: Date;
+      endedAt?: Date;
     },
     tx: Tx,
   ): Promise<void> {

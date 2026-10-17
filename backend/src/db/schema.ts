@@ -204,6 +204,8 @@ export const rideParticipants = pgTable(
     amountCents: integer('amount_cents'),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     pickedUpAt: timestamp('picked_up_at', { withTimezone: true }),
+    arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.rideId, t.userId] })],
 );

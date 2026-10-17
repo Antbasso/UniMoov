@@ -130,6 +130,32 @@ export class RidesService {
     });
   }
 
+  /**
+   * Prix maximal pour un passager (cahier §5, décision du 17/10/2026) : ce qu'il paierait s'il
+   * était le seul passager présent. Son solde doit le couvrir pour accepter, et il est retenu au
+   * départ ; le prix final, partagé entre les présents, ne le dépasse jamais. Avant le calcul de
+   * l'itinéraire, distance estimée (ligne droite × facteur routier, plus son détour).
+   */
+  async maxPassengerPrice(rideId: string, passengerId: string, detourOverrideS?: number | null): Promise<number | null> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride || ride.consumptionLPer100km === null) return null;
+    const members = await this.repo.members(rideId);
+    const driver = members.find((m) => m.role === 'driver');
+    const me = members.find((m) => m.userId === passengerId);
+    let distanceM = ride.distanceM;
+    if (distanceM === null) {
+      if (!driver?.home) return null;
+      distanceM = distanceMeters(driver.home, ride.campus) * (await this.settings.get('matching.roadFactor'));
+    }
+    // Pas encore dans l'itinéraire calculé : son détour s'ajoute.
+    if (detourOverrideS !== undefined || !me || me.stopOrder === null || ride.distanceM === null) {
+      const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
+      distanceM += (detourOverrideS ?? me?.detourS ?? 0) * speed;
+    }
+    const estimate = await this.estimate(ride, Math.round(distanceM), 2);
+    return estimate?.passengerPaysCents ?? null;
+  }
+
   /** Participant accepté d'un trajet confirmé, sinon 403 (ou 404 si le trajet n'existe pas). */
   private async access(userId: string, rideId: string): Promise<{ ride: RideInfo; members: Member[]; me: Member }> {
     const ride = await this.repo.ride(rideId);

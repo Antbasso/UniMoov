@@ -19,3 +19,12 @@ INSERT INTO app_settings (key, value) VALUES
   ('auth.loginDailyMaxFailures', '100'),
   ('auth.signupCodesPerDay', '10')
 ON CONFLICT (key) DO NOTHING;
+
+-- Paiement à l'arrivée (décision de l'équipe du 17/10/2026) : chaque passager termine son
+-- trajet (arrivé à destination, ou sorti avant) ; le prix final est calculé à la clôture.
+ALTER TABLE ride_participants
+  ADD COLUMN arrived_at timestamptz,
+  ADD COLUMN ended_at timestamptz;
+
+-- Retrait vers un IBAN : seul le prestataire garde l'IBAN ; ici, les 4 derniers caractères.
+ALTER TABLE payouts ADD COLUMN iban_last4 text;

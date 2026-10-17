@@ -117,6 +117,12 @@ export class MatchingService {
     private readonly onRideChanged: (rideId: string) => Promise<void> = () => Promise.resolve(),
     private readonly policy?: CancellationPolicy,
     private readonly notifier: Notifier = silentNotifier,
+    /**
+     * Solde du passager suffisant pour le prix maximal du trajet (`402 insufficient_funds`
+     * sinon) : pas de trajet avec un solde nul ou trop faible (décision du 17/10/2026).
+     */
+    private readonly requireFunds: (userId: string, rideId: string, detourS: number | null) => Promise<void> = () =>
+      Promise.resolve(),
   ) {}
 
   private today(): string {
@@ -273,6 +279,8 @@ export class MatchingService {
   async accept(userId: string, rideId: string): Promise<ProposalView> {
     // Toujours le verrou du jour avant celui du trajet (même ordre que la régénération).
     const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const mine = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
+    if (mine?.role === 'passenger' && mine.status === 'proposed') await this.requireFunds(userId, rideId, null);
     const result = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
       const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
@@ -289,6 +297,7 @@ export class MatchingService {
         const joinable = await this.joinable(userId, ride.day, ride.direction, null, tx, undefined, ride.targetTime);
         const match = joinable.find((j) => j.rideId === rideId);
         if (!match) throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+        await this.requireFunds(userId, rideId, match.driver.detourMinutes * 60);
         for (const other of await this.repo.otherActiveRides(userId, ride.day, ride.direction, rideId, tx)) {
           const otherParts = await this.repo.participants([other.ride_id], tx);
           const mine = otherParts.find((p) => p.userId === userId)!;

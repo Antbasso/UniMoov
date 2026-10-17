@@ -21,6 +21,8 @@ const settingSchemas = {
   'rides.startWindowMinutes': z.number().int().min(0).max(24 * 60),
   'rides.staleAfterHours': z.number().int().min(1).max(72),
   'wallet.minTopupCents': z.number().int().min(1).max(100_000),
+  'wallet.minPayoutCents': z.number().int().min(1).max(100_000),
+  'wallet.payoutMinIntervalDays': z.number().int().min(0).max(90),
   'wallet.holdMarginPercent': z.number().min(0).max(100),
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
   'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),

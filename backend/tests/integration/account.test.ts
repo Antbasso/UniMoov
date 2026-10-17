@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { runSeed } from '../../src/db/seed.js';
+import { runSeed, SEED_PASSENGER_BALANCE_CENTS } from '../../src/db/seed.js';
 import { DEMO_PASSWORD, seedUsers } from '../../src/db/seed-data.js';
 import { bearer, setupTestContext, type TestContext, type Tokens } from './helpers.js';
 
@@ -74,7 +74,7 @@ describe('GET /me/export', () => {
     }>();
     expect(data.profile).toMatchObject({ universityEmail: user('Hugo').email, firstName: 'Hugo' });
     expect(data.rides).toContainEqual(expect.objectContaining({ rideId, role: 'passenger', status: 'accepted' }));
-    expect(data.wallet.balanceCents).toBe(0);
+    expect(data.wallet.balanceCents).toBe(SEED_PASSENGER_BALANCE_CENTS);
     expect(response.json<Record<string, unknown>>()).toHaveProperty('positionTrace');
     expect(response.body).not.toMatch(/password|argon2|token_hash|encrypted_credentials|push_token/i);
     // Rien des autres : ni leur nom de famille ni leur adresse.
@@ -122,6 +122,32 @@ describe('DELETE /me', () => {
     const response = await call('Hugo', 'DELETE', '/me', { password: DEMO_PASSWORD });
     expect(response.statusCode).toBe(409);
     expect(errorCode(response)).toBe('wallet_not_empty');
+  });
+
+  it('retrait du solde vers un IBAN : contrôlé, une fois par semaine, IBAN jamais gardé', async () => {
+    const payout = (payload: object, key: string) =>
+      call('Inès', 'POST', '/wallet/payouts', payload, { 'idempotency-key': key });
+    const iban = 'FR76 3000 6000 0112 3456 7890 189';
+    const holderName = 'Inès Robert';
+    expect((await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban: 'FR76 3000 6000 0112 3456 7890 188', holderName }, 'retrait-ines-1')).json<{ error: { code: string } }>().error.code).toBe('iban_invalid');
+    expect((await payout({ amountCents: 500, iban, holderName }, 'retrait-ines-2')).json<{ error: { code: string } }>().error.code).toBe('payout_too_small');
+    expect((await payout({ amountCents: 999_999, iban, holderName }, 'retrait-ines-3')).json<{ error: { code: string } }>().error.code).toBe('insufficient_funds');
+
+    const done = await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4');
+    expect(done.statusCode).toBe(201);
+    expect(done.json<{ balanceCents: number }>().balanceCents).toBe(0);
+    // Rejouée avec la même clé : un seul virement.
+    expect((await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4')).statusCode).toBe(201);
+    const { rows } = await ctx.database.pool.query<Record<string, unknown>>(`SELECT * FROM payouts WHERE user_id = $1`, [user('Inès').id]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ amount_cents: SEED_PASSENGER_BALANCE_CENTS, iban_last4: '0189' });
+    expect(JSON.stringify(rows)).not.toContain('30006000');
+    // Un seul retrait par semaine.
+    await ctx.app.inject({ method: 'POST', url: '/api/v1/wallet/topups', headers: { ...bearer(await login('Inès')), 'idempotency-key': 'recharge-ines-rgpd' }, payload: { amountCents: 1000 } });
+    expect((await payout({ amountCents: 1000, iban, holderName }, 'retrait-ines-5')).json<{ error: { code: string } }>().error.code).toBe('payout_too_soon');
+    ctx.clock.advance(7 * 86_400_000);
+    expect((await payout({ amountCents: 1000, iban, holderName }, 'retrait-ines-6')).statusCode).toBe(201);
+    ctx.clock.advance(-7 * 86_400_000);
   });
 
   it('supprime et anonymise ; les autres sont prévenus, le trajet continue sans elle', async () => {
