@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:unimoov/features/account/data/account_api.dart';
 import 'package:unimoov/features/chat/data/chat_api.dart';
 import 'package:unimoov/features/chat/domain/chat.dart';
 import 'package:unimoov/features/notifications/data/notifications_api.dart';
@@ -32,7 +36,8 @@ class FakeBackend
         WalletApi,
         TrustApi,
         ChatApi,
-        NotificationsApi {
+        NotificationsApi,
+        AccountApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -791,6 +796,38 @@ class FakeBackend
   Future<NotificationPreferences> setPreferences(NotificationPreferences prefs) async {
     _maybeFail();
     return preferencesState = prefs;
+  }
+
+  // --- Compte (RGPD) ---
+
+  final List<String> deletedAccounts = [];
+
+  /// Refus du serveur à la suppression (portefeuille non vide, trajet en cours).
+  String? deleteRefusal;
+
+  @override
+  Future<Uint8List> exportData() async {
+    _maybeFail();
+    final me = _me;
+    return Uint8List.fromList(
+      utf8.encode(
+        jsonEncode({
+          'profile': {'universityEmail': me.email, 'firstName': me.firstName},
+        }),
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    _maybeFail();
+    final me = _me;
+    if (password != me.password) throw const ApiException('invalid_password', '', statusCode: 401);
+    final refusal = deleteRefusal;
+    if (refusal != null) throw ApiException(refusal, '', statusCode: 409);
+    _accounts.remove(me.email);
+    deletedAccounts.add(me.email);
+    devices.clear();
   }
 
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).

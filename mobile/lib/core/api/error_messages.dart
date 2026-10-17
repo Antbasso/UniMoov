@@ -54,5 +54,8 @@ String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'not_a_contact' => l10n.errorNotAContact,
   'conversation_archived' => l10n.errorConversationArchived,
   'group_too_large' => l10n.errorGroupTooLarge,
+  'invalid_password' => l10n.errorInvalidPassword,
+  'wallet_not_empty' => l10n.errorWalletNotEmpty,
+  'ride_in_progress' => l10n.errorRideInProgress,
   _ => l10n.errorGeneric,
 };

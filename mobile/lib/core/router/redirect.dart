@@ -29,6 +29,7 @@ abstract final class AppRoutes {
   static const wallet = '/wallet';
   static const reliability = '/profile/reliability';
   static const notificationSettings = '/profile/notifications';
+  static const deleteAccount = '/profile/delete';
   static const messages = '/messages';
   static String conversation(String id) => '/messages/$id';
 

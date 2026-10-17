@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../firebase_options.dart';
 
@@ -23,6 +24,12 @@ abstract interface class PushService {
 
   /// Notification qui a lancé l'application, s'il y en a une.
   Future<Map<String, String>?> initialOpened();
+
+  /// Notifications refusées dans les réglages du téléphone (sans redemander).
+  Future<bool> isBlocked();
+
+  /// Réglages de l'application dans le système, pour réactiver les notifications.
+  Future<void> openSettings();
 }
 
 /// Rien n'est envoyé ni reçu : Firebase non configuré.
@@ -39,6 +46,10 @@ class DisabledPushService implements PushService {
   Stream<Map<String, String>> get opened => const Stream.empty();
   @override
   Future<Map<String, String>?> initialOpened() async => null;
+  @override
+  Future<bool> isBlocked() async => false;
+  @override
+  Future<void> openSettings() async {}
 }
 
 class FirebasePushService implements PushService {
@@ -106,6 +117,20 @@ class FirebasePushService implements PushService {
     final message = await messaging?.getInitialMessage();
     return message == null ? null : _data(message);
   }
+
+  @override
+  Future<bool> isBlocked() async {
+    try {
+      final settings = await (await _messaging())?.getNotificationSettings();
+      return settings?.authorizationStatus == AuthorizationStatus.denied;
+    } on Object {
+      return false;
+    }
+  }
+
+  // Page de l'application dans les réglages du système (le plugin de position la fournit déjà).
+  @override
+  Future<void> openSettings() => Geolocator.openAppSettings();
 }
 
 final pushServiceProvider = Provider<PushService>((ref) {

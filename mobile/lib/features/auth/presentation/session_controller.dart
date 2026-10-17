@@ -42,6 +42,13 @@ class SessionController extends AsyncNotifier<SessionStatus> {
     }
   }
 
+  /// Compte supprimé : le serveur a déjà retiré sessions et appareils ; seul le local reste.
+  Future<void> accountDeleted() async {
+    ref.read(deviceTokenStoreProvider).token = null;
+    await _storage.clear();
+    state = const AsyncData(SessionStatus.signedOut);
+  }
+
   /// Session perdue (refresh refusé) : retour à l'accueil.
   void expire() => state = const AsyncData(SessionStatus.signedOut);
 }

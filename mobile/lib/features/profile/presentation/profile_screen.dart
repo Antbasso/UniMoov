@@ -8,6 +8,7 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../account/presentation/account_controller.dart';
 import '../../auth/presentation/session_controller.dart';
 import '../domain/me.dart';
 import '../domain/vehicle_input.dart';
@@ -89,6 +90,8 @@ class ProfileScreen extends ConsumerWidget {
           onEdit: () => context.push(AppRoutes.reliability),
         ),
         const _PausesSection(),
+        const SizedBox(height: UmSpace.s4),
+        const _DataSection(),
       ],
     );
   }
@@ -210,5 +213,63 @@ class _PausesSection extends ConsumerWidget {
         SnackBar(content: Text(apiErrorMessage(AppLocalizations.of(context), error.code))),
       );
     }
+  }
+}
+
+/// Droits RGPD : récupérer ses données, supprimer son compte (docs/rgpd.md).
+class _DataSection extends ConsumerStatefulWidget {
+  const _DataSection();
+
+  @override
+  ConsumerState<_DataSection> createState() => _DataSectionState();
+}
+
+class _DataSectionState extends ConsumerState<_DataSection> {
+  bool _exporting = false;
+
+  Future<void> _export(BuildContext buttonContext) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _exporting = true);
+    try {
+      await ref
+          .read(accountActionsProvider)
+          .exportData(subject: l10n.exportSubject, origin: origin);
+    } on ApiException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(l10n, error.code))));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return UmCard(
+      title: l10n.profileData,
+      body: l10n.profileDataBody,
+      child: Wrap(
+        spacing: UmSpace.s3,
+        runSpacing: UmSpace.s3,
+        children: [
+          Builder(
+            builder: (buttonContext) => UmButton(
+              label: l10n.exportAction,
+              icon: Icons.download_rounded,
+              variant: UmButtonVariant.secondary,
+              loading: _exporting,
+              onPressed: () => _export(buttonContext),
+            ),
+          ),
+          UmButton(
+            label: l10n.deleteAccountAction,
+            variant: UmButtonVariant.ghost,
+            onPressed: () => context.push(AppRoutes.deleteAccount),
+          ),
+        ],
+      ),
+    );
   }
 }

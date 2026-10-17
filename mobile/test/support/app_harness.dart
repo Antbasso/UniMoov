@@ -5,6 +5,8 @@ import 'package:unimoov/app.dart';
 import 'package:unimoov/core/clock.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/core/widgets/widgets.dart';
+import 'package:unimoov/features/account/data/account_api.dart';
+import 'package:unimoov/features/account/data/export_sharer.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/profile/data/profile_api.dart';
 import 'package:unimoov/features/proposals/data/proposals_api.dart';
@@ -37,6 +39,7 @@ Future<void> launchApp(
   FakeLocationService? location,
   FakeNavLauncher? launcher,
   PushService? push,
+  ExportSharer? sharer,
 }) async {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -57,6 +60,8 @@ Future<void> launchApp(
         trustApiProvider.overrideWithValue(backend),
         chatApiProvider.overrideWithValue(backend),
         notificationsApiProvider.overrideWithValue(backend),
+        accountApiProvider.overrideWithValue(backend),
+        exportSharerProvider.overrideWithValue(sharer ?? FakeExportSharer()),
         userSocketConnectorProvider.overrideWithValue(backend.socket),
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),

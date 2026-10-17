@@ -61,8 +61,7 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,8 +69,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -2835,10 +2833,129 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Rester'**
   String get chatLeaveCancel;
+
+  /// No description provided for @notificationsBlockedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications bloquées'**
+  String get notificationsBlockedTitle;
+
+  /// No description provided for @notificationsBlockedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton téléphone bloque les notifications d\'Uni-Moov : ni rappel avant le trajet ni alerte de message. Active-les dans les réglages du téléphone.'**
+  String get notificationsBlockedBody;
+
+  /// No description provided for @profileData.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes données'**
+  String get profileData;
+
+  /// No description provided for @profileDataBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupère tout ce qu\'Uni-Moov garde sur toi, ou supprime ton compte.'**
+  String get profileDataBody;
+
+  /// No description provided for @exportAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger mes données'**
+  String get exportAction;
+
+  /// No description provided for @exportSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes données Uni-Moov'**
+  String get exportSubject;
+
+  /// No description provided for @deleteAccountAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer mon compte'**
+  String get deleteAccountAction;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ton compte'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est définitif : ton compte ne pourra pas être récupéré.'**
+  String get deleteAccountIntro;
+
+  /// No description provided for @deleteAccountErased.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacés : ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.'**
+  String get deleteAccountErased;
+
+  /// No description provided for @deleteAccountKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardés sans ton nom : les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.'**
+  String get deleteAccountKept;
+
+  /// No description provided for @deleteAccountRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes trajets à venir sont annulés et les autres sont prévenus.'**
+  String get deleteAccountRides;
+
+  /// No description provided for @deleteAccountWallet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton portefeuille doit être vide. S\'il reste de l\'argent, écris à unimoov.support@gmail.com pour le récupérer avant.'**
+  String get deleteAccountWallet;
+
+  /// No description provided for @deleteAccountPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton mot de passe, pour confirmer'**
+  String get deleteAccountPassword;
+
+  /// No description provided for @deleteAccountConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer définitivement'**
+  String get deleteAccountConfirm;
+
+  /// No description provided for @deleteAccountCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder mon compte'**
+  String get deleteAccountCancel;
+
+  /// No description provided for @deleteAccountDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton compte est supprimé.'**
+  String get deleteAccountDone;
+
+  /// No description provided for @errorInvalidPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe incorrect.'**
+  String get errorInvalidPassword;
+
+  /// No description provided for @errorWalletNotEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton portefeuille n\'est pas vide : écris à unimoov.support@gmail.com pour récupérer ton solde, puis réessaie.'**
+  String get errorWalletNotEmpty;
+
+  /// No description provided for @errorRideInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Termine ton trajet en cours avant de supprimer ton compte.'**
+  String get errorRideInProgress;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -2847,8 +2964,7 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

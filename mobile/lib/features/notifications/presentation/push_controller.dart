@@ -115,3 +115,8 @@ final notificationPreferencesProvider =
       NotificationPreferencesController.new,
       retry: (retryCount, error) => null,
     );
+
+/// Notifications refusées au niveau du téléphone : relu à chaque retour dans l'application.
+final pushBlockedProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(pushServiceProvider).isBlocked(),
+);

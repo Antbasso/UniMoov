@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/account/presentation/delete_account_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/session_controller.dart';
 import '../../features/auth/presentation/signup_screen.dart';
@@ -68,6 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
           GoRoute(path: 'reliability', builder: (_, _) => const ReliabilityScreen()),
           GoRoute(path: 'notifications', builder: (_, _) => const NotificationSettingsScreen()),
+          GoRoute(path: 'delete', builder: (_, _) => const DeleteAccountScreen()),
           GoRoute(
             path: 'schedule',
             builder: (_, _) => const ScheduleScreen(),
