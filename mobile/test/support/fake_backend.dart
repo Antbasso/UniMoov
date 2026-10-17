@@ -1,5 +1,11 @@
+import 'package:unimoov/features/chat/data/chat_api.dart';
+import 'package:unimoov/features/chat/domain/chat.dart';
+import 'package:unimoov/features/notifications/data/notifications_api.dart';
 import 'package:unimoov/features/trust/data/trust_api.dart';
 import 'package:unimoov/features/trust/domain/trust.dart';
+
+import 'chat_fakes.dart';
+
 import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
@@ -17,7 +23,16 @@ import 'package:unimoov/features/schedule/domain/schedule.dart';
 /// Backend en mémoire qui reproduit les règles de l'API (docs/api.md) pour les tests de
 /// parcours. Il survit à un « redémarrage » de l'app, comme le vrai serveur.
 class FakeBackend
-    implements AuthApi, ProfileApi, ScheduleApi, ProposalsApi, RidesApi, WalletApi, TrustApi {
+    implements
+        AuthApi,
+        ProfileApi,
+        ScheduleApi,
+        ProposalsApi,
+        RidesApi,
+        WalletApi,
+        TrustApi,
+        ChatApi,
+        NotificationsApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -627,6 +642,155 @@ class FakeBackend
   Future<void> report(String userId, ReportReason reason, String? message) async {
     _maybeFail();
     reports.add((userId: userId, reason: reason, message: message));
+  }
+
+  // --- Messagerie ---
+
+  final Map<String, Conversation> conversationsById = {};
+  final Map<String, List<ChatMessage>> messagesById = {};
+  final Map<String, String> rideChats = {};
+  List<ChatMember> contactList = [];
+  final List<String> readConversations = [];
+  int _chatCounter = 0;
+
+  /// Messages entrants simulés (socket `/ws/me`).
+  final FakeUserSocketConnector socket = FakeUserSocketConnector();
+
+  @override
+  Future<List<Conversation>> conversations() async {
+    _maybeFail();
+    return conversationsById.values.toList();
+  }
+
+  @override
+  Future<Conversation> conversation(String id) async {
+    _maybeFail();
+    final c = conversationsById[id];
+    if (c == null) throw const ApiException('not_found', '', statusCode: 404);
+    return c;
+  }
+
+  @override
+  Future<Conversation> rideConversation(String rideId) async {
+    _maybeFail();
+    final id = rideChats[rideId];
+    if (id == null) throw const ApiException('not_found', '', statusCode: 404);
+    return conversationsById[id]!;
+  }
+
+  @override
+  Future<List<ChatMember>> contacts() async {
+    _maybeFail();
+    return contactList;
+  }
+
+  Conversation _newConversation(ConversationKind kind, List<String> userIds, {String? title}) {
+    final me = ChatMember(userId: idOf(_me.email), firstName: _me.firstName);
+    final c = Conversation(
+      id: 'conv-${++_chatCounter}',
+      kind: kind,
+      title: title,
+      archived: false,
+      unread: 0,
+      members: [me, ...contactList.where((m) => userIds.contains(m.userId))],
+    );
+    conversationsById[c.id] = c;
+    return c;
+  }
+
+  @override
+  Future<Conversation> createDirect(String userId) async {
+    _maybeFail();
+    final existing = conversationsById.values.where(
+      (c) => c.kind == ConversationKind.direct && c.members.any((m) => m.userId == userId),
+    );
+    return existing.firstOrNull ?? _newConversation(ConversationKind.direct, [userId]);
+  }
+
+  @override
+  Future<Conversation> createGroup(String title, List<String> userIds) async {
+    _maybeFail();
+    return _newConversation(ConversationKind.group, userIds, title: title);
+  }
+
+  @override
+  Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId}) async {
+    _maybeFail();
+    final all = (messagesById[id] ?? const <ChatMessage>[]).where(
+      (m) => before == null || m.createdAt.isBefore(before),
+    );
+    return all.toList().reversed.take(50).toList();
+  }
+
+  @override
+  Future<ChatMessage> send(String id, String body) async {
+    _maybeFail();
+    final c = conversationsById[id]!;
+    if (c.archived) throw const ApiException('conversation_archived', '', statusCode: 409);
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: id,
+      senderId: idOf(_me.email),
+      body: body,
+      createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+    );
+    messagesById.putIfAbsent(id, () => []).add(message);
+    conversationsById[id] = c.copyWith(lastMessage: message);
+    return message;
+  }
+
+  @override
+  Future<void> markRead(String id) async {
+    readConversations.add(id);
+    final c = conversationsById[id];
+    if (c != null) conversationsById[id] = c.copyWith(unread: 0);
+  }
+
+  @override
+  Future<void> leave(String id) async {
+    _maybeFail();
+    conversationsById.remove(id);
+  }
+
+  /// Un autre membre écrit : le message arrive par le socket et compte comme non lu.
+  void receive(String conversationId, String senderId, String body, {DateTime? at}) {
+    final c = conversationsById[conversationId]!;
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: conversationId,
+      senderId: senderId,
+      body: body,
+      createdAt: at ?? DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+    );
+    messagesById.putIfAbsent(conversationId, () => []).add(message);
+    conversationsById[conversationId] = c.copyWith(unread: c.unread + 1, lastMessage: message);
+    socket.emit(message);
+  }
+
+  // --- Notifications ---
+
+  final List<String> devices = [];
+  NotificationPreferences preferencesState = const NotificationPreferences();
+
+  @override
+  Future<void> registerDevice(String token) async {
+    _maybeFail();
+    if (!devices.contains(token)) devices.add(token);
+  }
+
+  @override
+  Future<void> unregisterDevice(String token) async => devices.remove(token);
+
+  @override
+  Future<NotificationPreferences> preferences() async {
+    _maybeFail();
+    return preferencesState;
+  }
+
+  @override
+  Future<NotificationPreferences> setPreferences(NotificationPreferences prefs) async {
+    _maybeFail();
+    return preferencesState = prefs;
   }
 
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).

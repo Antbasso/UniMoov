@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/token_storage.dart';
 import '../data/auth_api.dart';
+import '../../notifications/data/notifications_api.dart';
+import '../../notifications/data/push_service.dart';
+import '../../notifications/presentation/push_controller.dart';
 import '../domain/auth_tokens.dart';
 
 enum SessionStatus { signedOut, signedIn }
@@ -22,6 +25,11 @@ class SessionController extends AsyncNotifier<SessionStatus> {
 
   /// Déconnexion volontaire : révoque la session côté serveur si possible.
   Future<void> signOut() async {
+    // Tant que la session est valide : l'appareil ne recevra plus les notifications du compte.
+    // Jeton relu auprès de Firebase s'il n'a pas pu être enregistré pendant la session.
+    final store = ref.read(deviceTokenStoreProvider);
+    store.token ??= await ref.read(pushServiceProvider).currentToken();
+    await store.unregister(ref.read(notificationsApiProvider));
     final tokens = await _storage.read();
     await _storage.clear();
     state = const AsyncData(SessionStatus.signedOut);

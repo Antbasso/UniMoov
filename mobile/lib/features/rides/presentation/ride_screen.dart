@@ -14,6 +14,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../proposals/domain/proposal.dart';
+import '../../chat/data/chat_api.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../../proposals/presentation/proposals_controller.dart';
 import '../../trust/domain/trust.dart';
@@ -107,6 +108,16 @@ class _RideContentState extends ConsumerState<_RideContent> {
     ref.invalidate(weekProposalsProvider);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     router.go(AppRoutes.home);
+  }
+
+  Future<void> _openChat() async {
+    final router = GoRouter.of(context);
+    try {
+      final chat = await ref.read(chatApiProvider).rideConversation(widget.ride.id);
+      await router.push(AppRoutes.conversation(chat.id));
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    }
   }
 
   Future<void> _report(String? myId) async {
@@ -205,7 +216,16 @@ class _RideContentState extends ConsumerState<_RideContent> {
     ];
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          // Chat du trajet (cahier §6), créé à la confirmation.
+          IconButton(
+            tooltip: l10n.rideChat,
+            icon: Icon(Icons.chat_bubble_outline_rounded, color: c.brandStrong),
+            onPressed: _openChat,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

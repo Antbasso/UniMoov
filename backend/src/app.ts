@@ -41,7 +41,15 @@ import { SettingsService } from './modules/settings/service.js';
 import { TrustRepo } from './modules/trust/repo.js';
 import { trustRoutes } from './modules/trust/routes.js';
 import { TrustService } from './modules/trust/service.js';
-import { LogNotifier, type Notifier } from './shared/notifications/notifier.js';
+import type { Notifier } from './shared/notifications/notifier.js';
+import { LogPushProvider, type PushProvider } from './shared/push/push-provider.js';
+import { UserHub } from './modules/chat/hub.js';
+import { ChatRepo } from './modules/chat/repo.js';
+import { chatRoutes, userSocketRoutes } from './modules/chat/routes.js';
+import { ChatService } from './modules/chat/service.js';
+import { NotificationsRepo } from './modules/notifications/repo.js';
+import { notificationRoutes } from './modules/notifications/routes.js';
+import { NotificationService } from './modules/notifications/service.js';
 import { authenticatePlugin } from './plugins/authenticate.js';
 import { SecretBox } from './shared/crypto.js';
 import { AppError, errorBody } from './shared/errors.js';
@@ -56,7 +64,14 @@ import type { PaymentProvider } from './shared/payments/payment-provider.js';
 declare module 'fastify' {
   interface FastifyInstance {
     /** Services utilisés par les tâches planifiées (présents si les modules sont montés). */
-    services?: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService };
+    services?: {
+      calendar: CalendarService;
+      matching: MatchingService;
+      lifecycle: RideLifecycle;
+      trust: TrustService;
+      chat: ChatService;
+      notifications: NotificationService;
+    };
   }
 }
 
@@ -74,7 +89,9 @@ export interface AppModules {
   routingDailyQuota?: number;
   /** Prestataire de paiement (factice tant que l'équipe n'a pas fourni de compte). */
   payments: PaymentProvider;
-  /** Notifications (journal en v1, push FCM en M6) ; injectable pour les tests. */
+  /** Envoi push (FCM) ; par défaut, journal seulement. */
+  push?: PushProvider;
+  /** Observateur de notifications supplémentaire (tests). */
   notifier?: Notifier;
   /** Lecture d'un lien ICS ; par défaut téléchargement protégé contre le SSRF. */
   fetchIcs?: (url: string) => Promise<string>;
@@ -181,7 +198,18 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const wallet = new WalletService(new PaymentsRepo(modules.db), modules.payments, settings);
     const hub = new TrackingHub();
     const trust = new TrustService(new TrustRepo(modules.db), settings, modules.mail, clock);
-    const notifier = modules.notifier ?? new LogNotifier((data, message) => app.log.info(data, message));
+    const notifications = new NotificationService(
+      new NotificationsRepo(modules.db),
+      modules.push ?? new LogPushProvider((data, message) => app.log.info(data, message)),
+      settings,
+      clock,
+    );
+    const extra = modules.notifier;
+    const notifier: Notifier = extra
+      ? { notify: async (userIds, event) => void (await Promise.all([extra.notify(userIds, event), notifications.notify(userIds, event)])) }
+      : notifications;
+    const userHub = new UserHub();
+    const chat = new ChatService(new ChatRepo(modules.db), userHub, settings, notifier, clock);
     // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),
@@ -192,7 +220,12 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       new MatchingRepo(modules.db),
       settings,
       clock,
-      (rideId) => ridesService.onRideChanged(rideId),
+      async (rideId) => {
+        // Chat de trajet créé à la confirmation, membres suivis à chaque acceptation ou annulation ;
+        // indépendant du calcul d'itinéraire (appel externe qui peut échouer).
+        await chat.syncRideChat(rideId).catch((err: unknown) => app.log.error({ err }, 'ride chat sync'));
+        await ridesService.onRideChanged(rideId);
+      },
       trust,
       notifier,
     );
@@ -209,7 +242,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust });
+    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust, chat, notifications });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(
@@ -221,6 +254,9 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(ridesRoutes, { service: ridesService, lifecycle });
         await api.register(walletRoutes, { service: wallet });
         await api.register(trustRoutes, { service: trust });
+        await api.register(chatRoutes, { service: chat });
+        await api.register(notificationRoutes, { service: notifications });
+        await api.register(userSocketRoutes, { hub: userHub, isActiveUser: (userId) => authRepo.isActiveUser(userId) });
         await api.register(trackingRoutes, {
           service: tracking,
           isActiveUser: (userId) => authRepo.isActiveUser(userId),

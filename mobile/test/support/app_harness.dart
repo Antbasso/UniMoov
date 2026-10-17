@@ -12,11 +12,16 @@ import 'package:unimoov/core/location/location_service.dart';
 import 'package:unimoov/features/rides/data/live_channel.dart';
 import 'package:unimoov/features/rides/data/nav_launcher.dart';
 import 'package:unimoov/features/rides/data/rides_api.dart';
+import 'package:unimoov/features/chat/data/chat_api.dart';
+import 'package:unimoov/features/chat/data/user_socket.dart';
+import 'package:unimoov/features/notifications/data/notifications_api.dart';
+import 'package:unimoov/features/notifications/data/push_service.dart';
 import 'package:unimoov/features/trust/data/trust_api.dart';
 import 'package:unimoov/features/wallet/data/wallet_api.dart';
 import 'package:unimoov/features/schedule/data/schedule_api.dart';
 
 import 'fake_backend.dart';
+import 'chat_fakes.dart';
 import 'live_fakes.dart';
 
 /// Lance l'app complète sur un faux backend ; appeler deux fois simule un redémarrage
@@ -31,6 +36,7 @@ Future<void> launchApp(
   FakeLiveConnector? live,
   FakeLocationService? location,
   FakeNavLauncher? launcher,
+  PushService? push,
 }) async {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -49,6 +55,10 @@ Future<void> launchApp(
         ridesApiProvider.overrideWithValue(backend),
         walletApiProvider.overrideWithValue(backend),
         trustApiProvider.overrideWithValue(backend),
+        chatApiProvider.overrideWithValue(backend),
+        notificationsApiProvider.overrideWithValue(backend),
+        userSocketConnectorProvider.overrideWithValue(backend.socket),
+        pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),
         locationServiceProvider.overrideWithValue(location ?? FakeLocationService()),
         navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),

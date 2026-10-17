@@ -85,10 +85,14 @@ Les liens portent les arrêts restants (pas encore montés) dans l'ordre, puis l
 - `POST /wallet/payouts`, `GET /wallet/payouts`, `POST /webhooks/payments`, refus de réservation `402 insufficient_funds` : M4b.
 - Montants toujours en centimes (entiers).
 
-## Messagerie
-- `GET /conversations`, `POST /conversations` (direct ou groupe), `GET /conversations/{id}/messages?before=`, `POST /conversations/{id}/messages`.
-- Le chat de trajet est créé automatiquement à la confirmation.
-- Temps réel des messages : même socket utilisateur `GET /ws/me` (événements `message`).
+## Messagerie (cahier §6)
+- `GET /conversations` → `{ conversations: [{ id, kind: direct|group|ride, title, rideId, archived, members: [{ userId, firstName, photoUrl }], unread, lastMessage }] }`, la plus récente d'abord. Prénom et photo seulement, jamais le nom de famille.
+- `GET /contacts` : personnes croisées sur un trajet (proposé ou confirmé), seules joignables.
+- `POST /conversations` `{ kind: "direct", memberIds: [id] }` (réutilise la conversation existante de la paire) ou `{ kind: "group", title, memberIds }` (au plus `chat.maxGroupMembers`) → `201`. `403 not_a_contact` si une personne n'a jamais été croisée.
+- `GET /conversations/{id}` ; `GET /conversations/{id}/messages?before=<iso>&limit=50` (du plus récent au plus ancien) ; `POST /conversations/{id}/messages` `{ body }` (1 à 2000 caractères, 30 par minute) → `201` ; `POST /conversations/{id}/read` ; `DELETE /conversations/{id}/members/me` (groupe seulement, `409 cannot_leave` sinon).
+- Non-membre : `404` sur toute conversation, sans révéler son existence.
+- Chat de trajet : `GET /rides/{id}/conversation`. Créé à la confirmation avec les personnes acceptées, membres mis à jour à chaque acceptation ou annulation. Fin ou annulation du trajet : lecture seule (`archived: true`, `409 conversation_archived` à l'envoi) après `chat.rideArchiveDays`, puis supprimé avec ses messages `chat.rideDeleteDays` plus tard (tâche quotidienne).
+- Temps réel : `GET /ws/me?token=<jwt>` (socket utilisateur, plusieurs appareils) ; le serveur envoie `{ type: "ready" }` puis `{ type: "message", message }`. Fermeture `4401` sans jeton valide.
 
 ## Annulations (cahier §8)
 - `GET /rides/{id}/cancellation` → `{ role, tier }` : palier de pénalité si la personne annule maintenant (`early`, `medium`, `late`, selon `reliability.penalties`). `409 not_accepted` si elle n'a pas accepté (c'est alors un refus, `POST /proposals/{id}/decline`).
@@ -108,5 +112,9 @@ Les liens portent les arrêts restants (pas encore montés) dans l'ordre, puis l
 ## Signalements
 - `POST /reports` `{ targetUserId, reason, message? }` → `201 { id }` ; motifs `dangerous_driving`, `inappropriate_behaviour`, `fake_profile`, `other`. Seulement une personne croisée sur un trajet (sinon `404`, comme une personne inconnue), `reports.dailyLimit` par jour (`429 report_limit`). Transmis à l'équipe par mail, jamais à la personne signalée.
 
-## Notifications
-- `GET/PUT /me/notification-preferences` ; `POST /devices` `{ platform, pushToken }` (M6). En M5, les événements `ride_cancelled` et `replacement_proposed` passent par l'interface `Notifier` (journal sans donnée personnelle, push FCM en M6).
+## Notifications (cahier §11)
+- `POST /devices` `{ platform: android|ios, pushToken }` → `204` (le jeton appartient au dernier compte connecté sur l'appareil) ; `DELETE /devices` `{ pushToken }` à la déconnexion.
+- `GET /me/notification-preferences` → `{ match, rideUpdate, rideReminder, chat }`, tout à `true` par défaut ; `PUT` avec une partie des clés.
+- Événements et catégorie : `proposals_ready` et `replacement_proposed` (match), `ride_cancelled` (rideUpdate), `ride_reminder` (rideReminder, `notifications.reminderMinutes` avant le départ, un seul par personne et par trajet), `chat_message` (chat, seulement aux membres non connectés au socket).
+- Contenu du push : titre et phrase courte, jamais le texte d'un message ni une adresse ; `data` ne porte que `type` et un identifiant (`rideId`, `conversationId`, `week`) pour ouvrir le bon écran.
+- Envoi par `PushProvider` : FCM HTTP v1 (`PUSH_PROVIDER=fcm`, clé du compte de service dans `FCM_SERVICE_ACCOUNT_FILE`) ou journal en développement. Un jeton refusé par FCM est supprimé.

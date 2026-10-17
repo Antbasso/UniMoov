@@ -62,7 +62,7 @@ Architecture façon Teams, trois niveaux de conversation :
 ## 9. Validation de présence et clôture du trajet
 
 - Au moment du rendez-vous, vérification de la géolocalisation des deux téléphones pour confirmer leur proximité physique ; cette validation déclenche à la fois la confirmation du trajet et le paiement individuel du passager concerné.
-- Échec de la vérification pour un passager = absence constatée automatiquement → pas de remboursement de sa part, pénalité de score (section 8).
+- Échec de la vérification pour un passager = absence constatée automatiquement → il ne paie pas sa part, pénalité de score (section 8).
 - Nécessite un partage de localisation actif en continu pendant tout le trajet (bien expliciter à l'utilisateur côté confidentialité).
 - Clôture du trajet : manuelle (bouton « trajet finalisé » par n'importe quel participant), ou automatique (détection de l'arrivée à destination via la position partagée en continu). Si ni l'un ni l'autre : notification push invitant à rouvrir l'app pour finaliser manuellement.
 

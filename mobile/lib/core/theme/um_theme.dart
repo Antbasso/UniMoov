@@ -118,6 +118,8 @@ ThemeData buildUmTheme(Brightness brightness) {
     // Surbrillance de focus des composants Material (listes, icônes, interrupteurs) bien visible.
     focusColor: c.focus.withValues(alpha: 0.24),
     materialTapTargetSize: MaterialTapTargetSize.padded,
+    // Pastille (messages non lus) aux couleurs de la marque, pas le rouge d'erreur de Material.
+    badgeTheme: BadgeThemeData(backgroundColor: c.brand, textColor: c.onBrand),
     extensions: [ext],
   );
 }

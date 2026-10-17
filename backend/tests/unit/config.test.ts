@@ -78,4 +78,10 @@ describe('ROUTING_PROVIDER', () => {
     expect(() => loadConfig({ ...base, ROUTING_PROVIDER: 'ors', ORS_API_KEY: '' })).toThrow(/ORS_API_KEY/);
     expect(loadConfig({ ...base, ROUTING_PROVIDER: 'ors', ORS_API_KEY: 'k' }).ROUTING_PROVIDER).toBe('ors');
   });
+
+  it('push FCM exige le fichier de la clé du compte de service ; journal par défaut', () => {
+    expect(loadConfig(base).PUSH_PROVIDER).toBe('log');
+    expect(() => loadConfig({ ...base, PUSH_PROVIDER: 'fcm' })).toThrow(/FCM_SERVICE_ACCOUNT_FILE/);
+    expect(loadConfig({ ...base, PUSH_PROVIDER: 'fcm', FCM_SERVICE_ACCOUNT_FILE: '/secrets/fcm.json' }).PUSH_PROVIDER).toBe('fcm');
+  });
 });

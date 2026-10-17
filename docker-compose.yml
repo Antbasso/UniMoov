@@ -30,10 +30,15 @@ services:
       ORS_API_KEY: ${ORS_API_KEY:-}
       ROUTING_DAILY_QUOTA: ${ROUTING_DAILY_QUOTA:-2000}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
+      PUSH_PROVIDER: ${PUSH_PROVIDER:-log}
+      FCM_SERVICE_ACCOUNT_FILE: ${FCM_SERVICE_ACCOUNT_FILE:-}
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
     ports:
       - "${API_PORT:-3000}:3000"
+    volumes:
+      # Clé du compte de service Firebase, posée à la main sur le serveur (jamais commitée).
+      - ./secrets:/run/secrets:ro
     depends_on:
       db:
         condition: service_healthy
