@@ -11,6 +11,7 @@ import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import '../../support/app_harness.dart';
 import '../../support/chat_fakes.dart';
 import '../../support/fake_backend.dart';
+import '../../support/live_fakes.dart';
 import 'accessibility_test.dart' show expectAccessible;
 
 /// M7 : droits RGPD depuis le profil (export, suppression) et notifications bloquées.
@@ -48,16 +49,17 @@ void main() {
     final sharer = FakeExportSharer();
     await open(tester, AppRoutes.profile, sharer: sharer);
     expect(find.text('Mes données'), findsOneWidget);
-    await tapText(tester, 'Télécharger mes données');
+    await tapText(tester, 'Exporter mes données');
     expect(sharer.shared.single.fileName, 'uni-moov-mes-donnees.json');
     expect(sharer.shared.single.content, contains('lea@etu.univ-smb.fr'));
+    expect(find.text('Tes données sont prêtes.'), findsOneWidget);
   });
 
   testWidgets('export impossible hors ligne : message, rien de partagé', (tester) async {
     final sharer = FakeExportSharer();
     await open(tester, AppRoutes.profile, sharer: sharer);
     backend.failNext = const ApiException('network_error', '');
-    await tapText(tester, 'Télécharger mes données');
+    await tapText(tester, 'Exporter mes données');
     expect(sharer.shared, isEmpty);
     expect(find.textContaining('Connexion impossible'), findsOneWidget);
   });
@@ -75,7 +77,7 @@ void main() {
     await tester.enterText(fieldLabeled('Ton mot de passe, pour confirmer'), 'pas-le-bon');
     await tester.pump();
     await tapText(tester, 'Supprimer définitivement');
-    expect(find.text('Mot de passe incorrect.'), findsOneWidget);
+    expect(find.textContaining('Mot de passe incorrect. Réessaie.'), findsOneWidget);
     expect(backend.deletedAccounts, isEmpty);
 
     await tester.enterText(fieldLabeled('Ton mot de passe, pour confirmer'), 'motdepasse-solide');
@@ -87,13 +89,31 @@ void main() {
     expect(find.text('Ton emploi du temps organise aussi tes trajets.'), findsOneWidget);
   });
 
-  testWidgets('portefeuille non vide : refus expliqué, compte gardé', (tester) async {
-    backend.deleteRefusal = 'wallet_not_empty';
+  testWidgets('portefeuille non vide : bloqué avant le mot de passe, écrire à l’équipe', (
+    tester,
+  ) async {
+    final launcher = FakeNavLauncher();
+    backend.balanceCents = 1240;
+    await launchApp(tester, backend: backend, storage: storage, launcher: launcher);
+    unawaited(
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).push(AppRoutes.deleteAccount),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Portefeuille à vider d\'abord'), findsOneWidget);
+    expect(find.textContaining('12,40'), findsOneWidget);
+    expect(fieldLabeled('Ton mot de passe, pour confirmer'), findsNothing);
+    await tapText(tester, 'Écrire à l\'équipe');
+    expect(launcher.opened.single.scheme, 'mailto');
+    expect(backend.deletedAccounts, isEmpty);
+  });
+
+  testWidgets('refus du serveur (trajet en cours) : message, compte gardé', (tester) async {
+    backend.deleteRefusal = 'ride_in_progress';
     await open(tester, AppRoutes.deleteAccount);
     await tester.enterText(fieldLabeled('Ton mot de passe, pour confirmer'), 'motdepasse-solide');
     await tester.pump();
     await tapText(tester, 'Supprimer définitivement');
-    expect(find.textContaining('Ton portefeuille n\'est pas vide'), findsOneWidget);
+    expect(find.text('Termine ton trajet en cours avant de supprimer ton compte.'), findsOneWidget);
     expect(storage.tokens, isNotNull);
   });
 
@@ -147,6 +167,23 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/delete_account_light.png'),
+    );
+  });
+
+  testWidgets('golden suppression bloquée (sombre)', (tester) async {
+    backend.balanceCents = 1240;
+    await open(tester, AppRoutes.deleteAccount, mode: ThemeMode.dark);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/delete_account_blocked_dark.png'),
+    );
+  });
+
+  testWidgets('golden notifications bloquées', (tester) async {
+    await open(tester, AppRoutes.notificationSettings, push: FakePushService()..blocked = true);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/notifications_blocked_light.png'),
     );
   });
 }

@@ -1609,7 +1609,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationsBlockedBody =>
-      'Ton téléphone bloque les notifications d\'Uni-Moov : ni rappel avant le trajet ni alerte de message. Active-les dans les réglages du téléphone.';
+      'Ton téléphone bloque les notifications d\'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.';
 
   @override
   String get profileData => 'Mes données';
@@ -1619,7 +1619,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Récupère tout ce qu\'Uni-Moov garde sur toi, ou supprime ton compte.';
 
   @override
-  String get exportAction => 'Télécharger mes données';
+  String get exportAction => 'Exporter mes données';
 
   @override
   String get exportSubject => 'Mes données Uni-Moov';
@@ -1635,18 +1635,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteAccountErased =>
-      'Effacés : ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.';
+      'ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.';
 
   @override
   String get deleteAccountKept =>
-      'Gardés sans ton nom : les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.';
+      'les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.';
 
   @override
-  String get deleteAccountRides => 'Tes trajets à venir sont annulés et les autres sont prévenus.';
-
-  @override
-  String get deleteAccountWallet =>
-      'Ton portefeuille doit être vide. S\'il reste de l\'argent, écris à unimoov.support@gmail.com pour le récupérer avant.';
+  String get deleteAccountRides => 'tes trajets à venir. Les autres sont prévenus.';
 
   @override
   String get deleteAccountPassword => 'Ton mot de passe, pour confirmer';
@@ -1661,12 +1657,45 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteAccountDone => 'Ton compte est supprimé.';
 
   @override
-  String get errorInvalidPassword => 'Mot de passe incorrect.';
+  String get errorInvalidPassword => 'Mot de passe incorrect. Réessaie.';
 
   @override
   String get errorWalletNotEmpty =>
-      'Ton portefeuille n\'est pas vide : écris à unimoov.support@gmail.com pour récupérer ton solde, puis réessaie.';
+      'Ton portefeuille n\'est pas vide : récupère ton solde avant de supprimer ton compte.';
 
   @override
   String get errorRideInProgress => 'Termine ton trajet en cours avant de supprimer ton compte.';
+
+  @override
+  String get deleteAccountErasedLead => 'Effacés :';
+
+  @override
+  String get deleteAccountKeptLead => 'Gardés sans ton nom :';
+
+  @override
+  String get deleteAccountRidesLead => 'Annulés :';
+
+  @override
+  String get deleteAccountWalletTitle => 'Portefeuille à vider d\'abord';
+
+  @override
+  String deleteAccountWalletLeft(String amount, String email) {
+    return 'Il te reste $amount sur ton portefeuille. Écris à l\'équipe ($email) pour les récupérer, puis reviens supprimer ton compte.';
+  }
+
+  @override
+  String get deleteAccountWriteTeam => 'Écrire à l\'équipe';
+
+  @override
+  String get deleteAccountMailSubject => 'Récupérer mon solde avant de supprimer mon compte';
+
+  @override
+  String get exportDone => 'Tes données sont prêtes.';
+
+  @override
+  String get notificationsOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get notificationsBlockedHelp =>
+      'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.';
 }

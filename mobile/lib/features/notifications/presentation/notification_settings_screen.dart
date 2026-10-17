@@ -49,6 +49,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final prefs = ref.watch(notificationPreferencesProvider);
+    final blocked = ref.watch(pushBlockedProvider).value ?? false;
 
     Widget toggle(
       String title,
@@ -68,17 +69,37 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
       title: l10n.notificationsTitle,
       intro: l10n.notificationsIntro,
       children: [
-        if (ref.watch(pushBlockedProvider).value ?? false) ...[
+        if (blocked) ...[
           UmCard(
-            title: l10n.notificationsBlockedTitle,
-            body: l10n.notificationsBlockedBody,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: UmButton(
-                label: l10n.locationOpenSettings,
-                variant: UmButtonVariant.secondary,
-                onPressed: () => ref.read(pushServiceProvider).openSettings(),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ExcludeSemantics(
+                      child: Icon(
+                        Icons.notifications_off_outlined,
+                        size: UmSize.iconMd,
+                        color: c.brandStrong,
+                      ),
+                    ),
+                    const SizedBox(width: UmSpace.s3),
+                    Expanded(
+                      child: Text(
+                        l10n.notificationsBlockedTitle,
+                        style: UmText.h3.copyWith(color: c.ink),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: UmSpace.s2),
+                Text(l10n.notificationsBlockedBody, style: UmText.body.copyWith(color: c.ink)),
+                const SizedBox(height: UmSpace.s4),
+                UmButton(
+                  label: l10n.notificationsOpenSettings,
+                  onPressed: () => ref.read(pushServiceProvider).openSettings(),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: UmSpace.s4),
@@ -148,6 +169,10 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
             child: LinearProgressIndicator(color: c.brand),
           ),
         },
+        if (blocked && prefs.hasValue) ...[
+          const SizedBox(height: UmSpace.s2),
+          Text(l10n.notificationsBlockedHelp, style: UmText.bodySm.copyWith(color: c.inkMuted)),
+        ],
         if (_errorCode != null) ...[
           const SizedBox(height: UmSpace.s3),
           UmErrorText(apiErrorMessage(l10n, _errorCode)),

@@ -2843,7 +2843,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationsBlockedBody.
   ///
   /// In fr, this message translates to:
-  /// **'Ton téléphone bloque les notifications d\'Uni-Moov : ni rappel avant le trajet ni alerte de message. Active-les dans les réglages du téléphone.'**
+  /// **'Ton téléphone bloque les notifications d\'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.'**
   String get notificationsBlockedBody;
 
   /// No description provided for @profileData.
@@ -2861,7 +2861,7 @@ abstract class AppLocalizations {
   /// No description provided for @exportAction.
   ///
   /// In fr, this message translates to:
-  /// **'Télécharger mes données'**
+  /// **'Exporter mes données'**
   String get exportAction;
 
   /// No description provided for @exportSubject.
@@ -2891,26 +2891,20 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountErased.
   ///
   /// In fr, this message translates to:
-  /// **'Effacés : ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.'**
+  /// **'ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.'**
   String get deleteAccountErased;
 
   /// No description provided for @deleteAccountKept.
   ///
   /// In fr, this message translates to:
-  /// **'Gardés sans ton nom : les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.'**
+  /// **'les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.'**
   String get deleteAccountKept;
 
   /// No description provided for @deleteAccountRides.
   ///
   /// In fr, this message translates to:
-  /// **'Tes trajets à venir sont annulés et les autres sont prévenus.'**
+  /// **'tes trajets à venir. Les autres sont prévenus.'**
   String get deleteAccountRides;
-
-  /// No description provided for @deleteAccountWallet.
-  ///
-  /// In fr, this message translates to:
-  /// **'Ton portefeuille doit être vide. S\'il reste de l\'argent, écris à unimoov.support@gmail.com pour le récupérer avant.'**
-  String get deleteAccountWallet;
 
   /// No description provided for @deleteAccountPassword.
   ///
@@ -2939,13 +2933,13 @@ abstract class AppLocalizations {
   /// No description provided for @errorInvalidPassword.
   ///
   /// In fr, this message translates to:
-  /// **'Mot de passe incorrect.'**
+  /// **'Mot de passe incorrect. Réessaie.'**
   String get errorInvalidPassword;
 
   /// No description provided for @errorWalletNotEmpty.
   ///
   /// In fr, this message translates to:
-  /// **'Ton portefeuille n\'est pas vide : écris à unimoov.support@gmail.com pour récupérer ton solde, puis réessaie.'**
+  /// **'Ton portefeuille n\'est pas vide : récupère ton solde avant de supprimer ton compte.'**
   String get errorWalletNotEmpty;
 
   /// No description provided for @errorRideInProgress.
@@ -2953,6 +2947,66 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Termine ton trajet en cours avant de supprimer ton compte.'**
   String get errorRideInProgress;
+
+  /// No description provided for @deleteAccountErasedLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacés :'**
+  String get deleteAccountErasedLead;
+
+  /// No description provided for @deleteAccountKeptLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardés sans ton nom :'**
+  String get deleteAccountKeptLead;
+
+  /// No description provided for @deleteAccountRidesLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulés :'**
+  String get deleteAccountRidesLead;
+
+  /// No description provided for @deleteAccountWalletTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portefeuille à vider d\'abord'**
+  String get deleteAccountWalletTitle;
+
+  /// No description provided for @deleteAccountWalletLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il te reste {amount} sur ton portefeuille. Écris à l\'équipe ({email}) pour les récupérer, puis reviens supprimer ton compte.'**
+  String deleteAccountWalletLeft(String amount, String email);
+
+  /// No description provided for @deleteAccountWriteTeam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire à l\'équipe'**
+  String get deleteAccountWriteTeam;
+
+  /// No description provided for @deleteAccountMailSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupérer mon solde avant de supprimer mon compte'**
+  String get deleteAccountMailSubject;
+
+  /// No description provided for @exportDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes données sont prêtes.'**
+  String get exportDone;
+
+  /// No description provided for @notificationsOpenSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les réglages'**
+  String get notificationsOpenSettings;
+
+  /// No description provided for @notificationsBlockedHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.'**
+  String get notificationsBlockedHelp;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

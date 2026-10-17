@@ -237,6 +237,7 @@ class _DataSectionState extends ConsumerState<_DataSection> {
       await ref
           .read(accountActionsProvider)
           .exportData(subject: l10n.exportSubject, origin: origin);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.exportDone)));
     } on ApiException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(l10n, error.code))));
     } finally {
