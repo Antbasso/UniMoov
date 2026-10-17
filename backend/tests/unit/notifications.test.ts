@@ -99,6 +99,19 @@ describe('FcmPushProvider (API HTTP v1)', () => {
     expect(calls.filter((c) => c.url.includes('oauth2'))).toHaveLength(2);
   });
 
+  it('400 dû à la charge utile : aucun appareil supprimé ; UNREGISTERED : supprimé', async () => {
+    const calls: string[] = [];
+    const fn = (url: string, init: { body: string }) => {
+      calls.push(url);
+      if (url.includes('oauth2')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ access_token: 'a', expires_in: 3600 }) });
+      const token = (JSON.parse(init.body) as { message: { token: string } }).message.token;
+      const details = token === 'desinstalle-123' ? [{ errorCode: 'UNREGISTERED' }] : [{ errorCode: 'INVALID_ARGUMENT' }];
+      return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: { details } }) });
+    };
+    const result = await new FcmPushProvider(account, fn).send(['valide-1234567', 'desinstalle-123'], { title: 'T', body: 'B', data: {} });
+    expect(result.invalidTokens).toEqual(['desinstalle-123']);
+  });
+
   it('aucun appareil : aucun appel réseau', async () => {
     const { calls, fn } = fakeFetch(() => 200);
     await new FcmPushProvider(account, fn).send([], { title: 'T', body: 'B', data: {} });

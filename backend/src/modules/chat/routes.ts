@@ -15,6 +15,8 @@ import {
 } from './schema.js';
 import type { ChatService } from './service.js';
 
+const PING_INTERVAL_MS = 30_000;
+
 /** Socket utilisateur `GET /ws/me?token=<jwt>` (docs/api.md) : messages en direct. Jeton jamais journalisé. */
 export const userSocketRoutes: FastifyPluginAsyncZod<{
   hub: UserHub;
@@ -31,17 +33,39 @@ export const userSocketRoutes: FastifyPluginAsyncZod<{
       // Les clients n'envoient rien sur ce socket : tout message entrant est ignoré.
       socket.on('message', () => undefined);
       let userId: string;
+      let exp: number;
       try {
-        const payload = app.jwt.verify<{ sub: string }>(request.query.token);
+        const payload = app.jwt.verify<{ sub: string; exp: number }>(request.query.token);
         if (!(await isActiveUser(payload.sub))) throw new Error('inactive');
         userId = payload.sub;
+        exp = payload.exp;
       } catch {
         socket.close(4401, 'unauthorized');
         return;
       }
       if (closed) return;
       hub.add(userId, socket);
-      socket.on('close', () => hub.remove(userId, socket));
+      // Jeton expiré : on ferme, le client se reconnecte avec un jeton renouvelé.
+      const expiry = setTimeout(() => socket.close(4401, 'token_expired'), Math.max(0, exp * 1000 - Date.now()));
+      // Ping toutes les 30 s : un téléphone en veille ou une connexion coupée sans fermeture
+      // n'est plus compté « en ligne » (sinon pas de push) et ne reste pas en mémoire.
+      let alive = true;
+      socket.on('pong', () => {
+        alive = true;
+      });
+      const heartbeat = setInterval(() => {
+        if (!alive) {
+          socket.terminate();
+          return;
+        }
+        alive = false;
+        socket.ping();
+      }, PING_INTERVAL_MS);
+      socket.on('close', () => {
+        clearTimeout(expiry);
+        clearInterval(heartbeat);
+        hub.remove(userId, socket);
+      });
       socket.send(JSON.stringify({ type: 'ready' }));
     },
   );
@@ -81,7 +105,7 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
       messages: await service.messages(
         request.userId,
         request.params.id,
-        request.query.before ? new Date(request.query.before) : null,
+        request.query.before ? { at: new Date(request.query.before), id: request.query.beforeId ?? null } : null,
         request.query.limit,
       ),
     }),

@@ -105,8 +105,13 @@ export class NotificationService implements Notifier {
     for (const r of due) {
       if (!(await this.repo.markReminded(r.rideId, r.userId, now))) continue;
       const left = Math.max(1, Math.round((r.departure.getTime() - now.getTime()) / 60_000));
-      await this.notify([r.userId], { type: 'ride_reminder', rideId: r.rideId, minutes: left });
-      sent++;
+      try {
+        await this.notify([r.userId], { type: 'ride_reminder', rideId: r.rideId, minutes: left });
+        sent++;
+      } catch {
+        // Envoi raté : la marque est retirée, la tâche suivante (5 min) réessaie.
+        await this.repo.unmarkReminded(r.rideId, r.userId);
+      }
     }
     return sent;
   }

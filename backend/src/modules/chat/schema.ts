@@ -17,6 +17,7 @@ export const conversation = z.strictObject({
   kind: z.enum(['direct', 'group', 'ride']),
   title: z.string().nullable(),
   rideId: z.uuid().nullable(),
+  ride: z.strictObject({ day: z.string(), direction: z.enum(['to_campus', 'from_campus']) }).nullable(),
   archived: z.boolean(),
   members: z.array(member),
   unread: z.number().int(),
@@ -33,6 +34,7 @@ export const createBody = z.discriminatedUnion('kind', [
 
 export const messagesQuery = z.object({
   before: z.iso.datetime({ offset: true }).optional(),
+  beforeId: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export const messagesResponse = z.strictObject({ messages: z.array(message) });

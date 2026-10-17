@@ -19,6 +19,8 @@ export interface ConversationView {
   kind: ConversationKind;
   title: string | null;
   rideId: string | null;
+  /** Chat de trajet : jour et sens, pour le distinguer des autres. */
+  ride: { day: string; direction: 'to_campus' | 'from_campus' } | null;
   /** Lecture seule : chat de trajet archivé. */
   archived: boolean;
   /** Prénom et photo seulement : le nom de famille reste entre conducteur et passagers (§4). */
@@ -58,6 +60,7 @@ export class ChatService {
       kind: c.kind,
       title: c.title,
       rideId: c.rideId,
+      ride: c.kind === 'ride' && c.rideId ? await this.repo.rideInfo(c.rideId) : null,
       archived: this.archived(c),
       members: (await this.repo.members(c.id)).map(({ userId, firstName, photoUrl }) => ({ userId, firstName, photoUrl })),
       unread: c.unread ?? 0,
@@ -103,12 +106,7 @@ export class ChatService {
     if (input.kind === 'direct') {
       if (others.length !== 1) throw new AppError(400, 'validation_error', 'Requête invalide');
       const key = [userId, others[0]!].sort().join('|');
-      const id = await this.repo.transaction(async (tx) => {
-        const existing = await this.repo.byDirectKey(key, tx);
-        if (existing) return existing;
-        return this.repo.create({ kind: 'direct', title: null, directKey: key, createdBy: userId, at: now }, [userId, ...others], tx);
-      });
-      return this.get(userId, id);
+      return this.get(userId, await this.repo.upsertDirect(key, [userId, ...others], userId, now));
     }
     const title = input.title?.trim();
     if (!title) throw new AppError(400, 'validation_error', 'Donne un nom au groupe');
@@ -127,7 +125,7 @@ export class ChatService {
     if ((await this.repo.members(conversationId)).length === 0) await this.repo.setRetention(conversationId, this.clock(), this.clock());
   }
 
-  async messages(userId: string, conversationId: string, before: Date | null, limit: number): Promise<MessageView[]> {
+  async messages(userId: string, conversationId: string, before: { at: Date; id: string | null } | null, limit: number): Promise<MessageView[]> {
     await this.member(userId, conversationId);
     return (await this.repo.messages(conversationId, before, limit)).map(messageView);
   }
@@ -154,7 +152,8 @@ export class ChatService {
     const sender = members.find((m) => m.userId === userId);
     const offline = members.filter((m) => m.userId !== userId && !this.hub.isOnline(m.userId)).map((m) => m.userId);
     if (offline.length > 0) {
-      await this.notifier
+      // En tâche de fond : un FCM lent ne retarde pas la réponse (sinon renvoi et doublon).
+      void this.notifier
         .notify(offline, { type: 'chat_message', conversationId, senderFirstName: sender?.firstName ?? '' })
         .catch(() => undefined);
     }
@@ -166,25 +165,30 @@ export class ChatService {
    * Fin ou annulation du trajet : lecture seule après `chat.rideArchiveDays`, puis supprimé
    * `chat.rideDeleteDays` plus tard. Idempotent, appelé à chaque changement du trajet.
    */
-  async syncRideChat(rideId: string, db?: DbOrTx): Promise<void> {
-    const ride = await this.repo.rideMembers(rideId, db);
-    if (!ride) return;
-    const existing = await this.repo.byRide(rideId, db);
-    const live = ride.status === 'confirmed' || ride.status === 'in_progress';
-    const now = this.clock();
-    if (!existing) {
-      if (!live || ride.members.length < 2) return;
-      await this.repo.create({ kind: 'ride', title: null, rideId, createdBy: null, at: now }, ride.members, db);
-      return;
-    }
-    if (live || ride.status === 'proposed') {
-      const current = new Set((await this.repo.members(existing.id, db)).map((m) => m.userId));
-      const wanted = new Set(ride.members);
-      await this.repo.addMembers(existing.id, [...wanted].filter((u) => !current.has(u)), now, db);
-      await this.repo.removeMembers(existing.id, [...current].filter((u) => !wanted.has(u)), db);
-      return;
-    }
-    if (existing.deleteAfter === null) await this.scheduleRetention(existing.id, ride.endedAt ?? now, db);
+  async syncRideChat(rideId: string): Promise<void> {
+    // Sous le verrou du trajet : deux acceptations simultanées ne créent pas deux chats et
+    // une lecture périmée ne retire pas un membre ajouté entre-temps.
+    await this.repo.transaction(async (tx) => {
+      await this.repo.lockRide(rideId, tx);
+      const ride = await this.repo.rideMembers(rideId, tx);
+      if (!ride) return;
+      const existing = await this.repo.byRide(rideId, tx);
+      const live = ride.status === 'confirmed' || ride.status === 'in_progress';
+      const now = this.clock();
+      if (!existing) {
+        if (!live || ride.members.length < 2) return;
+        await this.repo.create({ kind: 'ride', title: null, rideId, createdBy: null, at: now }, ride.members, tx);
+        return;
+      }
+      if (live || ride.status === 'proposed') {
+        const current = new Set((await this.repo.members(existing.id, tx)).map((m) => m.userId));
+        const wanted = new Set(ride.members);
+        await this.repo.addMembers(existing.id, [...wanted].filter((u) => !current.has(u)), now, tx);
+        await this.repo.removeMembers(existing.id, [...current].filter((u) => !wanted.has(u)), tx);
+        return;
+      }
+      if (existing.deleteAfter === null) await this.scheduleRetention(existing.id, ride.endedAt ?? now, tx);
+    });
   }
 
   private async scheduleRetention(conversationId: string, from: Date, db?: DbOrTx): Promise<void> {
@@ -193,9 +197,14 @@ export class ChatService {
     await this.repo.setRetention(conversationId, archiveAt, deleteAt, db);
   }
 
-  /** Tâche quotidienne : programme l'archivage des trajets finis et supprime les chats échus. */
+  /**
+   * Tâche quotidienne : rattrape les chats manquants, programme l'archivage des trajets finis
+   * (ou jamais partis) et supprime les chats échus.
+   */
   async applyRetention(): Promise<{ scheduled: number; deleted: number }> {
-    const pending = await this.repo.rideChatsToSchedule();
+    for (const rideId of await this.repo.ridesMissingChat()) await this.syncRideChat(rideId);
+    const staleHours = await this.settings.get('rides.staleAfterHours');
+    const pending = await this.repo.rideChatsToSchedule(new Date(this.clock().getTime() - staleHours * 3_600_000));
     for (const c of pending) await this.scheduleRetention(c.id, c.endedAt ?? this.clock());
     const { deleted } = await this.repo.applyRetention(this.clock());
     return { scheduled: pending.length, deleted };

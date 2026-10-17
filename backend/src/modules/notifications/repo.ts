@@ -72,6 +72,10 @@ export class NotificationsRepo {
     return rows.map((r) => ({ rideId: r.ride_id, userId: r.user_id, departure: new Date(r.departure) }));
   }
 
+  async unmarkReminded(rideId: string, userId: string): Promise<void> {
+    await this.db.execute(sql`DELETE FROM ride_reminders WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
   /** Personnes ayant au moins une proposition à traiter sur ces jours. */
   async usersWithProposals(fromDay: string, toDay: string): Promise<string[]> {
     const { rows } = await this.db.execute<{ user_id: string }>(sql`

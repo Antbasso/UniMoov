@@ -113,6 +113,25 @@ export class ChatRepo {
     return id;
   }
 
+  /** Conversation privée de la paire, créée si besoin ; sûr en cas de création simultanée. */
+  async upsertDirect(key: string, members: readonly string[], createdBy: string, at: Date): Promise<string> {
+    return this.db.transaction(async (tx) => {
+      const { rows } = await tx.execute<{ id: string }>(sql`
+        INSERT INTO conversations (kind, direct_key, created_by, created_at) VALUES ('direct', ${key}, ${createdBy}, ${at})
+        ON CONFLICT (direct_key) WHERE kind = 'direct' DO NOTHING RETURNING id`);
+      if (rows[0]) {
+        await this.addMembers(rows[0].id, members, at, tx);
+        return rows[0].id;
+      }
+      return (await this.byDirectKey(key, tx))!;
+    });
+  }
+
+  /** Verrou du trajet : les synchronisations de son chat passent l'une après l'autre. */
+  async lockRide(rideId: string, db: DbOrTx): Promise<void> {
+    await db.execute(sql`SELECT 1 FROM rides WHERE id = ${rideId} FOR UPDATE`);
+  }
+
   async addMembers(conversationId: string, userIds: readonly string[], at: Date, db: DbOrTx = this.db): Promise<void> {
     for (const userId of userIds) {
       await db.execute(sql`
@@ -147,10 +166,12 @@ export class ChatRepo {
     return toMessage(rows[0]!);
   }
 
-  async messages(conversationId: string, before: Date | null, limit: number): Promise<MessageRow[]> {
+  /** Curseur (date, identifiant) : aucun message sauté à horodatage égal. */
+  async messages(conversationId: string, before: { at: Date; id: string | null } | null, limit: number): Promise<MessageRow[]> {
     const { rows } = await this.db.execute(
       before
-        ? sql`SELECT * FROM messages WHERE conversation_id = ${conversationId} AND created_at < ${before}
+        ? sql`SELECT * FROM messages WHERE conversation_id = ${conversationId}
+                AND (created_at, id) < (${before.at}, ${before.id ?? 'ffffffff-ffff-ffff-ffff-ffffffffffff'}::uuid)
               ORDER BY created_at DESC, id DESC LIMIT ${limit}`
         : sql`SELECT * FROM messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC, id DESC LIMIT ${limit}`,
     );
@@ -170,6 +191,9 @@ export class ChatRepo {
       FROM ride_participants x JOIN ride_participants y ON y.ride_id = x.ride_id
       JOIN users u ON u.id = y.user_id
       WHERE x.user_id = ${userId} AND y.user_id <> ${userId} AND u.deleted_at IS NULL
+        -- Engagés ou proposés ensemble : pas quelqu'un qui a refusé ou annulé.
+        AND x.status IN ('proposed', 'accepted', 'picked_up', 'absent')
+        AND y.status IN ('proposed', 'accepted', 'picked_up', 'absent')
       ORDER BY u.first_name, u.id LIMIT 200`);
     return rows.map((r) => ({ userId: r.id, firstName: r.first_name, photoUrl: r.photo_url }));
   }
@@ -190,16 +214,34 @@ export class ChatRepo {
     return r ? { status: r.status, endedAt: date(r.ended_at), members: r.members ?? [] } : null;
   }
 
+  async rideInfo(rideId: string): Promise<{ day: string; direction: 'to_campus' | 'from_campus' } | null> {
+    const { rows } = await this.db.execute<{ day: string; direction: 'to_campus' | 'from_campus' }>(sql`
+      SELECT day::text AS day, direction FROM rides WHERE id = ${rideId}`);
+    return rows[0] ?? null;
+  }
+
   async setRetention(conversationId: string, archivedAt: Date | null, deleteAfter: Date | null, db: DbOrTx = this.db) {
     await db.execute(sql`UPDATE conversations SET archived_at = ${archivedAt}, delete_after = ${deleteAfter} WHERE id = ${conversationId}`);
   }
 
-  /** Chats de trajet d'un trajet terminé ou annulé, pas encore programmés pour l'archivage. */
-  async rideChatsToSchedule(): Promise<{ id: string; status: string; endedAt: Date | null; day: string }[]> {
-    const { rows } = await this.db.execute<{ id: string; status: string; ended_at: string | null; day: string }>(sql`
-      SELECT c.id, r.status, r.ended_at, r.day::text AS day FROM conversations c JOIN rides r ON r.id = c.ride_id
-      WHERE c.kind = 'ride' AND c.delete_after IS NULL AND r.status IN ('completed', 'cancelled')`);
-    return rows.map((r) => ({ id: r.id, status: r.status, endedAt: date(r.ended_at), day: r.day }));
+  /**
+   * Chats de trajet à programmer pour l'archivage : trajet terminé, annulé, ou confirmé mais
+   * jamais parti (heure dépassée de `staleBefore`), qui sinon garderait son chat pour toujours.
+   */
+  async rideChatsToSchedule(staleBefore: Date): Promise<{ id: string; endedAt: Date | null; targetTime: Date }[]> {
+    const { rows } = await this.db.execute<{ id: string; ended_at: string | null; target_time: string }>(sql`
+      SELECT c.id, r.ended_at, r.target_time FROM conversations c JOIN rides r ON r.id = c.ride_id
+      WHERE c.kind = 'ride' AND c.delete_after IS NULL
+        AND (r.status IN ('completed', 'cancelled') OR (r.status = 'confirmed' AND r.target_time < ${staleBefore}))`);
+    return rows.map((r) => ({ id: r.id, endedAt: date(r.ended_at), targetTime: new Date(r.target_time) }));
+  }
+
+  /** Trajets confirmés ou en cours sans chat (confirmés avant la messagerie, échec ponctuel). */
+  async ridesMissingChat(): Promise<string[]> {
+    const { rows } = await this.db.execute<{ id: string }>(sql`
+      SELECT r.id FROM rides r WHERE r.status IN ('confirmed', 'in_progress')
+        AND NOT EXISTS (SELECT 1 FROM conversations c WHERE c.kind = 'ride' AND c.ride_id = r.id)`);
+    return rows.map((r) => r.id);
   }
 
   /** Archivage puis suppression (messages compris, par cascade). */

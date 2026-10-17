@@ -39,7 +39,10 @@ export interface ServiceAccount {
   private_key: string;
 }
 
-type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{
+type Fetch = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal },
+) => Promise<{
   ok: boolean;
   status: number;
   json(): Promise<unknown>;
@@ -97,6 +100,8 @@ export class FcmPushProvider implements PushProvider {
       const response = await this.fetchFn(`https://fcm.googleapis.com/v1/projects/${this.account.project_id}/messages:send`, {
         method: 'POST',
         headers: { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' },
+        // Un FCM lent n'immobilise ni la tâche ni la file.
+        signal: AbortSignal.timeout(5000),
         body: JSON.stringify({
           message: {
             token,
@@ -106,9 +111,21 @@ export class FcmPushProvider implements PushProvider {
           },
         }),
       });
-      // 404 UNREGISTERED ou 400 INVALID_ARGUMENT sur le jeton : appareil désinstallé ou jeton faux.
-      if (response.status === 404 || response.status === 400) invalidTokens.push(token);
+      // Jeton inconnu de FCM (application désinstallée) : 404, ou code UNREGISTERED. Un 400 dû à
+      // la charge utile ne supprime aucun appareil.
+      if (response.status === 404 || (!response.ok && (await errorCode(response)) === 'UNREGISTERED')) {
+        invalidTokens.push(token);
+      }
     }
     return { invalidTokens };
+  }
+}
+
+async function errorCode(response: { json(): Promise<unknown> }): Promise<string | null> {
+  try {
+    const body = (await response.json()) as { error?: { details?: { errorCode?: string }[] } };
+    return body.error?.details?.find((d) => d.errorCode)?.errorCode ?? null;
+  } catch {
+    return null;
   }
 }

@@ -11,8 +11,16 @@ export interface UserSocket {
 export class UserHub {
   private readonly sockets = new Map<string, Set<UserSocket>>();
 
+  /** Au plus quelques appareils par personne : le plus ancien socket est fermé. */
+  static readonly MAX_PER_USER = 5;
+
   add(userId: string, socket: UserSocket): void {
     const set = this.sockets.get(userId) ?? new Set();
+    if (set.size >= UserHub.MAX_PER_USER) {
+      const oldest = set.values().next().value!;
+      set.delete(oldest);
+      oldest.close(4408, 'too_many_sockets');
+    }
     set.add(socket);
     this.sockets.set(userId, set);
   }
@@ -30,7 +38,13 @@ export class UserHub {
   send(userIds: readonly string[], message: object): void {
     const data = JSON.stringify(message);
     for (const userId of userIds) {
-      for (const socket of this.sockets.get(userId) ?? []) socket.send(data);
+      for (const socket of this.sockets.get(userId) ?? []) {
+        try {
+          socket.send(data);
+        } catch {
+          // Socket en cours de fermeture : le message est enregistré, il sera relu.
+        }
+      }
     }
   }
 }

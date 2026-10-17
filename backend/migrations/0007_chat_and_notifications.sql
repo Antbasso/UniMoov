@@ -31,6 +31,14 @@ CREATE TABLE ride_reminders (
   PRIMARY KEY (ride_id, user_id)
 );
 
+-- Un signalement de message ne bloque pas la suppression d'un chat échu (rétention).
+ALTER TABLE reports DROP CONSTRAINT reports_target_message_id_fkey;
+ALTER TABLE reports ADD CONSTRAINT reports_target_message_id_fkey
+  FOREIGN KEY (target_message_id) REFERENCES messages(id) ON DELETE SET NULL;
+
+-- Anciens réglages de rétention remplacés par chat.rideArchiveDays / chat.rideDeleteDays.
+DELETE FROM app_settings WHERE key IN ('chat.rideArchiveAfterDays', 'chat.rideDeleteAfterDays');
+
 INSERT INTO app_settings (key, value) VALUES
   -- Chat de trajet : lecture seule tant de jours après la fin (ou l'annulation), puis supprimé.
   ('chat.rideArchiveDays', '7'),
