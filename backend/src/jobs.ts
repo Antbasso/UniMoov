@@ -4,7 +4,9 @@ import type { CalendarService } from './modules/calendar/service.js';
 import type { MatchingService } from './modules/matching/service.js';
 import type { RideLifecycle } from './modules/rides/lifecycle.js';
 import type { TrustService } from './modules/trust/service.js';
-import { addDaysIso, isoWeekOf, parisDateOf } from './shared/time.js';
+import type { ChatService } from './modules/chat/service.js';
+import type { NotificationService } from './modules/notifications/service.js';
+import { addDaysIso, isoWeekOf, parisDateOf, weekDays } from './shared/time.js';
 
 /**
  * Tâches planifiées dans PostgreSQL (pg-boss, pas de Redis) :
@@ -15,7 +17,7 @@ import { addDaysIso, isoWeekOf, parisDateOf } from './shared/time.js';
  */
 export async function startJobs(
   databaseUrl: string,
-  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService },
+  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService; chat: ChatService; notifications: NotificationService },
   log: FastifyBaseLogger,
   clock: () => Date = () => new Date(),
 ): Promise<() => Promise<void>> {
@@ -28,6 +30,10 @@ export async function startJobs(
   await boss.createQueue('trace-purge');
   await boss.createQueue('stale-rides');
   await boss.createQueue('reliability-refresh');
+  await boss.createQueue('chat-retention');
+  await boss.createQueue('ride-reminders');
+  await boss.schedule('chat-retention', '45 4 * * *', null, { tz: 'Europe/Paris' });
+  await boss.schedule('ride-reminders', '*/5 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('reliability-refresh', '15 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('stale-rides', '0 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('trace-purge', '30 4 * * *', null, { tz: 'Europe/Paris' });
@@ -42,7 +48,9 @@ export async function startJobs(
     await services.calendar.extendManualAll();
     const nextWeek = isoWeekOf(addDaysIso(parisDateOf(clock()), 7));
     await services.matching.ensureWeek(nextWeek);
-    log.info({ week: nextWeek }, 'weekly matching done');
+    const days = weekDays(nextWeek);
+    const notified = await services.notifications.notifyProposalsReady(nextWeek, days[0]!, days[6]!);
+    log.info({ week: nextWeek, notified }, 'weekly matching done');
   });
 
   await boss.work('stale-rides', async () => {
@@ -52,6 +60,13 @@ export async function startJobs(
   await boss.work('reliability-refresh', async () => {
     const refreshed = await services.trust.refreshExpired();
     log.info({ refreshed }, 'reliability scores refreshed');
+  });
+  await boss.work('chat-retention', async () => {
+    log.info(await services.chat.applyRetention(), 'chat retention applied');
+  });
+  await boss.work('ride-reminders', async () => {
+    const sent = await services.notifications.sendReminders();
+    if (sent > 0) log.info({ sent }, 'ride reminders sent');
   });
   await boss.work('trace-purge', async () => {
     const deleted = await services.lifecycle.purgeTraces();

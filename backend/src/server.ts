@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
@@ -8,6 +9,7 @@ import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provide
 import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
 import { FakePaymentProvider } from './shared/payments/payment-provider.js';
 import { ConsoleMailProvider } from './shared/mail/console-mail-provider.js';
+import { FcmPushProvider, type ServiceAccount } from './shared/push/push-provider.js';
 
 const config = loadConfig();
 // Le logger n'existe qu'une fois l'app construite ; le pool en a besoin dès sa création.
@@ -18,6 +20,12 @@ const geocoding =
   config.GEOCODING_PROVIDER === 'fake'
     ? new FakeGeocodingProvider()
     : new CachedGeocodingProvider(new BanGeocodingProvider(config.GEOCODING_URL));
+
+// Clé du compte de service lue au démarrage, hors du dépôt (chemin dans .env).
+const push =
+  config.PUSH_PROVIDER === 'fcm' && config.FCM_SERVICE_ACCOUNT_FILE
+    ? new FcmPushProvider(JSON.parse(readFileSync(config.FCM_SERVICE_ACCOUNT_FILE, 'utf8')) as ServiceAccount)
+    : undefined;
 
 const app = await buildApp({
   config,
@@ -33,6 +41,7 @@ const app = await buildApp({
     geocoding,
     // Développement uniquement (refusé en production par la config) ; prestataire réel en M4b.
     payments: new FakePaymentProvider(),
+    ...(push ? { push } : {}),
     ...(config.ROUTING_PROVIDER === 'ors' && config.ORS_API_KEY
       ? { routing: new OrsRoutingProvider(config.ORS_API_KEY), routingDailyQuota: config.ROUTING_DAILY_QUOTA }
       : {}),

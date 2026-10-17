@@ -40,6 +40,10 @@ const settingSchemas = {
   'disputes.windowDays': z.number().int().min(1).max(90),
   'reports.dailyLimit': z.number().int().min(1).max(100),
   'support.email': z.email(),
+  'chat.rideArchiveDays': z.number().int().min(1).max(90),
+  'chat.rideDeleteDays': z.number().int().min(1).max(365),
+  'chat.maxGroupMembers': z.number().int().min(3).max(50),
+  'notifications.reminderMinutes': z.number().int().min(5).max(24 * 60),
 } as const;
 
 type SettingKey = keyof typeof settingSchemas;

@@ -28,6 +28,10 @@ const envSchema = z
   ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),
   /** `fake` : portefeuille simulé (aucun argent réel), interdit en production. */
   PAYMENT_PROVIDER: z.enum(['fake']).default('fake'),
+  /** `fcm` : Firebase Cloud Messaging (clé de compte de service) ; `log` : journal seulement. */
+  PUSH_PROVIDER: z.enum(['log', 'fcm']).default('log'),
+  /** Chemin du fichier JSON de la clé du compte de service Firebase (secret, jamais commité). */
+  FCM_SERVICE_ACCOUNT_FILE: z.string().min(1).optional(),
   /** Tâches planifiées (synchronisation des agendas, génération hebdomadaire). */
   JOBS_ENABLED: z.stringbool().default(true),
 })
@@ -42,6 +46,10 @@ const envSchema = z
   .refine((env) => env.ROUTING_PROVIDER !== 'ors' || Boolean(env.ORS_API_KEY), {
     path: ['ORS_API_KEY'],
     message: 'clé requise avec ROUTING_PROVIDER=ors',
+  })
+  .refine((env) => env.PUSH_PROVIDER !== 'fcm' || Boolean(env.FCM_SERVICE_ACCOUNT_FILE), {
+    path: ['FCM_SERVICE_ACCOUNT_FILE'],
+    message: 'fichier requis avec PUSH_PROVIDER=fcm',
   });
 
 export type Config = z.infer<typeof envSchema>;

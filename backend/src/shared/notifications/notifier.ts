@@ -1,10 +1,14 @@
 /**
- * Notifications aux utilisateurs (cahier §8, §11), derrière une interface : journal en v1,
- * push FCM au jalon M6. Les événements ne portent que des identifiants, jamais de texte libre.
+ * Notifications aux utilisateurs (cahier §8, §11), derrière une interface : push (FCM) avec
+ * préférences par catégorie (`NotificationService`). Les événements ne portent jamais le
+ * texte d'un message (un écran verrouillé ne l'affiche pas), au plus le prénom de l'auteur.
  */
 export type NotificationEvent =
   | { type: 'ride_cancelled'; rideId: string; by: 'driver' | 'passenger' }
-  | { type: 'replacement_proposed'; rideId: string };
+  | { type: 'replacement_proposed'; rideId: string }
+  | { type: 'proposals_ready'; week: string }
+  | { type: 'ride_reminder'; rideId: string; minutes: number }
+  | { type: 'chat_message'; conversationId: string; senderFirstName: string };
 
 export interface Notifier {
   notify(userIds: readonly string[], event: NotificationEvent): Promise<void>;
