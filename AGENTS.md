@@ -45,6 +45,9 @@ cd backend && npm run lint && npm run typecheck
 cd backend && npm test                        # unitaires (vitest, sans base)
 cd backend && npm run test:integration        # PostGIS requis : TEST_DATABASE_URL (base effacée)
 cd mobile && flutter pub get && flutter analyze && flutter test
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build   # production derrière Caddy (docs/deploiement.md)
+./deploy/backup.sh                            # sauvegarde chiffrée de la base (cron quotidien en production)
+./deploy/restore.sh backups/<fichier>.dump.enc   # restauration (remplace la base)
 cd mobile && dart run tool/generate_tokens.dart   # après modification de tokens.json
 cd mobile && flutter gen-l10n                 # après modification de lib/l10n/app_fr.arb
 cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000

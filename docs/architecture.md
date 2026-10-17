@@ -78,8 +78,8 @@ FCM pour Android et iOS. Table des préférences par type d'événement ; rappel
 - JWT d'accès courts (15 min) + refresh rotatifs ; secrets en variables d'environnement.
 - Contrôle d'accès par ressource, tests dédiés (un utilisateur ne lit jamais le trajet, le chat ou la position d'un autre trajet).
 - Chiffrement en transit (TLS) ; chiffrement au repos géré par l'hébergeur ; sauvegardes.
-- Registre des traitements, durées de rétention dans `app_settings` : chat de trajet (à définir), traces de position (courte), tokens d'agenda (révocables, supprimés à la déconnexion).
+- Registre des traitements, durées de rétention, droits et checklist : `docs/rgpd.md` (durées réglables dans `app_settings` : chat de trajet, traces de position ; purge de nuit des codes, sessions et créneaux).
 - Modération : signalement d'un utilisateur ou d'un message, accessible depuis le profil et le chat.
 
 ## 10. Environnements et déploiement
-`docker-compose.yml` pour le développement et la production sur un seul VPS (API, PostgreSQL/PostGIS, Caddy pour le HTTPS). Sauvegardes quotidiennes vers le stockage objet. Image Docker du back-end ; CI (GitHub Actions) : lint, typecheck, tests back et mobile à chaque PR. Configuration par variables d'environnement validées au démarrage (Zod).
+`docker-compose.yml` pour le développement et la production sur un seul VPS (API, PostgreSQL/PostGIS), plus `docker-compose.prod.yml` pour Caddy (HTTPS) en production ; procédure dans `docs/deploiement.md`. Sauvegardes quotidiennes vers le stockage objet. Image Docker du back-end ; CI (GitHub Actions) : lint, typecheck, tests back et mobile à chaque PR. Configuration par variables d'environnement validées au démarrage (Zod).

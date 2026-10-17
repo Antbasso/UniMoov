@@ -14,3 +14,7 @@ build/
 *service-account*.json
 *firebase-adminsdk*.json
 secrets/
+
+# Sauvegardes et fond de carte du serveur (jamais commités)
+backups/
+tiles/
