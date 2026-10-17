@@ -63,6 +63,21 @@ afterAll(async () => {
 });
 
 describe('conducteur qui recopie la position de son passager', () => {
+  it('première position envoyée = adresse du passager, juste après le départ : pas crue', async () => {
+    const lea = await connect('Léa', rideId);
+    const hugo = await connect('Hugo', rideId);
+    await new Promise((r) => setTimeout(r, 100));
+    const home = { lat: user('Hugo').lat, lon: user('Hugo').lon };
+    // Léa vient de démarrer de chez elle et n'a encore rien envoyé : elle « apparaît » chez Hugo.
+    await send(lea, home, 1000);
+    await send(hugo, home, 1000);
+    await send(hugo, home, 16_000);
+    expect(hugo.messages.some((m) => m.type === 'presence_validated')).toBe(false);
+    lea.ws.terminate();
+    hugo.ws.terminate();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
   it('saut impossible depuis 12 km : ni présence automatique, ni présence demandée, ni paiement', async () => {
     const lea = await connect('Léa', rideId);
     const hugo = await connect('Hugo', rideId);
@@ -72,9 +87,10 @@ describe('conducteur qui recopie la position de son passager', () => {
     await send(lea, { lat: home.lat + 0.11, lon: home.lon });
     await send(hugo, home);
     await send(lea, home);
-    // Hugo attend devant chez lui ; ses positions arrivent bien, longtemps.
-    for (let i = 0; i < 4; i++) {
-      await send(lea, home, 10_000);
+    // Hugo attend devant chez lui ; ses positions arrivent bien, plus de 15 s, mais Léa ne peut
+    // pas avoir roulé jusque-là depuis son départ (≈ 2,5 km en une demi-minute).
+    for (let i = 0; i < 2; i++) {
+      await send(lea, home, 5000);
       await send(hugo, home, 1000);
     }
     expect(hugo.messages.some((m) => m.type === 'presence_validated')).toBe(false);

@@ -1,3 +1,4 @@
+import type { Notifier } from '../../shared/notifications/notifier.js';
 import { AppError } from '../../shared/errors.js';
 import { distanceMeters, type LatLon } from '../../shared/geo.js';
 import { navigationLinks, SUPPORTS_MULTI_STOP } from '../navigation/links.js';
@@ -14,6 +15,9 @@ export interface LiveRide {
   driverId: string;
   /** Campus (aller) ou domicile du conducteur (retour). */
   destination: LatLon;
+  /** Point de départ du conducteur et heure du départ : première référence de vraisemblance. */
+  origin: LatLon;
+  startedAt: number;
   passengers: { userId: string; point: LatLon; pickedUp: boolean; validated: boolean }[];
 }
 
@@ -33,6 +37,7 @@ export class RideLifecycle {
     private readonly onLiveChanged: (rideId: string) => void = () => undefined,
     /** Score de fiabilité : trajet mené à bien ou absence, dans la transaction de clôture. */
     private readonly trust?: Pick<TrustService, 'onRideFinished'>,
+    private readonly notifier?: Notifier,
   ) {}
 
   private async load(rideId: string) {
@@ -68,6 +73,8 @@ export class RideLifecycle {
       rideId,
       driverId: ride.driverId,
       destination: ride.direction === 'to_campus' ? { lat: ride.campus.lat, lon: ride.campus.lon } : driver.home,
+      origin: ride.direction === 'to_campus' ? driver.home : { lat: ride.campus.lat, lon: ride.campus.lon },
+      startedAt: (ride.startedAt ?? this.clock()).getTime(),
       passengers: members
         .filter((m) => m.role === 'passenger' && isAccepted(m))
         .flatMap((m) => {
@@ -94,6 +101,7 @@ export class RideLifecycle {
     if (now > ride.targetTime.getTime() + staleHours * 3_600_000) {
       throw new AppError(409, 'too_late', 'Ce trajet est passé');
     }
+    let unanswered: string[] = [];
     const started = await this.repo.transaction(async (tx) => {
       const current = await this.repo.ride(rideId, tx, true);
       if (current?.status === 'in_progress') return false;
@@ -103,7 +111,7 @@ export class RideLifecycle {
       const price = await this.rides.estimate(current, current.distanceM, passengers.length + 1);
       await this.repo.setRideStatus(rideId, 'in_progress', { startedAt: this.clock() }, tx);
       // Demandes de place restées sans réponse : on ne monte pas en route.
-      await this.repo.declinePendingRequests(rideId, tx);
+      unanswered = await this.repo.declinePendingRequests(rideId, tx);
       // Tous les portefeuilles d'un coup, dans l'ordre des identifiants : pas d'interblocage.
       await this.wallet.lockWallets([ride.driverId, ...passengers.map((p) => p.userId)], tx);
       for (const p of passengers) {
@@ -121,6 +129,9 @@ export class RideLifecycle {
       return true;
     });
     if (!started) return;
+    if (unanswered.length > 0) {
+      await this.notifier?.notify(unanswered, { type: 'request_answered', rideId, approved: false }).catch(() => undefined);
+    }
     this.onLiveChanged(rideId);
     this.hub.send(rideId, { type: 'ride_status', status: 'in_progress' });
   }
@@ -202,14 +213,16 @@ export class RideLifecycle {
     }
     const closed = await this.repo.transaction(async (tx) => {
       const ride = await this.repo.ride(rideId, tx, true);
-      if (ride?.status !== 'in_progress') return false;
+      if (ride?.status !== 'in_progress') return null;
       const members = await this.repo.members(rideId, tx);
       const present = members.filter((m) => m.role === 'passenger' && m.presenceValidatedAt);
       const now = this.clock();
       const missing = members.filter((m) => m.role === 'passenger' && isAccepted(m) && !m.presenceValidatedAt);
       // Clôture avant l'heure de passage d'un passager ni pris ni monté : le conducteur n'est pas
       // allé jusqu'à lui ; ce n'est pas une absence (pas de pénalité).
-      const notReached = missing.filter((m) => m.status === 'accepted' && m.eta !== null && m.eta > now);
+      // Prise en charge : heure de passage à l'aller ; au retour, départ du campus.
+      const pickupTime = (m: (typeof missing)[number]) => (ride.direction === 'to_campus' ? m.eta : ride.targetTime);
+      const notReached = missing.filter((m) => m.status === 'accepted' && (pickupTime(m)?.getTime() ?? 0) > now.getTime());
       const noShow = missing.filter((m) => !notReached.includes(m));
       const price = await this.rides.estimate(ride, ride.distanceM, present.length + 1);
       await this.repo.setRideStatus(rideId, 'completed', { endedAt: now, finalTotalCostCents: price?.totalCostCents ?? null }, tx);
@@ -223,12 +236,19 @@ export class RideLifecycle {
       }
       await this.trust?.onRideFinished(
         rideId,
-        { completed: [ride.driverId, ...present.map((m) => m.userId)], noShow: noShow.map((m) => m.userId) },
+        // Conducteur qui a laissé un passager en route : trajet non compté comme mené à bien.
+        {
+          completed: [...(notReached.length === 0 ? [ride.driverId] : []), ...present.map((m) => m.userId)],
+          noShow: noShow.map((m) => m.userId),
+        },
         tx,
       );
-      return true;
+      return { skipped: notReached.map((m) => m.userId) };
     });
     if (!closed) return;
+    if (closed.skipped.length > 0) {
+      await this.notifier?.notify(closed.skipped, { type: 'ride_cancelled', rideId, by: 'driver' }).catch(() => undefined);
+    }
     this.hub.send(rideId, { type: 'ride_status', status: 'completed' });
     this.hub.close(rideId);
     this.onLiveChanged(rideId);

@@ -24,4 +24,9 @@ set -e
 [ "${status[0]}" -eq 0 ] || { echo "déchiffrement impossible (phrase de passe ou fichier)" >&2; exit 1; }
 [ "${status[1]}" -eq 0 ] || echo "pg_restore a signalé des avertissements (code ${status[1]}) : vérifie les journaux ci-dessus" >&2
 docker compose exec -T db psql -U "${POSTGRES_USER:-unimoov}" -d "${POSTGRES_DB:-unimoov}" -Atc 'SELECT count(*) FROM users' >/dev/null
+# Production : droits du rôle de l'API rétablis (pg_restore --no-owner rend tout au propriétaire).
+APP_DB_PASSWORD="$(env_value APP_DB_PASSWORD)"
+if [ -n "$APP_DB_PASSWORD" ]; then
+  docker compose exec -T -e APP_DB_PASSWORD="$APP_DB_PASSWORD" db sh -s < deploy/db-init/10-app-role.sh
+fi
 echo "restauration terminée"

@@ -19,6 +19,7 @@ export interface RideInfo {
   durationS: number | null;
   routeEstimated: boolean;
   plannedAt: Date | null;
+  startedAt: Date | null;
   campus: LatLon & { name: string };
   /** Consommation du véhicule du conducteur (null s'il l'a retiré). */
   consumptionLPer100km: number | null;
@@ -71,13 +72,14 @@ export class RidesRepo {
       duration_s: number | null;
       route_estimated: boolean;
       planned_at: Date | null;
+      started_at: Date | null;
       campus_name: string;
       campus_lat: number;
       campus_lon: number;
       consumption: string | null;
     }>(sql`
       SELECT r.id, r.driver_id, r.direction, r.day::text, r.target_time, r.status, r.seats_total,
-             r.distance_m, r.duration_s, r.route_estimated, r.planned_at,
+             r.distance_m, r.duration_s, r.route_estimated, r.planned_at, r.started_at,
              c.name AS campus_name, ST_Y(c.location::geometry) AS campus_lat,
              ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption
       FROM rides r JOIN campuses c ON c.id = r.campus_id
@@ -98,6 +100,7 @@ export class RidesRepo {
       durationS: r.duration_s,
       routeEstimated: r.route_estimated,
       plannedAt: r.planned_at ? new Date(r.planned_at) : null,
+      startedAt: r.started_at ? new Date(r.started_at) : null,
       campus: { name: r.campus_name, lat: Number(r.campus_lat), lon: Number(r.campus_lon) },
       consumptionLPer100km: r.consumption === null ? null : Number(r.consumption),
     };
@@ -205,8 +208,11 @@ export class RidesRepo {
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
   }
 
-  async declinePendingRequests(rideId: string, tx: Tx): Promise<void> {
-    await tx.execute(sql`UPDATE ride_participants SET status = 'declined' WHERE ride_id = ${rideId} AND status = 'requested'`);
+  async declinePendingRequests(rideId: string, tx: Tx): Promise<string[]> {
+    const { rows } = await tx.execute<{ user_id: string }>(sql`
+      UPDATE ride_participants SET status = 'declined' WHERE ride_id = ${rideId} AND status = 'requested'
+      RETURNING user_id`);
+    return rows.map((r) => r.user_id);
   }
 
   async setRideStatus(

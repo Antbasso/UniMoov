@@ -143,6 +143,8 @@ export class AccountRepo {
     const count = async (query: ReturnType<typeof sql>) => (await this.db.execute(query)).rowCount ?? 0;
     return {
       verificationCodes: await count(sql`DELETE FROM verification_codes WHERE expires_at < ${day(1)}`),
+      loginFailures: await count(sql`
+        DELETE FROM login_failures WHERE window_start < ${day(1)} AND (locked_until IS NULL OR locked_until < ${now})`),
       // Jetons utilisés ou révoqués gardés jusqu'à leur expiration : leur réutilisation révèle un vol.
       refreshTokens: await count(sql`DELETE FROM refresh_tokens WHERE expires_at < ${now}`),
       scheduleSlots: await count(sql`DELETE FROM schedule_slots WHERE end_at < ${day(7)}`),

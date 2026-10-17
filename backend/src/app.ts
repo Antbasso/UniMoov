@@ -234,6 +234,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),
       trust,
+      notifier,
     );
     const tracking = new TrackingService(hub, lifecycle, ridesRepo, settings, () => clock().getTime());
     const matchingService = new MatchingService(

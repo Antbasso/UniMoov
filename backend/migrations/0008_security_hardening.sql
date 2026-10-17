@@ -1,9 +1,9 @@
 -- Audit de sécurité (docs/decisions.md, 2026-10-17).
 
--- Échecs de connexion par adresse : au-delà du seuil, l'adresse est bloquée un moment, quelle
--- que soit l'IP (limite par IP contournable avec beaucoup d'adresses).
+-- Échecs de connexion : par adresse et IP hachée (blocage court) et par adresse sur la journée
+-- (seuil plus haut, contre une attaque répartie sur beaucoup d'IP). Purgés chaque nuit.
 CREATE TABLE login_failures (
-  email text PRIMARY KEY,
+  email text PRIMARY KEY,                 -- clé : « adresse|IP hachée » ou « adresse|jour »
   failures integer NOT NULL DEFAULT 0,
   window_start timestamptz NOT NULL,
   locked_until timestamptz
@@ -16,5 +16,6 @@ ALTER TYPE participant_status ADD VALUE IF NOT EXISTS 'requested' BEFORE 'accept
 INSERT INTO app_settings (key, value) VALUES
   ('auth.loginMaxFailures', '10'),
   ('auth.loginLockMinutes', '15'),
+  ('auth.loginDailyMaxFailures', '100'),
   ('auth.signupCodesPerDay', '10')
 ON CONFLICT (key) DO NOTHING;

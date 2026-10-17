@@ -49,19 +49,23 @@ export class AuthRepo {
     return rows[0]?.n ?? 0;
   }
 
-  /** Adresse bloquée après trop d'échecs de connexion (`null` : libre). */
-  async loginLockedUntil(email: string, now: Date): Promise<Date | null> {
+  /** Clé bloquée après trop d'échecs de connexion (`null` : libre). */
+  async loginLockedUntil(keys: readonly string[], now: Date): Promise<Date | null> {
     const { rows } = await this.db.execute<{ locked_until: Date | null }>(sql`
-      SELECT locked_until FROM login_failures WHERE email = ${email} AND locked_until > ${now}`);
+      SELECT max(locked_until) AS locked_until FROM login_failures
+      WHERE email IN (${sql.join(
+        keys.map((k) => sql`${k}`),
+        sql`, `,
+      )}) AND locked_until > ${now}`);
     return rows[0]?.locked_until ?? null;
   }
 
-  /** Compte un échec dans la fenêtre ; au seuil, bloque l'adresse. */
-  async recordLoginFailure(email: string, now: Date, policy: { maxFailures: number; lockMinutes: number }): Promise<void> {
-    const windowStart = new Date(now.getTime() - policy.lockMinutes * 60_000);
+  /** Compte un échec dans la fenêtre de la clé ; au seuil, la bloque. */
+  async recordLoginFailure(key: string, now: Date, policy: { maxFailures: number; windowMinutes: number; lockMinutes: number }): Promise<void> {
+    const windowStart = new Date(now.getTime() - policy.windowMinutes * 60_000);
     const lockUntil = new Date(now.getTime() + policy.lockMinutes * 60_000);
     await this.db.execute(sql`
-      INSERT INTO login_failures (email, failures, window_start) VALUES (${email}, 1, ${now})
+      INSERT INTO login_failures (email, failures, window_start) VALUES (${key}, 1, ${now})
       ON CONFLICT (email) DO UPDATE SET
         failures = CASE WHEN login_failures.window_start < ${windowStart} THEN 1 ELSE login_failures.failures + 1 END,
         window_start = CASE WHEN login_failures.window_start < ${windowStart} THEN ${now} ELSE login_failures.window_start END,
@@ -70,8 +74,8 @@ export class AuthRepo {
           THEN ${lockUntil} ELSE login_failures.locked_until END`);
   }
 
-  async clearLoginFailures(email: string): Promise<void> {
-    await this.db.execute(sql`DELETE FROM login_failures WHERE email = ${email}`);
+  async clearLoginFailures(keys: readonly string[]): Promise<void> {
+    for (const key of keys) await this.db.execute(sql`DELETE FROM login_failures WHERE email = ${key}`);
   }
 
   async incrementAttempts(id: string, db: DbOrTx = this.db): Promise<void> {

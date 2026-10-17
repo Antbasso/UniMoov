@@ -196,21 +196,42 @@ describe('connexion', () => {
     expect(wrong.json()).toEqual(unknown.json());
   });
 
-  it('trop d’échecs sur une adresse : bloquée un moment, même avec le bon mot de passe, puis libérée', async () => {
+  it('trop d’échecs depuis une IP : bloquée pour elle seulement, la vraie personne se connecte ailleurs', async () => {
     const target = freshEmail();
     await signUp(ctx, target);
-    for (let i = 0; i < 10; i++) {
-      expect((await post('/auth/login', { universityEmail: target, password: `essai-${i}` })).statusCode).toBe(401);
-    }
-    const locked = await post('/auth/login', { universityEmail: target, password: 'motdepasse-solide' });
+    const from = (ip: string, password: string) =>
+      ctx.app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { universityEmail: target, password }, remoteAddress: ip });
+    for (let i = 0; i < 10; i++) expect((await from('198.51.100.7', `essai-${i}`)).statusCode).toBe(401);
+    const locked = await from('198.51.100.7', 'motdepasse-solide');
     expect(locked.statusCode).toBe(429);
     expect(locked.json<{ error: { code: string } }>().error.code).toBe('login_locked');
     // Même blocage pour une adresse inconnue : rien n'indique si le compte existe.
     for (let i = 0; i < 10; i++) await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' });
     expect((await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' })).statusCode).toBe(429);
-
+    // Le téléphone de la vraie personne (autre IP) n'est pas bloqué par l'attaquant.
+    expect((await from('203.0.113.20', 'motdepasse-solide')).statusCode).toBe(200);
     ctx.clock.advance(16 * 60_000);
-    expect((await post('/auth/login', { universityEmail: target, password: 'motdepasse-solide' })).statusCode).toBe(200);
+    expect((await from('198.51.100.7', 'motdepasse-solide')).statusCode).toBe(200);
+  });
+
+  it('attaque répartie sur beaucoup d’IP : plafond quotidien par adresse', async () => {
+    const target = freshEmail();
+    await signUp(ctx, target);
+    for (let i = 0; i < 100; i++) {
+      await ctx.app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { universityEmail: target, password: `essai-${i}` },
+        remoteAddress: `10.0.${Math.floor(i / 9)}.${i % 9}`,
+      });
+    }
+    const response = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { universityEmail: target, password: 'motdepasse-solide' },
+      remoteAddress: '203.0.113.99',
+    });
+    expect(response.statusCode).toBe(429);
   });
 });
 

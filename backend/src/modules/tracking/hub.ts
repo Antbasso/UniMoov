@@ -39,6 +39,7 @@ export const WS_CLOSE = {
 export class TrackingHub {
   private readonly rooms = new Map<string, Set<LiveClient>>();
   private readonly positions = new Map<string, Map<string, LivePosition>>();
+  private readonly closedRides = new Set<string>();
 
   /** Un seul socket par personne et par trajet : le précédent est fermé (pas de diffusion multipliée). */
   join(rideId: string, client: LiveClient): void {
@@ -84,6 +85,12 @@ export class TrackingHub {
     for (const client of this.rooms.get(rideId) ?? []) client.socket.close(WS_CLOSE.closed, 'ride_closed');
     this.rooms.delete(rideId);
     this.positions.delete(rideId);
+    this.closedRides.add(rideId);
+  }
+
+  /** Trajet clôturé pendant la vie du processus (ses états de suivi peuvent être oubliés). */
+  isClosed(rideId: string): boolean {
+    return this.closedRides.has(rideId);
   }
 
   isOpen(rideId: string): boolean {

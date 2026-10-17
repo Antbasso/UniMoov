@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { MailProvider } from '../../shared/mail/mail-provider.js';
 import { AppError } from '../../shared/errors.js';
@@ -113,12 +113,19 @@ export class AuthService {
     return this.issueTokens(userId, randomUUID());
   }
 
-  async login(input: { universityEmail: string; password: string }): Promise<TokensResponse> {
-    const { repo, settings, clock } = this.deps;
+  /**
+   * Connexion. Deux compteurs d'échecs : par adresse et IP (blocage court, sans gêner la vraie
+   * personne depuis son téléphone) et par adresse seule, plus haut, sur la journée (attaque
+   * répartie sur beaucoup d'IP). L'IP n'est gardée que hachée.
+   */
+  async login(input: { universityEmail: string; password: string; ip?: string }): Promise<TokensResponse> {
+    const { repo, settings, clock, secret } = this.deps;
     const email = normalizeEmail(input.universityEmail);
     const now = clock();
-    // Blocage par adresse (compte existant ou non : la réponse ne révèle rien).
-    if (await repo.loginLockedUntil(email, now)) {
+    const ipKey = `${email}|${createHmac('sha256', secret).update(input.ip ?? '').digest('base64url').slice(0, 16)}`;
+    const dayKey = `${email}|jour`;
+    // Compte existant ou non : la réponse ne révèle rien.
+    if (await repo.loginLockedUntil([ipKey, dayKey], now)) {
       throw new AppError(429, 'login_locked', 'Trop d’essais : réessaie dans quelques minutes');
     }
     const user = await repo.findUserByEmail(email);
@@ -126,13 +133,20 @@ export class AuthService {
     // Même coût de calcul qu'un vrai essai : la durée ne révèle pas si le compte existe.
     const matches = await verify(active?.passwordHash ?? (await this.getDummyHash()), input.password);
     if (!active || !matches) {
-      await repo.recordLoginFailure(email, now, {
+      const lockMinutes = await settings.get('auth.loginLockMinutes');
+      await repo.recordLoginFailure(ipKey, now, {
         maxFailures: await settings.get('auth.loginMaxFailures'),
-        lockMinutes: await settings.get('auth.loginLockMinutes'),
+        windowMinutes: lockMinutes,
+        lockMinutes,
+      });
+      await repo.recordLoginFailure(dayKey, now, {
+        maxFailures: await settings.get('auth.loginDailyMaxFailures'),
+        windowMinutes: 24 * 60,
+        lockMinutes: 60,
       });
       throw invalidCredentials();
     }
-    await repo.clearLoginFailures(email);
+    await repo.clearLoginFailures([ipKey]);
     return this.issueTokens(active.id, randomUUID());
   }
 

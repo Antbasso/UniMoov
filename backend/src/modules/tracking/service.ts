@@ -40,6 +40,7 @@ export class TrackingService {
   private readonly lastTrace = new Map<string, number>();
   private readonly anchor = new Map<string, { lat: number; lon: number; at: number }>();
   private readonly nearSince = new Map<string, number>();
+  private readonly nearMisses = new Map<string, number>();
 
   constructor(
     private readonly hub: TrackingHub,
@@ -52,9 +53,9 @@ export class TrackingService {
   /** L'état d'un trajet a changé (départ, montée, présence, clôture) : relu au besoin. */
   invalidate(rideId: string): void {
     this.state.delete(rideId);
-    // Salle fermée (clôture) : plus rien à garder pour ce trajet.
-    if (!this.hub.isOpen(rideId)) {
-      for (const map of [this.lastTrace, this.anchor, this.nearSince]) {
+    // Trajet clôturé seulement (pas une salle vide un instant) : plus rien à garder.
+    if (this.hub.isClosed(rideId)) {
+      for (const map of [this.lastTrace, this.anchor, this.nearSince, this.nearMisses]) {
         for (const key of map.keys()) if (key.startsWith(`${rideId}:`)) map.delete(key);
       }
     }
@@ -117,7 +118,11 @@ export class TrackingService {
     const ts = new Date(now);
     const userId = client.userId;
     const key = `${rideId}:${userId}`;
-    const anchor = this.anchor.get(key);
+    // Conducteur sans position crue : référence = son point de départ à l'heure du départ (sa
+    // toute première position n'est pas crue d'office, sinon il « apparaît » chez un passager).
+    const anchor =
+      this.anchor.get(key) ??
+      (userId === live.driverId ? { ...live.origin, at: live.startedAt } : undefined);
     const meters = anchor ? distanceMeters(anchor, { lat, lon }) : 0;
     const trusted = !anchor || meters <= JUMP_TOLERANCE_M || meters / Math.max((now - anchor.at) / 1000, 1) <= MAX_SPEED_MPS;
     if (trusted) this.anchor.set(key, { lat, lon, at: now });
@@ -170,9 +175,14 @@ export class TrackingService {
       now - driver.receivedAt <= PRESENCE_FRESH_MS &&
       distanceMeters(pos, driver) <= radius;
     if (!near) {
-      this.nearSince.delete(key);
+      // Une mesure isolée hors du rayon (GPS en mouvement, décalage entre les deux téléphones)
+      // n'efface pas la co-présence ; deux de suite, si.
+      const misses = (this.nearMisses.get(key) ?? 0) + 1;
+      this.nearMisses.set(key, misses);
+      if (misses >= 2) this.nearSince.delete(key);
       return;
     }
+    this.nearMisses.delete(key);
     const since = this.nearSince.get(key);
     if (since === undefined) {
       this.nearSince.set(key, now);

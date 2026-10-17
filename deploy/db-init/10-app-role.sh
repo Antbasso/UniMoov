@@ -6,7 +6,8 @@
 #   docker compose exec db sh /docker-entrypoint-initdb.d/10-app-role.sh
 set -eu
 : "${APP_DB_PASSWORD:?définis APP_DB_PASSWORD dans .env}"
-APP_DB_USER="${APP_DB_USER:-unimoov_app}"
+# Nom fixe : docker-compose.prod.yml s'y connecte.
+APP_DB_USER=unimoov_app
 
 psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" -v owner="$POSTGRES_USER" -v db="$POSTGRES_DB" <<'SQL'
@@ -28,5 +29,14 @@ SELECT format('ALTER SCHEMA pgboss OWNER TO %I', :'app_user')
 WHERE EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'pgboss') \gexec
 SELECT format('ALTER TABLE pgboss.%I OWNER TO %I', tablename, :'app_user')
 FROM pg_tables WHERE schemaname = 'pgboss' \gexec
+SELECT format('ALTER %s pgboss.%I(%s) OWNER TO %I',
+              CASE p.prokind WHEN 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+              p.proname, pg_get_function_identity_arguments(p.oid), :'app_user')
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'pgboss' \gexec
+SELECT format('ALTER TYPE pgboss.%I OWNER TO %I', t.typname, :'app_user')
+FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'pgboss' AND t.typtype IN ('e', 'd') \gexec
+SELECT format('ALTER SEQUENCE pgboss.%I OWNER TO %I', sequencename, :'app_user')
+FROM pg_sequences WHERE schemaname = 'pgboss' \gexec
 SQL
 echo "rôle $APP_DB_USER prêt"

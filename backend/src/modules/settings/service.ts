@@ -8,6 +8,7 @@ const settingSchemas = {
   'auth.allowedEmailDomains': z.array(z.string().min(3)).min(1),
   'auth.loginMaxFailures': z.number().int().min(3).max(100),
   'auth.loginLockMinutes': z.number().int().min(1).max(24 * 60),
+  'auth.loginDailyMaxFailures': z.number().int().min(10).max(10_000),
   'auth.signupCodesPerDay': z.number().int().min(1).max(100),
   'matching.roadFactor': z.number().min(1).max(3),
   'matching.avgSpeedKmh': z.number().min(5).max(130),

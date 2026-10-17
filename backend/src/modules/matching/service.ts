@@ -308,7 +308,10 @@ export class MatchingService {
       if (driverAccepted && passengerAccepted && ride.status === 'proposed') {
         await this.repo.setRideStatus(rideId, 'confirmed', tx);
       }
-      const confirmed = driverAccepted && passengerAccepted;
+      // Tracé à refaire seulement si cette réponse ajoute quelqu'un d'accepté (pas pour une demande
+      // en attente ni un second appui : appel d'itinéraire inutile).
+      const accepting = me !== undefined && me.status === 'proposed';
+      const confirmed = accepting && driverAccepted && passengerAccepted;
       if (confirmed) await this.repo.invalidatePlan(rideId, tx);
       return { view: await this.viewFor(userId, rideId, tx), confirmed, requested, driverId: ride.driverId };
     });
