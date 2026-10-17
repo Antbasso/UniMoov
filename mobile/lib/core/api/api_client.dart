@@ -5,6 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Par défaut, l'hôte de la machine vu depuis l'émulateur Android.
 const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:3000');
 
+/// Lève une erreur si une adresse n'est pas en HTTPS (version publiée) : un build oublié sans
+/// `--dart-define` ne doit pas parler en clair à un serveur local ou intercepté.
+void assertSecureEndpoints({required String apiBaseUrl, required String pmtilesUrl}) {
+  if (!apiBaseUrl.startsWith('https://')) {
+    throw StateError('API_BASE_URL doit être en https:// dans une version publiée');
+  }
+  if (pmtilesUrl.isNotEmpty && !pmtilesUrl.startsWith('https://')) {
+    throw StateError('PMTILES_URL doit être en https:// dans une version publiée');
+  }
+}
+
 /// Erreur d'API au format `{ "error": { "code", "message" } }` (docs/api.md).
 class ApiException implements Exception {
   const ApiException(this.code, this.message, {this.statusCode});

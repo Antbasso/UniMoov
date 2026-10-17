@@ -117,12 +117,30 @@ Les migrations s'appliquent au démarrage de l'API. Retour arrière : `git check
 
 ## 7. Application mobile
 
-Construire l'app pour ce serveur :
+Clé de publication Android (une fois, à garder précieusement hors du dépôt : la perdre empêche toute mise à jour) :
+
+```bash
+keytool -genkey -v -keystore ~/uni-moov-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+Puis `mobile/android/key.properties` (ignoré par git) :
+
+```
+storeFile=/chemin/vers/uni-moov-upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+```
+
+Sans ce fichier, la version release est signée avec la clé de débogage (essais seulement) et Gradle l'indique.
+
+Construire l'app pour ce serveur (une version publiée refuse de démarrer si l'API ou le fond de carte ne sont pas en `https://`) :
 
 ```bash
 cd mobile
-flutter build appbundle --dart-define=API_BASE_URL=https://api.uni-moov.fr \
+flutter build appbundle --obfuscate --split-debug-info=build/symbols \
+  --dart-define=API_BASE_URL=https://api.uni-moov.fr \
   --dart-define=PMTILES_URL=https://api.uni-moov.fr/tiles/annecy.pmtiles
 ```
 
-Avant la publication sur Google Play : créer une clé de signature de publication (aujourd'hui, la version release est signée avec la clé de débogage), ajouter son empreinte SHA-1 à la clé d'API Android dans Google Cloud, et activer la signature des applications par Google Play (ajouter aussi son empreinte). iOS : compte Apple Developer et clé APNs à ajouter dans Firebase.
+Garde `build/symbols` (hors dépôt) pour lire une trace d'erreur. Avant la publication sur Google Play : ajouter l'empreinte SHA-1 de la clé de publication à la clé d'API Android dans Google Cloud, activer la signature des applications par Google Play et ajouter aussi son empreinte. iOS : compte Apple Developer, clé APNs à ajouter dans Firebase et capacité « Push Notifications » à activer dans Xcode (Runner, Signing & Capabilities), qui crée le fichier d'entitlements `aps-environment`.

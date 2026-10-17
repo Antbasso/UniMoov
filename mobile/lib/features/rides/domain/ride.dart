@@ -247,12 +247,23 @@ class NavigationPlan {
   final String appleMaps;
   final String wazeNextStop;
 
-  /// Lien pour l'application choisie (Waze : l'arrêt suivant seulement).
-  Uri linkFor(NavApp app) => Uri.parse(switch (app) {
-    NavApp.googleMaps => googleMaps,
-    NavApp.appleMaps => appleMaps,
-    NavApp.waze => wazeNextStop,
-  });
+  /// Lien pour l'application choisie (Waze : l'arrêt suivant seulement), ou `null` s'il ne
+  /// pointe pas vers l'application attendue : un lien venu du serveur n'ouvre jamais autre chose.
+  Uri? linkFor(NavApp app) {
+    final uri = Uri.tryParse(switch (app) {
+      NavApp.googleMaps => googleMaps,
+      NavApp.appleMaps => appleMaps,
+      NavApp.waze => wazeNextStop,
+    });
+    final expected = switch (app) {
+      NavApp.googleMaps => (host: 'www.google.com', path: '/maps/'),
+      NavApp.appleMaps => (host: 'maps.apple.com', path: '/'),
+      NavApp.waze => (host: 'waze.com', path: '/ul'),
+    };
+    if (uri == null || uri.scheme != 'https' || uri.host != expected.host) return null;
+    if (!uri.path.startsWith(expected.path) || uri.userInfo.isNotEmpty || uri.hasPort) return null;
+    return uri;
+  }
 
   List<NavigationStop> get remaining => stops.where((s) => !s.pickedUp).toList();
 }

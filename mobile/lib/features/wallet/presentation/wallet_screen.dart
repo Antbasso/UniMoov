@@ -7,6 +7,7 @@ import '../../../core/api/error_messages.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../auth/presentation/session_controller.dart';
 import '../data/wallet_api.dart';
 import '../domain/wallet.dart';
 
@@ -14,7 +15,11 @@ import '../domain/wallet.dart';
 /// (réseau coupé) puis réessayée ne recharge qu'une fois. Renouvelée quand l'issue est connue.
 class PendingTopupKey extends Notifier<String> {
   @override
-  String build() => newIdempotencyKey();
+  String build() {
+    // Nouvelle session (autre compte possible) : nouvelle clé.
+    ref.watch(sessionProvider);
+    return newIdempotencyKey();
+  }
 
   void rotate() => state = newIdempotencyKey();
 }

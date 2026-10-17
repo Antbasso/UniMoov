@@ -41,15 +41,20 @@ class ChatLive {
   /// Reconnecté après une coupure : des messages ont pu être manqués, à relire.
   Stream<void> get reconnected => _reconnected.stream;
 
+  /// Change à chaque pause ou reprise : une connexion lancée avant n'est plus la bonne.
+  int _generation = 0;
+
   void start() {
     if (_running || _disposed) return;
     _running = true;
+    _generation++;
     unawaited(_connect());
   }
 
   /// Arrière-plan : socket fermé, plus de reconnexion jusqu'au retour.
   Future<void> pause() async {
     _running = false;
+    _generation++;
     _retry?.cancel();
     final connection = _connection;
     _connection = null;
@@ -58,12 +63,15 @@ class ChatLive {
 
   Future<void> _connect() async {
     if (!_running) return;
+    final generation = _generation;
+    bool current() => _running && generation == _generation;
     int? code;
     try {
       // Jeton refusé à la dernière tentative : on le renouvelle avant de réessayer.
       if (_attempt > 0) await refreshSession?.call();
       final connection = await _connector.connect();
-      if (!_running) {
+      // Mis en pause (puis peut-être repris) pendant la connexion : celle-ci est de trop.
+      if (!current()) {
         await connection.close();
         return;
       }
@@ -75,7 +83,7 @@ class ChatLive {
         connection.ready.then((_) => true),
         done.then((_) => false),
       ]);
-      if (accepted && _running && _connection == connection) {
+      if (accepted && current() && _connection == connection) {
         // Accepté par le serveur : le délai repart du minimum.
         _attempt = 0;
         if (_connectedOnce) _reconnected.add(null);
@@ -86,7 +94,7 @@ class ChatLive {
     } on Object {
       // Hors ligne, serveur indisponible ou session expirée : nouvel essai plus tard.
     }
-    if (!_running) return;
+    if (!current()) return;
     _attempt++;
     _retry = Timer(retryDelay(_attempt, code), () => unawaited(_connect()));
   }

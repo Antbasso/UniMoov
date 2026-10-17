@@ -79,6 +79,8 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<!-- Notifications push (FCM via APNs) reçues application en arrière-plan. -->
+		<string>remote-notification</string>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

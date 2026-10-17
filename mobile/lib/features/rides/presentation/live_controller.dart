@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/clock.dart';
 import '../../../core/location/location_service.dart';
 import '../data/live_channel.dart';
 import '../data/rides_api.dart';
@@ -99,8 +98,12 @@ class LiveRideController extends Notifier<LiveState> {
         return;
       }
       _connection = connection;
-      _events = connection.events.listen(_onEvent);
-      unawaited(connection.closeCode.then(_onClosed));
+      // Trame illisible ou connexion coupée : traitées comme une fermeture, jamais remontées.
+      _events = connection.events.listen(
+        _onEvent,
+        onError: (Object _) => unawaited(connection.close()),
+      );
+      unawaited(connection.closeCode.then(_onClosed, onError: (Object _) => _onClosed(null)));
     } on Object {
       _scheduleRetry();
     }
@@ -163,17 +166,32 @@ class LiveRideController extends Notifier<LiveState> {
     if (await location.status() != LocationAccess.granted) return;
     _positions = location
         .positions(notificationTitle: notificationTitle, notificationText: notificationText)
-        .listen((p) {
-          _lastFix = p;
-          _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at);
-        });
+        .listen(
+          (p) {
+            _lastFix = p;
+            _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at);
+          },
+          // GPS coupé ou permission retirée : on cesse de partager plutôt que d'envoyer du vieux.
+          onError: (Object _) => _stopSharing(),
+        );
     _heartbeat = Timer.periodic(heartbeat, (_) {
       final fix = _lastFix;
+      // Immobile, le GPS (filtre de distance) n'envoie plus rien : la dernière position est
+      // renvoyée avec son heure d'origine. GPS coupé : l'erreur du flux arrête le partage.
       if (fix != null) {
-        _connection?.sendPosition(lat: fix.lat, lon: fix.lon, at: ref.read(clockProvider)());
+        _connection?.sendPosition(lat: fix.lat, lon: fix.lon, at: fix.at);
       }
     });
     state = state.copyWith(sharing: true);
+  }
+
+  void _stopSharing() {
+    _heartbeat?.cancel();
+    _heartbeat = null;
+    unawaited(_positions?.cancel());
+    _positions = null;
+    _lastFix = null;
+    if (!_disposed) state = state.copyWith(sharing: false);
   }
 
   void _stop() {

@@ -162,17 +162,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
           loading: _busy,
           onPressed: _busy ? null : () => _act(controller.confirmPresence, done: l10n.presenceDone),
         ),
-      if (!ride.isDriver && ride.inProgress)
-        UmButton(
-          label: l10n.finishRide,
-          variant: UmButtonVariant.ghost,
-          expand: true,
-          onPressed: _busy
-              ? null
-              : () async {
-                  if (await confirmFinish(context)) await _act(controller.finish);
-                },
-        ),
+      // La clôture revient au conducteur (ou se fait seule à l'arrivée) : un passager ne peut pas
+      // faire compter absents ceux qui ne sont pas encore montés.
       if (ride.editable && ride.isDriver)
         UmButton(
           label: l10n.rideAddPassengers,
