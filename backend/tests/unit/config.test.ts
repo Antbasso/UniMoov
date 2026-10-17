@@ -55,6 +55,11 @@ describe('secrets et fournisseurs', () => {
     expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow(/MAIL_PROVIDER/);
   });
 
+  it('Brevo exige une clé', () => {
+    expect(() => loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: '' })).toThrow(/BREVO_API_KEY/);
+    expect(loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: 'k' }).MAIL_FROM).toBe('unimoov.support@gmail.com');
+  });
+
   it('utilise la BAN par défaut', () => {
     expect(loadConfig(base).GEOCODING_PROVIDER).toBe('ban');
   });
