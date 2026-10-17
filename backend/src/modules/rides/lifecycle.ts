@@ -102,6 +102,8 @@ export class RideLifecycle {
       const passengers = (await this.repo.members(rideId, tx)).filter((m) => m.role === 'passenger' && isAccepted(m));
       const price = await this.rides.estimate(current, current.distanceM, passengers.length + 1);
       await this.repo.setRideStatus(rideId, 'in_progress', { startedAt: this.clock() }, tx);
+      // Demandes de place restées sans réponse : on ne monte pas en route.
+      await this.repo.declinePendingRequests(rideId, tx);
       // Tous les portefeuilles d'un coup, dans l'ordre des identifiants : pas d'interblocage.
       await this.wallet.lockWallets([ride.driverId, ...passengers.map((p) => p.userId)], tx);
       for (const p of passengers) {

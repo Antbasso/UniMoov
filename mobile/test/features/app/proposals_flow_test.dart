@@ -76,6 +76,38 @@ void main() {
     expect(find.text('Voir d\'autres voitures'), findsNothing);
   });
 
+  testWidgets('conducteur : accepter une demande de place', (tester) async {
+    backend.weeks[week]![1] = backend.weeks[week]![1].copyWith(
+      passengers: const [
+        PublicPerson(
+          userId: 'p9',
+          firstName: 'Inès',
+          reliabilityScore: 0.9,
+          detourMinutes: 3,
+          status: 'requested',
+        ),
+      ],
+    );
+    await launchApp(tester, backend: backend, storage: storage);
+    await tester.tap(find.text('Voir').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Demande à monter avec toi.'), findsOneWidget);
+    await tapText(tester, 'Accepter', index: 0);
+    expect(backend.requestAnswers.single, (rideId: 'from-monday', userId: 'p9', approve: true));
+    expect(find.textContaining('Demande à monter avec toi.'), findsNothing);
+  });
+
+  testWidgets('passager : demande en attente, puis retirée', (tester) async {
+    backend.weeks[week]![0] = backend.weeks[week]![0].copyWith(myStatus: 'requested');
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    expect(find.text('Demande envoyée'), findsOneWidget);
+    expect(find.textContaining('Nathan doit accepter ta demande'), findsOneWidget);
+    expect(find.text('Accepter'), findsNothing);
+    await tapText(tester, 'Retirer ma demande');
+    expect(find.textContaining('avec Nathan'), findsNothing);
+  });
+
   testWidgets('refuser retire la proposition', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     await tapText(tester, 'Voir', index: 0);
@@ -107,7 +139,7 @@ void main() {
     expect(find.textContaining('avec Chloé'), findsOneWidget);
     await tapText(tester, 'Choisir');
     expect(backend.joined, ['other-ride']);
-    expect(find.text('C\'est noté : tu as choisi cette voiture.'), findsOneWidget);
+    expect(find.text('Demande envoyée : le conducteur doit l\'accepter.'), findsOneWidget);
     expect(find.text('Ta semaine'), findsOneWidget);
   });
 

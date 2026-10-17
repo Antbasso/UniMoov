@@ -134,16 +134,16 @@ export class MatchingRepo {
       WHERE r.day = ${day} AND r.direction = ${direction} AND r.status <> 'cancelled'
         AND p.status NOT IN ('declined', 'cancelled')
         AND (r.status = 'confirmed' OR EXISTS (
-          SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status = 'accepted'))`);
+          SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status IN ('accepted', 'requested')))`);
     return new Set(rows.map((r) => r.user_id));
   }
 
-  /** Supprime les propositions encore ouvertes (personne n'a accepté) du jour et du sens. */
+  /** Supprime les propositions encore ouvertes (personne n'a accepté ni demandé) du jour et du sens. */
   async deleteOpenRides(day: string, direction: Direction, db: DbOrTx = this.db): Promise<void> {
     await db.execute(sql`
       DELETE FROM rides r
       WHERE r.day = ${day} AND r.direction = ${direction} AND r.status = 'proposed'
-        AND NOT EXISTS (SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status = 'accepted')`);
+        AND NOT EXISTS (SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status IN ('accepted', 'requested'))`);
   }
 
   async declines(day: string, direction: Direction, db: DbOrTx = this.db): Promise<Set<string>> {
@@ -283,7 +283,7 @@ export class MatchingRepo {
     return new Map(rows.map((r) => [r.id, { lat: Number(r.lat), lon: Number(r.lon), maxDetourMinutes: r.max_detour }]));
   }
 
-  async setParticipantStatus(rideId: string, userId: string, status: 'accepted' | 'declined', db: DbOrTx = this.db) {
+  async setParticipantStatus(rideId: string, userId: string, status: 'accepted' | 'declined' | 'requested', db: DbOrTx = this.db) {
     await db
       .update(rideParticipants)
       .set({ status })
@@ -295,7 +295,7 @@ export class MatchingRepo {
     userId: string,
     detourS: number,
     db: DbOrTx = this.db,
-    status: 'accepted' | 'proposed' = 'accepted',
+    status: 'accepted' | 'proposed' | 'requested' = 'accepted',
   ) {
     await db
       .insert(rideParticipants)
@@ -375,7 +375,7 @@ export class MatchingRepo {
       SELECT r.id AS ride_id, array_agg(p.user_id) AS passengers
       FROM rides r JOIN ride_participants p ON p.ride_id = r.id
       WHERE r.day = ${day} AND r.driver_id = ${userId} AND r.status = 'proposed'
-        AND p.role = 'passenger' AND p.status = 'accepted'
+        AND p.role = 'passenger' AND p.status IN ('accepted', 'requested')
       GROUP BY r.id`);
     for (const r of rows) {
       await this.setRideStatus(r.ride_id, 'cancelled', db);

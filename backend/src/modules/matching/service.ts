@@ -279,9 +279,11 @@ export class MatchingService {
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
 
+      let requested = false;
       if (me) {
         if (!ACTIVE(me)) throw new AppError(409, 'proposal_declined', 'Tu as refusé cette proposition');
-        await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
+        // Demande déjà envoyée : c'est au conducteur de répondre.
+        if (me.status !== 'requested') await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
       } else {
         // Sans créneau ce jour-là (trajet trouvé par la recherche) : l'heure du trajet choisi.
         const joinable = await this.joinable(userId, ride.day, ride.direction, null, tx, undefined, ride.targetTime);
@@ -294,7 +296,10 @@ export class MatchingService {
           if (mine.status === 'accepted') throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
           await this.repo.setParticipantStatus(other.ride_id, userId, 'declined', tx);
         }
-        await this.repo.addPassenger(rideId, userId, match.driver.detourMinutes * 60, tx);
+        // Voiture choisie par le passager (recherche, « voir d'autres ») : le conducteur ne l'a
+        // pas encore accepté, donc ni nom ni adresse échangés avant sa réponse (cahier §4).
+        await this.repo.addPassenger(rideId, userId, match.driver.detourMinutes * 60, tx, 'requested');
+        requested = true;
       }
 
       const updated = await this.repo.participants([rideId], tx);
@@ -305,11 +310,45 @@ export class MatchingService {
       }
       const confirmed = driverAccepted && passengerAccepted;
       if (confirmed) await this.repo.invalidatePlan(rideId, tx);
-      return { view: await this.viewFor(userId, rideId, tx), confirmed };
+      return { view: await this.viewFor(userId, rideId, tx), confirmed, requested, driverId: ride.driverId };
     });
     // Après la transaction (appel d'itinéraire) ; en cas d'échec, le plan sera calculé à la lecture.
     if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
+    if (result.requested) {
+      await this.notifier.notify([result.driverId], { type: 'ride_requested', rideId }).catch(() => undefined);
+    }
     return result.view;
+  }
+
+  /**
+   * Réponse du conducteur à une demande de place (passager venu par la recherche ou « voir
+   * d'autres »). Acceptée : le passager est accepté des deux côtés, le trajet peut être
+   * confirmé. Refusée : la paire n'est plus reproposée ce jour-là et on lui cherche une autre voiture.
+   */
+  async answerRequest(driverId: string, rideId: string, passengerId: string, approve: boolean): Promise<ProposalView> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const result = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      const parts = await this.repo.participants([rideId], tx);
+      if (ride.driverId !== driverId) throw new AppError(403, 'forbidden', 'Réservé au conducteur');
+      const request = parts.find((p) => p.userId === passengerId && p.role === 'passenger');
+      if (request?.status !== 'requested') throw new AppError(404, 'not_found', 'Ressource introuvable');
+      if (!approve) {
+        await this.repo.setParticipantStatus(rideId, passengerId, 'declined', tx);
+        await this.repo.recordDecline(passengerId, driverId, ride.day, ride.direction, tx);
+        return { ride, confirmed: false };
+      }
+      await this.repo.setParticipantStatus(rideId, passengerId, 'accepted', tx);
+      const driverAccepted = parts.some((p) => p.role === 'driver' && p.status === 'accepted');
+      if (driverAccepted && ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
+      if (driverAccepted) await this.repo.invalidatePlan(rideId, tx);
+      return { ride, confirmed: driverAccepted };
+    });
+    await this.notifier.notify([passengerId], { type: 'request_answered', rideId, approved: approve }).catch(() => undefined);
+    if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
+    if (!approve) await this.rehome(passengerId, result.ride).catch(() => undefined);
+    return this.viewFor(driverId, rideId);
   }
 
   /**
@@ -325,7 +364,8 @@ export class MatchingService {
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
       if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
-      if (me.status !== 'proposed') {
+      // Une demande de place encore sans réponse se retire comme une proposition.
+      if (me.status !== 'proposed' && me.status !== 'requested') {
         throw new AppError(409, 'already_answered', 'Tu as déjà répondu à cette proposition');
       }
       if (me.role === 'passenger') {

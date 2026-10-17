@@ -6,6 +6,8 @@
 export type NotificationEvent =
   | { type: 'ride_cancelled'; rideId: string; by: 'driver' | 'passenger' }
   | { type: 'replacement_proposed'; rideId: string }
+  | { type: 'ride_requested'; rideId: string }
+  | { type: 'request_answered'; rideId: string; approved: boolean }
   | { type: 'proposals_ready'; week: string }
   | { type: 'ride_reminder'; rideId: string; minutes: number }
   | { type: 'chat_message'; conversationId: string; senderFirstName: string };

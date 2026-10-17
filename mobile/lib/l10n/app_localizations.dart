@@ -1241,7 +1241,7 @@ abstract class AppLocalizations {
   /// No description provided for @joined.
   ///
   /// In fr, this message translates to:
-  /// **'C\'est noté : tu as choisi cette voiture.'**
+  /// **'Demande envoyée : le conducteur doit l\'accepter.'**
   String get joined;
 
   /// No description provided for @searchTitle.
@@ -3013,6 +3013,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucune application de mail trouvée. Écris-nous à {email}.'**
   String noMailApp(String email);
+
+  /// No description provided for @requestSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée'**
+  String get requestSent;
+
+  /// No description provided for @requestPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.'**
+  String requestPending(String driver);
+
+  /// No description provided for @requestWithdraw.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ma demande'**
+  String get requestWithdraw;
+
+  /// No description provided for @requestFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande à monter avec toi.'**
+  String get requestFrom;
+
+  /// No description provided for @requestApprove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepter'**
+  String get requestApprove;
+
+  /// No description provided for @requestReject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Refuser'**
+  String get requestReject;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -655,7 +655,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get choose => 'Choisir';
 
   @override
-  String get joined => 'C\'est noté : tu as choisi cette voiture.';
+  String get joined => 'Demande envoyée : le conducteur doit l\'accepter.';
 
   @override
   String get searchTitle => 'Chercher un trajet';
@@ -1703,4 +1703,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String noMailApp(String email) {
     return 'Aucune application de mail trouvée. Écris-nous à $email.';
   }
+
+  @override
+  String get requestSent => 'Demande envoyée';
+
+  @override
+  String requestPending(String driver) {
+    return '$driver doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.';
+  }
+
+  @override
+  String get requestWithdraw => 'Retirer ma demande';
+
+  @override
+  String get requestFrom => 'Demande à monter avec toi.';
+
+  @override
+  String get requestApprove => 'Accepter';
+
+  @override
+  String get requestReject => 'Refuser';
 }

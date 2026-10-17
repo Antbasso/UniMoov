@@ -75,6 +75,19 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
     (request) => service.invite(request.userId, request.params.id, request.params.userId),
   );
 
+  // Conducteur : réponse à une demande de place (passager venu par la recherche).
+  app.post(
+    '/rides/:id/requests/:userId/approve',
+    { schema: { params: inviteParams, response: { 200: proposal } } },
+    (request) => service.answerRequest(request.userId, request.params.id, request.params.userId, true),
+  );
+
+  app.post(
+    '/rides/:id/requests/:userId/reject',
+    { schema: { params: inviteParams, response: { 200: proposal } } },
+    (request) => service.answerRequest(request.userId, request.params.id, request.params.userId, false),
+  );
+
   app.get(
     '/search/rides',
     {

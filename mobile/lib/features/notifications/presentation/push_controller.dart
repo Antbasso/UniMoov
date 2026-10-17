@@ -14,7 +14,10 @@ String? routeForPush(Map<String, String> data) => switch (data['type']) {
   ),
   'ride_cancelled' ||
   'ride_reminder' when data['rideId'] != null => AppRoutes.ride(data['rideId']!),
-  'replacement_proposed' || 'proposals_ready' => AppRoutes.home,
+  'replacement_proposed' ||
+  'proposals_ready' ||
+  'ride_requested' ||
+  'request_answered' => AppRoutes.home,
   _ => null,
 };
 

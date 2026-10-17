@@ -361,7 +361,7 @@
   "alternativesTitle": "Autres voitures",
   "alternativesEmpty": "Aucune autre voiture compatible pour ce créneau.",
   "choose": "Choisir",
-  "joined": "C'est noté : tu as choisi cette voiture.",
+  "joined": "Demande envoyée : le conducteur doit l'accepter.",
   "searchTitle": "Chercher un trajet",
   "searchDayLabel": "Jour",
   "searchTimeOptional": "Heure (facultatif)",
@@ -951,5 +951,18 @@
         "type": "String"
       }
     }
-  }
+  },
+  "requestSent": "Demande envoyée",
+  "requestPending": "{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.",
+  "@requestPending": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "requestWithdraw": "Retirer ma demande",
+  "requestFrom": "Demande à monter avec toi.",
+  "requestApprove": "Accepter",
+  "requestReject": "Refuser"
 }

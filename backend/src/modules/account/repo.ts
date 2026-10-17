@@ -45,7 +45,7 @@ export class AccountRepo {
     const { rows } = await this.db.execute<{ ride_id: string; status: string }>(sql`
       SELECT rp.ride_id, rp.status FROM ride_participants rp JOIN rides r ON r.id = rp.ride_id
       WHERE rp.user_id = ${userId} AND r.status IN ('proposed', 'confirmed') AND r.target_time > ${now}
-        AND rp.status IN ('proposed', 'accepted')
+        AND rp.status IN ('proposed', 'requested', 'accepted')
       ORDER BY r.target_time`);
     return rows.map((r) => ({ rideId: r.ride_id, status: r.status }));
   }
@@ -195,7 +195,7 @@ export class AccountRepo {
       await tx.execute(sql`
         UPDATE ride_participants rp SET status = 'cancelled', cancelled_at = ${now}
         FROM rides r WHERE r.id = rp.ride_id AND r.status IN ('proposed', 'confirmed', 'cancelled')
-          AND rp.status IN ('proposed', 'accepted')
+          AND rp.status IN ('proposed', 'requested', 'accepted')
           AND (rp.user_id = ${userId} OR r.driver_id = ${userId})`);
       await tx.execute(sql`
         UPDATE ride_participants SET pickup_label = NULL, pickup_location = NULL WHERE user_id = ${userId}`);

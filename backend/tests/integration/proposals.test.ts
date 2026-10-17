@@ -199,7 +199,8 @@ describe('accepter, refuser, voir d’autres', () => {
     const nathan = rides.find((r) => r.driver.firstName === 'Nathan')!;
     const accepted = await call('Manon', 'POST', `/proposals/${nathan.rideId}/accept`);
     expect(accepted.statusCode).toBe(200);
-    expect(accepted.json()).toMatchObject({ myStatus: 'accepted', driver: { firstName: 'Nathan' } });
+    // Voiture choisie par Manon : Nathan doit d'abord accepter sa demande.
+    expect(accepted.json()).toMatchObject({ myStatus: 'requested', driver: { firstName: 'Nathan' } });
     // L'ancienne proposition avec Léa a disparu de sa semaine.
     const friday = (await proposals('Manon')).filter((p) => p.day === FRIDAY && p.direction === 'to_campus');
     expect(friday.map((p) => p.driver?.firstName)).toEqual(['Nathan']);
@@ -283,9 +284,42 @@ describe('recherche manuelle', () => {
     const search = await call('Inès', 'GET', `/search/rides?day=${FRIDAY}&direction=to_campus&time=08:00`);
     const rides = search.json<{ rides: { rideId: string; driver: Person }[] }>().rides;
     expect(rides.length).toBeGreaterThan(0);
-    const joined = await call('Inès', 'POST', `/proposals/${rides[0]!.rideId}/accept`);
+    const rideId = rides[0]!.rideId;
+    const joined = await call('Inès', 'POST', `/proposals/${rideId}/accept`);
     expect(joined.statusCode).toBe(200);
-    expect(joined.json()).toMatchObject({ role: 'passenger', myStatus: 'accepted' });
+    expect(joined.json()).toMatchObject({ role: 'passenger', myStatus: 'requested' });
+    const driverName = rides[0]!.driver.firstName;
+    expect(ctx.notifier.sent).toContainEqual(expect.objectContaining({ event: { type: 'ride_requested', rideId } }));
+
+    // Tant que le conducteur n'a pas répondu : ni le trajet, ni son nom, ni son adresse.
+    expect((await call('Inès', 'GET', `/rides/${rideId}`)).statusCode).toBe(403);
+    // Lui voit la demande, au prénom seulement.
+    const driverView = (await proposals(driverName)).find((p) => p.id === rideId)!;
+    expect(driverView.passengers).toContainEqual(expect.objectContaining({ firstName: 'Inès', status: 'requested' }));
+    expect(JSON.stringify(driverView)).not.toContain(user('Inès').lastName);
+    // Un autre que le conducteur ne peut pas répondre.
+    expect((await call('Inès', 'POST', `/rides/${rideId}/requests/${user('Inès').id}/approve`)).statusCode).toBe(403);
+
+    const approved = await call(driverName, 'POST', `/rides/${rideId}/requests/${user('Inès').id}/approve`);
+    expect(approved.statusCode).toBe(200);
+    expect(ctx.notifier.sent).toContainEqual(expect.objectContaining({ event: { type: 'request_answered', rideId, approved: true } }));
+    expect((await proposals('Inès')).find((p) => p.id === rideId)).toMatchObject({ myStatus: 'accepted' });
+    // Déjà traitée : plus rien à approuver.
+    expect((await call(driverName, 'POST', `/rides/${rideId}/requests/${user('Inès').id}/reject`)).statusCode).toBe(404);
+  });
+
+  it('demande refusée : la paire n’est plus reproposée, une autre voiture est cherchée', async () => {
+    const ride = find(await proposals('Manon'), FRIDAY, 'to_campus')!;
+    expect(ride.myStatus).toBe('requested');
+    const nathan = ride.driver!.firstName;
+    const rejected = await call(nathan, 'POST', `/rides/${ride.id}/requests/${user('Manon').id}/reject`);
+    expect(rejected.statusCode).toBe(200);
+    expect(ctx.notifier.sent).toContainEqual(
+      expect.objectContaining({ userIds: [user('Manon').id], event: { type: 'request_answered', rideId: ride.id, approved: false } }),
+    );
+    // Ce trajet ne figure plus parmi ses propositions actives.
+    const after = (await proposals('Manon')).find((p) => p.id === ride.id);
+    expect(after === undefined || after.myStatus === 'declined').toBe(true);
   });
 
   it('refuse une date passée', async () => {

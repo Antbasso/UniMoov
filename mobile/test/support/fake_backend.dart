@@ -263,10 +263,31 @@ class FakeBackend
     _maybeFail();
     final isJoin = weeks.values.every((list) => list.every((p) => p.id != id));
     if (isJoin) {
+      // Voiture choisie par le passager : demande en attente du conducteur.
       joined.add(id);
-      return proposalFixture(id: id, myStatus: 'accepted');
+      return proposalFixture(id: id, myStatus: 'requested');
     }
     return _replace(id, (p) => p.copyWith(myStatus: 'accepted'));
+  }
+
+  final List<({String rideId, String userId, bool approve})> requestAnswers = [];
+
+  @override
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve}) async {
+    _maybeFail();
+    requestAnswers.add((rideId: rideId, userId: userId, approve: approve));
+    return _replace(
+      rideId,
+      (p) => p.copyWith(
+        passengers: [
+          for (final person in p.passengers)
+            if (person.userId != userId)
+              person
+            else if (approve)
+              person.copyWith(status: 'accepted'),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1114,3 +1135,13 @@ Reliability reliabilityFixture({List<ReliabilityEvent>? events}) => Reliability(
         ),
       ],
 );
+
+extension PublicPersonCopy on PublicPerson {
+  PublicPerson copyWith({String? status}) => PublicPerson(
+    userId: userId,
+    firstName: firstName,
+    reliabilityScore: reliabilityScore,
+    detourMinutes: detourMinutes,
+    status: status ?? this.status,
+  );
+}

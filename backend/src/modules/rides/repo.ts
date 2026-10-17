@@ -205,6 +205,10 @@ export class RidesRepo {
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
   }
 
+  async declinePendingRequests(rideId: string, tx: Tx): Promise<void> {
+    await tx.execute(sql`UPDATE ride_participants SET status = 'declined' WHERE ride_id = ${rideId} AND status = 'requested'`);
+  }
+
   async setRideStatus(
     rideId: string,
     status: 'in_progress' | 'completed',

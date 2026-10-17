@@ -8,6 +8,8 @@ export function categoryOf(event: NotificationEvent): Category {
   switch (event.type) {
     case 'replacement_proposed':
     case 'proposals_ready':
+    case 'ride_requested':
+    case 'request_answered':
       return 'match';
     case 'ride_cancelled':
       return 'ride_update';
@@ -32,6 +34,12 @@ export function pushMessage(event: NotificationEvent): PushMessage {
       };
     case 'replacement_proposed':
       return { title: 'Nouvelle proposition', body: 'Une place se libère pour toi. Réponds vite.', data: { type: event.type, rideId: event.rideId } };
+    case 'ride_requested':
+      return { title: 'Demande de place', body: 'Un passager demande à monter avec toi. Réponds-lui.', data: { type: event.type, rideId: event.rideId } };
+    case 'request_answered':
+      return event.approved
+        ? { title: 'Place acceptée', body: 'Ton conducteur a accepté ta demande.', data: { type: event.type, rideId: event.rideId } }
+        : { title: 'Demande refusée', body: 'Le conducteur ne peut pas te prendre. On te cherche une autre voiture.', data: { type: event.type, rideId: event.rideId } };
     case 'proposals_ready':
       return { title: 'Ta semaine est prête', body: 'Tes propositions de trajets sont arrivées.', data: { type: event.type, week: event.week } };
     case 'ride_reminder':

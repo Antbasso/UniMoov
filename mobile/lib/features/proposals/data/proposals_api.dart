@@ -9,6 +9,9 @@ abstract interface class ProposalsApi {
   Future<List<Proposal>> week(String week);
   Future<Proposal> accept(String id);
   Future<void> decline(String id);
+
+  /// Conducteur : réponse à une demande de place.
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve});
   Future<List<JoinableRide>> alternatives(String id);
   Future<List<JoinableRide>> search({
     required DateTime day,
@@ -44,6 +47,15 @@ class DioProposalsApi implements ProposalsApi {
     final response = await _dio.post<Map<String, dynamic>>('/api/v1/proposals/$id/accept');
     return Proposal.fromJson(response.data!);
   });
+
+  @override
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve}) =>
+      guardApi(() async {
+        final response = await _dio.post<Map<String, dynamic>>(
+          '/api/v1/rides/$rideId/requests/$userId/${approve ? 'approve' : 'reject'}',
+        );
+        return Proposal.fromJson(response.data!);
+      });
 
   @override
   Future<void> decline(String id) =>

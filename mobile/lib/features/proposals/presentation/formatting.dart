@@ -20,7 +20,7 @@ String formatTime(DateTime time, String locale) =>
 
 UmRideStatus rideStatusOf(Proposal p) => switch (p.state) {
   ProposalState.proposed => UmRideStatus.proposed,
-  ProposalState.waiting => UmRideStatus.waiting,
+  ProposalState.waiting || ProposalState.requested => UmRideStatus.waiting,
   ProposalState.confirmed => UmRideStatus.confirmed,
   ProposalState.cancelled => UmRideStatus.cancelled,
 };
