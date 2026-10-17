@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+/** Valeurs de `.env.example` : jamais en production. */
+const EXAMPLE_SECRETS = new Set([
+  'dev-secret-a-remplacer-par-32-caracteres-min',
+  'ZGV2LWNsZS1hLXJlbXBsYWNlci0zMi1vY3RldHMhISE=',
+]);
+
 /** Variables d'environnement validées au démarrage (docs/architecture.md §10). */
 const envSchema = z
   .object({
@@ -30,8 +36,10 @@ const envSchema = z
   ORS_API_KEY: z.string().optional(),
   /** Appels quotidiens autorisés (palier gratuit d'OpenRouteService), alerte à 80 %. */
   ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),
-  /** `fake` : portefeuille simulé (aucun argent réel), interdit en production. */
+  /** `fake` : portefeuille simulé (aucun argent réel), interdit en production sauf répétition. */
   PAYMENT_PROVIDER: z.enum(['fake']).default('fake'),
+  /** Répétition du pilote en production sans argent réel : autorise explicitement `fake`. */
+  ALLOW_FAKE_PAYMENTS: z.stringbool().default(false),
   /** `fcm` : Firebase Cloud Messaging (clé de compte de service) ; `log` : journal seulement. */
   PUSH_PROVIDER: z.enum(['log', 'fcm']).default('log'),
   /** Chemin du fichier JSON de la clé du compte de service Firebase (secret, jamais commité). */
@@ -43,9 +51,17 @@ const envSchema = z
     path: ['MAIL_PROVIDER'],
     message: 'console interdit en production',
   })
-  .refine((env) => env.NODE_ENV !== 'production' || env.PAYMENT_PROVIDER !== 'fake', {
+  .refine((env) => env.NODE_ENV !== 'production' || env.PAYMENT_PROVIDER !== 'fake' || env.ALLOW_FAKE_PAYMENTS, {
     path: ['PAYMENT_PROVIDER'],
-    message: 'fake interdit en production',
+    message: 'fake interdit en production (ALLOW_FAKE_PAYMENTS=true pour une répétition)',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || !EXAMPLE_SECRETS.has(env.JWT_SECRET), {
+    path: ['JWT_SECRET'],
+    message: 'valeur d’exemple interdite en production',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || !EXAMPLE_SECRETS.has(env.CALENDAR_ENCRYPTION_KEY), {
+    path: ['CALENDAR_ENCRYPTION_KEY'],
+    message: 'valeur d’exemple interdite en production',
   })
   .refine((env) => env.MAIL_PROVIDER !== 'brevo' || Boolean(env.BREVO_API_KEY), {
     path: ['BREVO_API_KEY'],

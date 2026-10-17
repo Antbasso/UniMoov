@@ -4,15 +4,26 @@ services:
   db:
     ports: !reset []
     restart: unless-stopped
+    environment:
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?définis APP_DB_PASSWORD dans .env}
+    volumes:
+      # Rôle sans superutilisateur pour l'API, créé au premier démarrage de la base.
+      - ./deploy/db-init:/docker-entrypoint-initdb.d:ro
 
   api:
     ports: !reset []
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      # Toujours production ici : une répétition sans argent réel passe par ALLOW_FAKE_PAYMENTS.
+      NODE_ENV: production
       TRUST_PROXY: "true"
+      ALLOW_FAKE_PAYMENTS: ${ALLOW_FAKE_PAYMENTS:-false}
+      # L'API n'a que les droits sur les données ; les migrations, ceux du propriétaire.
+      DATABASE_URL: postgres://unimoov_app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
+      MIGRATION_DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
+    mem_limit: 768m
 
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.10-alpine
     restart: unless-stopped
     depends_on:
       - api

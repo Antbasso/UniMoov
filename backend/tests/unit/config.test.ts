@@ -61,6 +61,27 @@ describe('secrets et fournisseurs', () => {
     expect(loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: 'k', MAIL_FROM: 'a@uni-moov.fr' }).MAIL_FROM).toBe('a@uni-moov.fr');
   });
 
+  it('production : portefeuille factice seulement sur autorisation explicite', () => {
+    const prod = {
+      ...base,
+      NODE_ENV: 'production',
+      MAIL_PROVIDER: 'brevo',
+      BREVO_API_KEY: 'k',
+      MAIL_FROM: 'a@uni-moov.fr',
+      JWT_SECRET: 'y'.repeat(40),
+      CALENDAR_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString('base64'),
+    };
+    expect(() => loadConfig(prod)).toThrow(/PAYMENT_PROVIDER/);
+    expect(loadConfig({ ...prod, ALLOW_FAKE_PAYMENTS: 'true' }).PAYMENT_PROVIDER).toBe('fake');
+    // Secrets de .env.example refusés en production.
+    expect(() =>
+      loadConfig({ ...prod, ALLOW_FAKE_PAYMENTS: 'true', JWT_SECRET: 'dev-secret-a-remplacer-par-32-caracteres-min' }),
+    ).toThrow(/JWT_SECRET/);
+    expect(() =>
+      loadConfig({ ...prod, ALLOW_FAKE_PAYMENTS: 'true', CALENDAR_ENCRYPTION_KEY: 'ZGV2LWNsZS1hLXJlbXBsYWNlci0zMi1vY3RldHMhISE=' }),
+    ).toThrow(/CALENDAR_ENCRYPTION_KEY/);
+  });
+
   it('utilise la BAN par défaut', () => {
     expect(loadConfig(base).GEOCODING_PROVIDER).toBe('ban');
   });

@@ -15,7 +15,9 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const url = process.env.DATABASE_URL;
+  // En production, les migrations passent par le propriétaire du schéma ; l'API, par un rôle
+  // limité aux données (docs/deploiement.md).
+  const url = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL manquant');
   await runMigrations(url);
   console.log('Migrations appliquées');

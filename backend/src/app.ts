@@ -115,7 +115,8 @@ export interface AppDeps {
 export async function buildApp({ config, pingDb, logStream, modules }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     // Derrière Caddy en production : l'IP réelle sert à la limite de débit, jamais aux journaux.
-    trustProxy: config.TRUST_PROXY ?? false,
+    // Un seul saut de confiance (Caddy) : un X-Forwarded-For forgé par le client est ignoré.
+    trustProxy: config.TRUST_PROXY ? (_address: string, hop: number) => hop === 0 : false,
     logger: {
       level: config.LOG_LEVEL,
       ...(logStream ? { stream: logStream } : {}),

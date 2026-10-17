@@ -3,14 +3,15 @@
 # À lancer depuis la racine du dépôt sur le VPS, par cron :
 #   15 3 * * * cd ~/UniMoov && mkdir -p backups && ./deploy/backup.sh >> backups/backup.log 2>&1
 # Chiffrement AES-256 avec la phrase de passe de secrets/backup-passphrase (jamais commitée).
-# Copie distante facultative avec rclone si BACKUP_REMOTE est défini (ex. r2:unimoov-backups).
+# Copie distante facultative avec rclone si BACKUP_REMOTE est défini (ex. r2:unimoov-backups) ;
+# BACKUP_REMOTE et BACKUP_KEEP_DAYS se passent dans l'environnement de la tâche cron.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-set -a
-# shellcheck disable=SC1091
-source .env
-set +a
+# Seules les deux variables utiles sont lues dans .env (jamais exécuté comme du shell).
+env_value() { sed -n "s/^$1=//p" .env | tail -1; }
+POSTGRES_USER="$(env_value POSTGRES_USER)"
+POSTGRES_DB="$(env_value POSTGRES_DB)"
 
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 PASSPHRASE_FILE="secrets/backup-passphrase"

@@ -5,10 +5,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 [ $# -eq 1 ] && [ -f "$1" ] || { echo "usage : $0 <fichier .dump.enc>" >&2; exit 1; }
-set -a
-# shellcheck disable=SC1091
-source .env
-set +a
+env_value() { sed -n "s/^$1=//p" .env | tail -1; }
+POSTGRES_USER="$(env_value POSTGRES_USER)"
+POSTGRES_DB="$(env_value POSTGRES_DB)"
 
 read -r -p "La base ${POSTGRES_DB:-unimoov} va être remplacée. Taper OUI pour continuer : " answer
 [ "$answer" = "OUI" ] || exit 1

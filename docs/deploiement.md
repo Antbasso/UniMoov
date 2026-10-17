@@ -10,7 +10,7 @@ Un seul VPS en Docker Compose (docs/couts.md) : PostgreSQL/PostGIS, l'API et Cad
 - **La clé du compte de service Firebase** (console Firebase, Paramètres du projet, Comptes de service).
 - Facultatif : une clé OpenRouteService pour les vrais tracés, un compte Cloudflare R2 pour la copie distante des sauvegardes.
 
-> **Point bloquant pour la production.** Avec `NODE_ENV=production`, l'API refuse de démarrer avec le portefeuille factice (`PAYMENT_PROVIDER=fake`) : aucun argent réel ne doit transiter par lui. Il faut donc avoir branché le vrai prestataire de paiement (jalon M4b) avant le lancement public. Pour une répétition avec de faux paiements, mets `NODE_ENV=development` dans `.env` (la surcharge de production le respecte ; la documentation OpenAPI est alors publique sur `/docs` : à éviter au-delà des tests).
+> **Point bloquant pour la production.** La surcharge de production force `NODE_ENV=production` ; l'API refuse alors de démarrer avec le portefeuille factice (`PAYMENT_PROVIDER=fake`) : aucun argent réel ne doit transiter par lui. Il faut donc avoir branché le vrai prestataire de paiement (jalon M4b) avant le lancement public. Pour une répétition sans argent réel, ajoute `ALLOW_FAKE_PAYMENTS=true` dans `.env` : tout le reste reste en mode production (pas de documentation publique, mail réel, secrets d'exemple refusés).
 
 ## 1. Préparer le serveur
 
@@ -22,10 +22,16 @@ Un seul VPS en Docker Compose (docs/couts.md) : PostgreSQL/PostGIS, l'API et Cad
 apt update && apt upgrade -y
 curl -fsSL https://get.docker.com | sh                 # Docker et Docker Compose
 adduser --disabled-password unimoov && usermod -aG docker unimoov
+mkdir -p ~unimoov/.ssh && cp ~/.ssh/authorized_keys ~unimoov/.ssh/ && chown -R unimoov: ~unimoov/.ssh
+# Connexion par clé seulement, jamais en root.
+printf 'PermitRootLogin no\nPasswordAuthentication no\n' > /etc/ssh/sshd_config.d/10-unimoov.conf
+systemctl reload ssh
 ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
 su - unimoov
 git clone https://github.com/Antbasso/UniMoov.git && cd UniMoov
 ```
+
+Avant de fermer la session root, vérifie depuis ton PC que `ssh unimoov@ADRESSE_DU_VPS` marche. Les mises à jour de sécurité d'Ubuntu s'installent seules (`unattended-upgrades`, actif par défaut). Le groupe `docker` vaut un accès root : n'y ajoute personne d'autre.
 
 ## 2. Configurer
 
@@ -33,7 +39,8 @@ git clone https://github.com/Antbasso/UniMoov.git && cd UniMoov
 cp .env.example .env
 openssl rand -base64 48        # JWT_SECRET
 openssl rand -base64 32        # CALENDAR_ENCRYPTION_KEY (32 octets)
-openssl rand -base64 24        # POSTGRES_PASSWORD
+openssl rand -hex 24           # POSTGRES_PASSWORD (propriétaire du schéma, migrations)
+openssl rand -hex 24           # APP_DB_PASSWORD (rôle de l'API, sans droits sur le schéma)
 nano .env
 ```
 
@@ -41,6 +48,7 @@ Dans `.env` :
 
 ```
 POSTGRES_PASSWORD=...
+APP_DB_PASSWORD=...
 JWT_SECRET=...
 CALENDAR_ENCRYPTION_KEY=...
 DOMAIN=api.uni-moov.fr
@@ -56,15 +64,18 @@ ORS_API_KEY=...
 
 Garde une copie de `CALENDAR_ENCRYPTION_KEY` hors du serveur (gestionnaire de mots de passe) : sans elle, les liens d'agenda enregistrés deviennent illisibles.
 
-Les secrets en fichiers vont dans `secrets/` (ignoré par git, monté en lecture seule dans l'API) :
+Les secrets en fichiers vont dans `secrets/` (ignoré par git). Seul `secrets/api/` est monté, en lecture seule, dans l'API ; la phrase de passe des sauvegardes reste hors de sa portée :
 
 ```bash
-mkdir -p secrets
-# Depuis ton PC : scp unimoov-383ff-firebase-adminsdk-xxxx.json unimoov@ADRESSE:~/UniMoov/secrets/fcm-service-account.json
+mkdir -p secrets/api && chmod 700 secrets
+# Depuis ton PC : scp unimoov-383ff-firebase-adminsdk-xxxx.json unimoov@ADRESSE:~/UniMoov/secrets/api/fcm-service-account.json
 openssl rand -base64 32 > secrets/backup-passphrase   # copie-la aussi hors du serveur
-sudo chown 1000:1000 secrets/fcm-service-account.json
-chmod 600 secrets/*
+chmod 600 secrets/backup-passphrase
+# L'API (uid 1000 dans son conteneur) doit lire la clé ; secrets/ (700) la cache aux autres comptes.
+chmod 755 secrets/api && chmod 644 secrets/api/*
 ```
+
+La base crée au premier démarrage un rôle `unimoov_app` (`deploy/db-init/10-app-role.sh`) : l'API s'y connecte et ne peut ni modifier le schéma ni lancer de programme sur le serveur ; les migrations passent par le propriétaire. Sur une base déjà créée, lance une fois `docker compose exec db sh /docker-entrypoint-initdb.d/10-app-role.sh` après le premier démarrage.
 
 Fond de carte (facultatif) : pose l'extrait PMTiles de la région (README) dans `tiles/annecy.pmtiles` ; Caddy le sert sur `https://DOMAIN/tiles/annecy.pmtiles`.
 
@@ -80,7 +91,7 @@ Seul Caddy est exposé (ports 80 et 443). La base et l'API restent sur le résea
 
 ## 4. Sauvegardes
 
-`deploy/backup.sh` fait un `pg_dump` chiffré (AES-256, phrase de `secrets/backup-passphrase`) dans `backups/`, garde 14 jours (`BACKUP_KEEP_DAYS`) et copie sur un stockage distant si `BACKUP_REMOTE` est défini (par exemple `r2:unimoov-backups`, après `rclone config`).
+`deploy/backup.sh` fait un `pg_dump` chiffré (AES-256, phrase de `secrets/backup-passphrase`) dans `backups/`, garde 14 jours et copie sur un stockage distant si `BACKUP_REMOTE` est défini dans la ligne cron (par exemple `BACKUP_REMOTE=r2:unimoov-backups ./deploy/backup.sh`, après `rclone config`).
 
 ```bash
 crontab -e
