@@ -36,6 +36,8 @@ export interface ParticipantRow {
   photoUrl: string | null;
   sector: string | null;
   reliability: number;
+  /** Lu seulement par `participants` (annulation pendant le trajet). */
+  presenceValidated?: boolean;
 }
 
 export interface RideRow {
@@ -214,8 +216,9 @@ export class MatchingRepo {
       photo_url: string | null;
       home_sector: string | null;
       reliability: string;
+      presence_validated: boolean;
     }>(sql`
-      SELECT p.ride_id, p.user_id, p.role, p.status, p.detour_s,
+      SELECT p.ride_id, p.user_id, p.role, p.status, p.detour_s, p.presence_validated_at IS NOT NULL AS presence_validated,
              u.first_name, u.photo_url, u.home_sector, u.reliability_score AS reliability
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id IN (${sql.join(rideIds.map((id) => sql`${id}::uuid`), sql`, `)})`);
@@ -229,6 +232,7 @@ export class MatchingRepo {
       photoUrl: r.photo_url,
       sector: r.home_sector,
       reliability: Number(r.reliability),
+      presenceValidated: r.presence_validated,
     }));
   }
 

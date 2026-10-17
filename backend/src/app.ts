@@ -246,6 +246,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         // indépendant du calcul d'itinéraire (appel externe qui peut échouer).
         await chat.syncRideChat(rideId).catch((err: unknown) => app.log.error({ err }, 'ride chat sync'));
         await ridesService.onRideChanged(rideId);
+        await lifecycle.onParticipantsChanged(rideId);
       },
       trust,
       notifier,

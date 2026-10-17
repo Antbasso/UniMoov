@@ -162,6 +162,8 @@ export class RideLifecycle {
     }
     if (unfunded.length > 0) {
       await this.notifier?.notify(unfunded, { type: 'payment_required', rideId }).catch(() => undefined);
+      // Leurs détours ne doivent pas renchérir le prix des autres.
+      await this.rides.replanStarted(rideId).catch(() => undefined);
     }
     this.onLiveChanged(rideId);
     this.hub.send(rideId, { type: 'ride_status', status: 'in_progress' });
@@ -292,6 +294,15 @@ export class RideLifecycle {
     await this.finishIfEveryoneDone(rideId);
   }
 
+  /** Participants changés hors du cycle de vie (annulation pendant le trajet) : suivi coupé pour qui n'en fait plus partie. */
+  async onParticipantsChanged(rideId: string): Promise<void> {
+    if ((await this.repo.ride(rideId))?.status !== 'in_progress') return;
+    for (const m of (await this.repo.members(rideId)).filter((x) => x.role === 'passenger' && !isAccepted(x))) {
+      this.hub.dismiss(rideId, m.userId);
+    }
+    this.onLiveChanged(rideId);
+  }
+
   /** Tous les passagers ont terminé (arrivés ou sortis) : le trajet est clos pour tous. */
   private async finishIfEveryoneDone(rideId: string): Promise<void> {
     const members = await this.repo.members(rideId);
@@ -322,7 +333,7 @@ export class RideLifecycle {
       const ride = await this.repo.ride(rideId, tx, true);
       if (ride?.status !== 'in_progress') return null;
       const members = await this.repo.members(rideId, tx);
-      const present = members.filter((m) => m.role === 'passenger' && m.presenceValidatedAt);
+      const present = members.filter((m) => m.role === 'passenger' && isAccepted(m) && m.presenceValidatedAt);
       const now = this.clock();
       const missing = members.filter((m) => m.role === 'passenger' && isAccepted(m) && !m.presenceValidatedAt);
       // Clôture avant l'heure de prise en charge d'un passager ni pris ni monté, qui n'est pas
@@ -333,7 +344,7 @@ export class RideLifecycle {
         (m) => m.status === 'accepted' && !m.endedAt && (pickupTime(m)?.getTime() ?? 0) > now.getTime(),
       );
       const noShow = missing.filter((m) => !notReached.includes(m));
-      const price = await this.rides.estimate(ride, ride.distanceM, present.length + 1);
+      const price = await this.rides.estimate(ride, await this.rides.billingDistance(rideId), present.length + 1);
       await this.repo.setRideStatus(rideId, 'completed', { endedAt: now, finalTotalCostCents: price?.totalCostCents ?? null }, tx);
       // Paiement des seuls passagers arrivés, au prix final partagé entre les présents.
       for (const p of present.filter((m) => m.arrivedAt)) {

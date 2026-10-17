@@ -40,6 +40,7 @@ export class TrackingHub {
   private readonly rooms = new Map<string, Set<LiveClient>>();
   private readonly positions = new Map<string, Map<string, LivePosition>>();
   private readonly closedRides = new Set<string>();
+  private readonly dismissed = new Map<string, Set<string>>();
 
   /** Un seul socket par personne et par trajet : le précédent est fermé (pas de diffusion multipliée). */
   join(rideId: string, client: LiveClient): void {
@@ -90,6 +91,17 @@ export class TrackingHub {
     }
     if (room?.size === 0) this.rooms.delete(rideId);
     this.positions.get(rideId)?.delete(userId);
+    this.dismissed.set(rideId, (this.dismissed.get(rideId) ?? new Set()).add(userId));
+  }
+
+  /** Passagers dont le suivi s'est arrêté avant la clôture. */
+  dismissedUsers(rideId: string): ReadonlySet<string> {
+    return this.dismissed.get(rideId) ?? new Set();
+  }
+
+  /** Connexion encore active dans la salle (pas remplacée ni renvoyée). */
+  has(rideId: string, client: LiveClient): boolean {
+    return this.rooms.get(rideId)?.has(client) ?? false;
   }
 
   /** Clôture : connexions fermées, positions oubliées (seule la trace réduite reste en base). */
@@ -97,6 +109,7 @@ export class TrackingHub {
     for (const client of this.rooms.get(rideId) ?? []) client.socket.close(WS_CLOSE.closed, 'ride_closed');
     this.rooms.delete(rideId);
     this.positions.delete(rideId);
+    this.dismissed.delete(rideId);
     this.closedRides.add(rideId);
   }
 

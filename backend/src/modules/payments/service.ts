@@ -8,6 +8,7 @@ import {
   isValidIban,
   normalizeIban,
   payoutEntries,
+  payoutReversalEntries,
   releaseEntries,
   topupEntries,
   userAccount,
@@ -102,6 +103,10 @@ export class WalletService {
     await this.repo.lockWallets([passengerId, driverId], tx);
     const payment = await this.repo.payment(rideId, passengerId, tx);
     if (!payment || payment.status !== 'held') return 'already';
+    // Jamais plus que la retenue (le prix maximal accepté) : commission d'abord, puis part.
+    const commissionCents = Math.min(input.commissionCents, payment.held_cents);
+    const shareCents = Math.min(input.shareCents, payment.held_cents - commissionCents);
+    input = { ...input, shareCents, commissionCents };
     const available = (await this.repo.balance(userAccount(passengerId), tx)) + payment.held_cents;
     if (available < input.shareCents + input.commissionCents) {
       if (payment.held_cents > 0) {
@@ -140,9 +145,12 @@ export class WalletService {
     const key = `payout:${userId}:${idempotencyKey}`;
     if (await this.repo.operationExists(key)) return this.wallet(userId);
     const intervalDays = await this.settings.get('wallet.payoutMinIntervalDays');
-    // Vérifié et débité sous verrou : deux demandes simultanées ne retirent pas deux fois.
-    await this.repo.transaction(async (tx) => {
+    // Débit enregistré et validé avant l'appel au prestataire : un virement parti ne peut
+    // jamais rester sans écriture (réponse perdue, transaction annulée), donc jamais doublé.
+    const payoutId = await this.repo.transaction(async (tx) => {
       await this.repo.lockWallets([userId], tx);
+      // Même clé en parallèle (double appui) : la seconde voit la première une fois le verrou pris.
+      if (await this.repo.operationExists(key, tx)) return null;
       if ((await this.repo.balance(userAccount(userId), tx)) < input.amountCents) {
         throw new AppError(409, 'insufficient_funds', 'Solde insuffisant');
       }
@@ -150,17 +158,28 @@ export class WalletService {
       if (last && now.getTime() - last.getTime() < intervalDays * 86_400_000) {
         throw new AppError(429, 'payout_too_soon', 'Un retrait par semaine au plus');
       }
-      const result = await this.provider.createPayout({
-        userId,
-        amountCents: input.amountCents,
-        iban,
-        holderName: input.holderName,
-        idempotencyKey: key,
-      });
-      if (result.status === 'failed') throw new AppError(402, 'payout_failed', 'Le virement a été refusé');
-      await this.repo.insertPayout({ userId, amountCents: input.amountCents, providerRef: result.providerRef, status: result.status === 'succeeded' ? 'paid' : 'pending', ibanLast4: iban.slice(-4) }, tx);
+      const id = await this.repo.insertPayout({ userId, amountCents: input.amountCents, ibanLast4: iban.slice(-4) }, tx);
       await this.record(key, payoutEntries(userId, input.amountCents), null, tx);
+      return id;
     });
+    if (payoutId === null) return this.wallet(userId);
+    let result: Awaited<ReturnType<PaymentProvider['createPayout']>>;
+    try {
+      result = await this.provider.createPayout({ userId, amountCents: input.amountCents, iban, holderName: input.holderName, idempotencyKey: key });
+    } catch {
+      // Issue inconnue : le retrait reste `pending`, débité ; l'équipe le rapproche (webhook en M4b).
+      return this.wallet(userId);
+    }
+    await this.repo.transaction(async (tx) => {
+      if (result.status === 'failed') {
+        await this.repo.lockWallets([userId], tx);
+        await this.repo.setPayoutResult(payoutId, 'failed', result.providerRef, tx);
+        await this.record(`${key}:reversal`, payoutReversalEntries(userId, input.amountCents), null, tx);
+      } else {
+        await this.repo.setPayoutResult(payoutId, result.status === 'succeeded' ? 'paid' : 'pending', result.providerRef, tx);
+      }
+    });
+    if (result.status === 'failed') throw new AppError(402, 'payout_failed', 'Le virement a été refusé');
     return this.wallet(userId);
   }
 

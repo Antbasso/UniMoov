@@ -126,13 +126,15 @@ export class PaymentsRepo {
     return rows[0]?.at ? new Date(rows[0].at) : null;
   }
 
-  async insertPayout(
-    p: { userId: string; amountCents: number; providerRef: string; status: string; ibanLast4: string },
-    tx: Tx,
-  ): Promise<void> {
-    await tx.execute(sql`
-      INSERT INTO payouts (user_id, amount_cents, provider_ref, status, iban_last4)
-      VALUES (${p.userId}, ${p.amountCents}, ${p.providerRef}, ${p.status}, ${p.ibanLast4})`);
+  async insertPayout(p: { userId: string; amountCents: number; ibanLast4: string }, tx: Tx): Promise<string> {
+    const { rows } = await tx.execute<{ id: string }>(sql`
+      INSERT INTO payouts (user_id, amount_cents, status, iban_last4)
+      VALUES (${p.userId}, ${p.amountCents}, 'pending', ${p.ibanLast4}) RETURNING id`);
+    return rows[0]!.id;
+  }
+
+  async setPayoutResult(id: string, status: 'pending' | 'paid' | 'failed', providerRef: string | null, tx: Tx): Promise<void> {
+    await tx.execute(sql`UPDATE payouts SET status = ${status}, provider_ref = ${providerRef} WHERE id = ${id}`);
   }
 
   async setPaymentStatus(rideId: string, payerId: string, status: string, paidAt: Date | null, tx: Tx): Promise<void> {

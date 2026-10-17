@@ -53,6 +53,10 @@ export class TrackingService {
   /** L'état d'un trajet a changé (départ, montée, présence, clôture) : relu au besoin. */
   invalidate(rideId: string): void {
     this.state.delete(rideId);
+    // Passager arrivé, sorti ou annulé : ses états de suivi sont oubliés tout de suite.
+    for (const userId of this.hub.dismissedUsers(rideId)) {
+      for (const map of [this.lastTrace, this.anchor, this.nearSince, this.nearMisses]) map.delete(`${rideId}:${userId}`);
+    }
     // Trajet clôturé seulement (pas une salle vide un instant) : plus rien à garder.
     if (this.hub.isClosed(rideId)) {
       for (const map of [this.lastTrace, this.anchor, this.nearSince, this.nearMisses]) {
@@ -117,8 +121,8 @@ export class TrackingService {
 
     const live = await this.live(rideId);
     if (!live) return;
-    // Trajet terminé pour ce passager : plus aucune position collectée.
-    if (live.passengers.some((p) => p.userId === client.userId && p.ended)) return;
+    // Trajet terminé pour ce passager (ou connexion fermée entre-temps) : plus aucune position.
+    if (!this.hub.has(rideId, client) || live.passengers.some((p) => p.userId === client.userId && p.ended)) return;
     const { lat, lon } = parsed.data;
     // Heure du serveur : le client ne choisit ni l'horodatage de la trace ni sa durée de conservation.
     const ts = new Date(now);

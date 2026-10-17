@@ -92,6 +92,15 @@ export function payoutEntries(userId: string, amountCents: number): Entry[] {
   ];
 }
 
+/** Retrait refusé par le prestataire après le débit : le solde est recrédité. */
+export function payoutReversalEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'retrait annulé');
+  return [
+    { account: CLEARING, kind: 'refund', amountCents: -amountCents },
+    { account: userAccount(userId), kind: 'refund', amountCents },
+  ];
+}
+
 /** Retenue = prix estimé majoré de la marge, au centime supérieur. */
 export function holdAmount(estimatedCents: number, marginPercent: number): number {
   if (!Number.isInteger(estimatedCents) || estimatedCents < 0) throw new RangeError('prix invalide');

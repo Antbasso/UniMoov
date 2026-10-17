@@ -133,14 +133,23 @@ describe('DELETE /me', () => {
     expect((await payout({ amountCents: 500, iban, holderName }, 'retrait-ines-2')).json<{ error: { code: string } }>().error.code).toBe('payout_too_small');
     expect((await payout({ amountCents: 999_999, iban, holderName }, 'retrait-ines-3')).json<{ error: { code: string } }>().error.code).toBe('insufficient_funds');
 
-    const done = await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4');
-    expect(done.statusCode).toBe(201);
+    // Refusé par le prestataire après le débit : solde recrédité, et la semaine n'est pas consommée.
+    ctx.payments.failingAmounts.add(SEED_PASSENGER_BALANCE_CENTS);
+    expect((await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-refus')).json<{ error: { code: string } }>().error.code).toBe('payout_failed');
+    ctx.payments.failingAmounts.delete(SEED_PASSENGER_BALANCE_CENTS);
+    expect((await call('Inès', 'GET', '/wallet')).json<{ balanceCents: number }>().balanceCents).toBe(SEED_PASSENGER_BALANCE_CENTS);
+
+    // Double appui : deux requêtes simultanées avec la même clé, un seul virement, deux succès.
+    const [done, replay] = await Promise.all([
+      payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4'),
+      payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4'),
+    ]);
+    expect([done.statusCode, replay.statusCode]).toEqual([201, 201]);
     expect(done.json<{ balanceCents: number }>().balanceCents).toBe(0);
-    // Rejouée avec la même clé : un seul virement.
-    expect((await payout({ amountCents: SEED_PASSENGER_BALANCE_CENTS, iban, holderName }, 'retrait-ines-4')).statusCode).toBe(201);
-    const { rows } = await ctx.database.pool.query<Record<string, unknown>>(`SELECT * FROM payouts WHERE user_id = $1`, [user('Inès').id]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ amount_cents: SEED_PASSENGER_BALANCE_CENTS, iban_last4: '0189' });
+    expect(replay.json<{ balanceCents: number }>().balanceCents).toBe(0);
+    const { rows } = await ctx.database.pool.query<Record<string, unknown>>(`SELECT * FROM payouts WHERE user_id = $1 ORDER BY created_at`, [user('Inès').id]);
+    expect(rows.map((r) => r.status)).toEqual(['failed', 'paid']);
+    expect(rows[1]).toMatchObject({ amount_cents: SEED_PASSENGER_BALANCE_CENTS, iban_last4: '0189' });
     expect(JSON.stringify(rows)).not.toContain('30006000');
     // Un seul retrait par semaine.
     await ctx.app.inject({ method: 'POST', url: '/api/v1/wallet/topups', headers: { ...bearer(await login('Inès')), 'idempotency-key': 'recharge-ines-rgpd' }, payload: { amountCents: 1000 } });

@@ -59,9 +59,9 @@ class WalletController extends AsyncNotifier<Wallet> {
       keys.rotate();
       if (ref.mounted) state = AsyncData(wallet);
     } on ApiException catch (error) {
-      // Réponse reçue (refus, saisie invalide) : rien n'a été retiré, nouvelle clé. Sans
-      // réponse (réseau), la même clé est réutilisée au prochain essai.
-      if (error.code != 'network_error') keys.rotate();
+      // Refus explicite (4xx : saisie invalide, solde, prestataire) : nouvelle clé. Sans réponse
+      // ou erreur du serveur (5xx), l'issue est inconnue : la même clé au prochain essai.
+      if (error.statusCode case final status? when status >= 400 && status < 500) keys.rotate();
       rethrow;
     }
   }

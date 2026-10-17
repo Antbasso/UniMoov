@@ -333,6 +333,43 @@ describe('clôture', () => {
     expect((await wallet('Léa')).balanceCents).toBe(before.lea);
   });
 
+  it('pas encore à bord : annule sa place pendant le trajet ; prélèvement plafonné à la retenue', async () => {
+    const friday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
+      .proposals.find((p) => p.day === '2026-10-23' && p.direction === 'to_campus')!.id;
+    for (const name of ['Léa', 'Hugo', 'Chloé']) {
+      expect((await call(name, 'POST', `/proposals/${friday}/accept`)).statusCode).toBe(200);
+    }
+    ctx.clock.now = new Date('2026-10-23T05:30:00Z');
+    expect((await call('Léa', 'POST', `/rides/${friday}/start`)).statusCode).toBe(204);
+    const chloe = await connect('Chloé', friday);
+    await waitFor(() => chloe.messages.find((m) => m.type === 'ready'));
+
+    // Chloé n'est pas montée : elle annule (pénalité), sa connexion est fermée, Léa prévenue.
+    expect((await call('Chloé', 'GET', `/rides/${friday}/cancellation`)).statusCode).toBe(200);
+    expect((await call('Chloé', 'POST', `/rides/${friday}/cancel`)).statusCode).toBe(200);
+    expect(await chloe.closed).toBe(4410);
+    const cancelled = ctx.notifier.sent.find((n) => n.event.type === 'ride_cancelled' && 'rideId' in n.event && n.event.rideId === friday);
+    expect(cancelled?.userIds).toContain(user('Léa').id);
+    expect(await (await connect('Chloé', friday)).closed).toBe(4403);
+
+    // Hugo, à bord, ne peut plus annuler ; il arrive. Tracé rallongé après la retenue : il ne paie
+    // jamais plus que ce qui a été retenu.
+    expect(await ctx.app.services!.lifecycle.validatePresence(friday, user('Hugo').id)).toBe('validated');
+    expect((await call('Hugo', 'POST', `/rides/${friday}/cancel`)).json<{ error: { code: string } }>().error.code).toBe('ride_unavailable');
+    await ctx.database.pool.query(`UPDATE rides SET distance_m = distance_m * 5 WHERE id = $1`, [friday]);
+    // Seul passager restant, arrivé : le trajet se clôt de lui-même.
+    await ctx.app.services!.lifecycle.arrive(friday, user('Hugo').id);
+    expect((await call('Léa', 'GET', `/rides/${friday}`)).json<{ status: string }>().status).toBe('completed');
+    const { rows } = await ctx.database.pool.query<{ payer_id: string; status: string; held_cents: number; share_cents: number; commission_cents: number }>(
+      `SELECT payer_id, status, held_cents, share_cents, commission_cents FROM payments WHERE ride_id = $1`,
+      [friday],
+    );
+    const hugoPayment = rows.find((r) => r.payer_id === user('Hugo').id)!;
+    expect(hugoPayment.status).toBe('paid');
+    expect(hugoPayment.share_cents + hugoPayment.commission_cents).toBe(hugoPayment.held_cents);
+    expect(rows.find((r) => r.payer_id === user('Chloé').id)?.status ?? 'refunded').toBe('refunded');
+  });
+
   it('trace réduite gardée pour les litiges, puis purgée après la rétention', async () => {
     const count = async () => Number((await ctx.database.pool.query<{ n: string }>(`SELECT count(*) AS n FROM position_trace`)).rows[0]!.n);
     expect(await count()).toBeGreaterThan(0);

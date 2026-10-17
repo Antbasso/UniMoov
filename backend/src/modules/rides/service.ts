@@ -140,6 +140,24 @@ export class RidesService {
    * départ ; le prix final, partagé entre les présents, ne le dépasse jamais. Avant le calcul de
    * l'itinéraire, distance estimée (ligne droite × facteur routier, plus son détour).
    */
+  /** Distance de facturation : le tracé calculé, sinon l'estimation utilisée pour la retenue. */
+  async billingDistance(rideId: string): Promise<number | null> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride) return null;
+    if (ride.distanceM !== null) return ride.distanceM;
+    const members = (await this.repo.members(rideId)).filter(isAccepted);
+    const home = members.find((m) => m.role === 'driver')?.home;
+    if (!home) return null;
+    const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
+    const detours = members.filter((m) => m.role === 'passenger').reduce((sum, m) => sum + (m.detourS ?? 0) * speed, 0);
+    return Math.round(distanceMeters(home, ride.campus) * (await this.settings.get('matching.roadFactor')) + detours);
+  }
+
+  /** Replan après le départ (passagers retirés faute de solde) : le tracé raccourcit. */
+  async replanStarted(rideId: string): Promise<void> {
+    await this.plan(rideId);
+  }
+
   async maxPassengerPrice(rideId: string, passengerId: string, detourOverrideS?: number | null): Promise<number | null> {
     const ride = await this.repo.ride(rideId);
     if (!ride || ride.consumptionLPer100km === null) return null;
@@ -178,7 +196,8 @@ export class RidesService {
 
   async get(userId: string, rideId: string): Promise<RideView> {
     let { ride, members, me } = await this.access(userId, rideId);
-    if (!ride.plannedAt) {
+    // Plan figé une fois le trajet commencé : le prix retenu au départ en dépend.
+    if (!ride.plannedAt && ride.status === 'confirmed') {
       await this.plan(rideId);
       ({ ride, members, me } = await this.access(userId, rideId));
     }

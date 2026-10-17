@@ -402,9 +402,21 @@ export class MatchingService {
   }
 
   /** Avant d'annuler : palier de pénalité si l'annulation avait lieu maintenant (cahier §8). */
+  /**
+   * Trajet annulable : ouvert, ou en cours pour un passager pas encore à bord (présence non
+   * validée) ; une fois à bord, il termine son trajet au lieu d'annuler.
+   */
+  private assertCancellable(ride: RideRow | undefined, me: ParticipantRow | undefined): RideRow {
+    if (ride?.status === 'in_progress' && me?.role === 'passenger' && me.status === 'accepted' && !me.presenceValidated) {
+      return ride;
+    }
+    return this.assertOpen(ride);
+  }
+
   async cancellation(userId: string, rideId: string): Promise<{ role: 'driver' | 'passenger'; tier: CancelTier }> {
-    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    const found = await this.repo.findRide(rideId);
     const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
+    const ride = this.assertCancellable(found, me);
     if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
     return { role: me.role, tier: await this.requirePolicy().cancellationTier(ride.targetTime) };
@@ -418,12 +430,16 @@ export class MatchingService {
    */
   async cancel(userId: string, rideId: string): Promise<{ tier: CancelTier }> {
     const policy = this.requirePolicy();
-    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const peek = await this.repo.peekRide(rideId);
+    if (!peek) throw new AppError(404, 'not_found', 'Ressource introuvable');
     const outcome = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
-      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      const found = await this.repo.findRide(rideId, tx);
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
+      // Relu sous le verrou du trajet : une validation de présence simultanée l'emporte.
+      const ride = this.assertCancellable(found, me);
+      const started = ride.status === 'in_progress';
       if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
       if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
       const now = this.clock();
@@ -437,8 +453,9 @@ export class MatchingService {
         if (ride.status === 'confirmed' && !others.some((p) => p.role === 'passenger')) {
           await this.repo.setRideStatus(rideId, 'proposed', tx);
         }
-        await this.repo.invalidatePlan(rideId, tx);
-        return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed: [] as string[] };
+        // Trajet en cours : plan figé (prix retenu), retenue libérée à la clôture.
+        if (!started) await this.repo.invalidatePlan(rideId, tx);
+        return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed: [] as string[], started };
       }
       await this.repo.setRideStatus(rideId, 'cancelled', tx);
       await this.repo.cancelParticipants(rideId, now, tx);
@@ -446,7 +463,7 @@ export class MatchingService {
         await this.repo.recordDecline(userId, p.userId, ride.day, ride.direction, tx);
       }
       const freed = parts.filter((p) => p.role === 'passenger' && ACTIVE(p)).map((p) => p.userId);
-      return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed };
+      return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed, started };
     });
 
     // Après la transaction : rien de ce qui suit ne remet l'annulation en cause.
@@ -455,7 +472,8 @@ export class MatchingService {
     }
     if (outcome.role === 'passenger') {
       await this.onRideChanged(rideId).catch(() => undefined);
-      await this.proposeReplacement(rideId).catch(() => undefined);
+      // Voiture déjà partie : pas de remplaçant.
+      if (!outcome.started) await this.proposeReplacement(rideId).catch(() => undefined);
     } else {
       await this.regenerateDay(outcome.ride.day).catch(() => undefined);
       for (const passengerId of outcome.freed) {
