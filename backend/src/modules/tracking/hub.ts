@@ -15,6 +15,8 @@ export interface LiveClient {
 export interface LivePosition extends LatLon {
   ts: Date;
   receivedAt: number;
+  /** Faux après un déplacement impossible : la position ne valide alors aucune présence. */
+  trusted: boolean;
 }
 
 /** Au-delà, une position n'est plus assez fraîche pour valider une présence. */
@@ -24,6 +26,8 @@ export const PRESENCE_FRESH_MS = 60_000;
 export const WS_CLOSE = {
   unauthorized: 4401,
   forbidden: 4403,
+  /** Remplacé par une connexion plus récente de la même personne. */
+  replaced: 4408,
   notStarted: 4409,
   closed: 4410,
 } as const;
@@ -36,8 +40,14 @@ export class TrackingHub {
   private readonly rooms = new Map<string, Set<LiveClient>>();
   private readonly positions = new Map<string, Map<string, LivePosition>>();
 
+  /** Un seul socket par personne et par trajet : le précédent est fermé (pas de diffusion multipliée). */
   join(rideId: string, client: LiveClient): void {
     const room = this.rooms.get(rideId) ?? new Set();
+    for (const other of [...room]) {
+      if (other.userId !== client.userId) continue;
+      room.delete(other);
+      other.socket.close(WS_CLOSE.replaced, 'replaced');
+    }
     room.add(client);
     this.rooms.set(rideId, room);
   }

@@ -180,19 +180,23 @@ export class RideLifecycle {
     const now = this.clock().getTime();
     // Mêmes règles que la validation automatique : positions récentes et proches.
     const fresh = (p: { receivedAt: number } | undefined) => p !== undefined && now - p.receivedAt <= PRESENCE_FRESH_MS;
-    if (!mine || !driver || !fresh(mine) || !fresh(driver) || distanceMeters(mine, driver) > radius) {
+    // Position du conducteur jugée invraisemblable (saut impossible) : pas de validation.
+    if (!mine || !driver || !driver.trusted || !fresh(mine) || !fresh(driver) || distanceMeters(mine, driver) > radius) {
       throw new AppError(409, 'presence_not_confirmed', 'Ton téléphone et celui du conducteur doivent être proches');
     }
     return this.validatePresence(rideId, userId);
   }
 
   /**
-   * Clôture manuelle (tout participant) ou automatique à l'arrivée : prix final, retenues
-   * des absents libérées, suivi fermé. Idempotente.
+   * Clôture manuelle (conducteur seulement) ou automatique à l'arrivée et pour un trajet oublié :
+   * prix final, retenues des absents libérées, suivi fermé. Idempotente.
    */
   async finish(rideId: string, byUserId: string | null): Promise<void> {
     if (byUserId) {
-      const { ride } = await this.participant(byUserId, rideId);
+      const { ride, members } = await this.load(rideId);
+      if (ride.status === 'completed' && members.some((m) => m.userId === byUserId && isAccepted(m))) return;
+      // Un passager ne clôt pas : il ferait compter absents ceux qui n'étaient pas encore montés.
+      this.driverOf(ride, members, byUserId);
       if (ride.status === 'completed') return;
       if (ride.status !== 'in_progress') throw new AppError(409, 'ride_not_started', "Le trajet n'a pas commencé");
     }
@@ -201,13 +205,21 @@ export class RideLifecycle {
       if (ride?.status !== 'in_progress') return false;
       const members = await this.repo.members(rideId, tx);
       const present = members.filter((m) => m.role === 'passenger' && m.presenceValidatedAt);
-      const noShow = members.filter((m) => m.role === 'passenger' && isAccepted(m) && !m.presenceValidatedAt);
+      const now = this.clock();
+      const missing = members.filter((m) => m.role === 'passenger' && isAccepted(m) && !m.presenceValidatedAt);
+      // Clôture avant l'heure de passage d'un passager ni pris ni monté : le conducteur n'est pas
+      // allé jusqu'à lui ; ce n'est pas une absence (pas de pénalité).
+      const notReached = missing.filter((m) => m.status === 'accepted' && m.eta !== null && m.eta > now);
+      const noShow = missing.filter((m) => !notReached.includes(m));
       const price = await this.rides.estimate(ride, ride.distanceM, present.length + 1);
-      await this.repo.setRideStatus(rideId, 'completed', { endedAt: this.clock(), finalTotalCostCents: price?.totalCostCents ?? null }, tx);
+      await this.repo.setRideStatus(rideId, 'completed', { endedAt: now, finalTotalCostCents: price?.totalCostCents ?? null }, tx);
       await this.wallet.releaseRemaining(rideId, tx);
       // Absence constatée : présence non validée par proximité (cahier §9).
       for (const absent of noShow) {
         await this.repo.setParticipant(rideId, absent.userId, { status: 'absent' }, tx);
+      }
+      for (const skipped of notReached) {
+        await this.repo.setParticipant(rideId, skipped.userId, { status: 'cancelled', cancelledAt: now }, tx);
       }
       await this.trust?.onRideFinished(
         rideId,

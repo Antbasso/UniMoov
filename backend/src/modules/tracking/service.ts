@@ -18,6 +18,17 @@ const positionMessage = z.object({
 const MIN_INTERVAL_MS = 2000;
 /** Trace pour les litiges : un point toutes les 30 s (docs/couts.md). */
 const TRACE_INTERVAL_MS = 30_000;
+/**
+ * Vraisemblance (décision de l'équipe contre l'imitation de position) : une position n'est
+ * crue que si on a pu l'atteindre depuis la dernière position crue à 144 km/h de moyenne au
+ * plus. Un téléphone qui « apparaît » ailleurs n'est cru qu'après le temps du vrai trajet ;
+ * un point GPS aberrant isolé n'efface pas la suite. Sous 500 m, l'écart est mis sur le
+ * compte de l'imprécision du GPS.
+ */
+const MAX_SPEED_MPS = 40;
+const JUMP_TOLERANCE_M = 500;
+/** Présence : téléphones proches pendant au moins ce temps (pas un simple point recopié). */
+export const PRESENCE_DWELL_MS = 15_000;
 
 /**
  * Suivi en direct (architecture §6) : position diffusée aux seuls participants du trajet
@@ -27,6 +38,8 @@ const TRACE_INTERVAL_MS = 30_000;
 export class TrackingService {
   private readonly state = new Map<string, LiveRide>();
   private readonly lastTrace = new Map<string, number>();
+  private readonly anchor = new Map<string, { lat: number; lon: number; at: number }>();
+  private readonly nearSince = new Map<string, number>();
 
   constructor(
     private readonly hub: TrackingHub,
@@ -41,7 +54,9 @@ export class TrackingService {
     this.state.delete(rideId);
     // Salle fermée (clôture) : plus rien à garder pour ce trajet.
     if (!this.hub.isOpen(rideId)) {
-      for (const key of this.lastTrace.keys()) if (key.startsWith(`${rideId}:`)) this.lastTrace.delete(key);
+      for (const map of [this.lastTrace, this.anchor, this.nearSince]) {
+        for (const key of map.keys()) if (key.startsWith(`${rideId}:`)) map.delete(key);
+      }
     }
   }
 
@@ -101,11 +116,15 @@ export class TrackingService {
     // Heure du serveur : le client ne choisit ni l'horodatage de la trace ni sa durée de conservation.
     const ts = new Date(now);
     const userId = client.userId;
-    this.hub.setPosition(rideId, userId, { lat, lon, ts, receivedAt: now });
+    const key = `${rideId}:${userId}`;
+    const anchor = this.anchor.get(key);
+    const meters = anchor ? distanceMeters(anchor, { lat, lon }) : 0;
+    const trusted = !anchor || meters <= JUMP_TOLERANCE_M || meters / Math.max((now - anchor.at) / 1000, 1) <= MAX_SPEED_MPS;
+    if (trusted) this.anchor.set(key, { lat, lon, at: now });
+    this.hub.setPosition(rideId, userId, { lat, lon, ts, receivedAt: now, trusted });
 
-    const traceKey = `${rideId}:${userId}`;
-    if (now - (this.lastTrace.get(traceKey) ?? 0) >= TRACE_INTERVAL_MS) {
-      this.lastTrace.set(traceKey, now);
+    if (now - (this.lastTrace.get(key) ?? 0) >= TRACE_INTERVAL_MS) {
+      this.lastTrace.set(key, now);
       await this.repo.insertTrace(rideId, userId, ts, { lat, lon });
     }
 
@@ -132,18 +151,37 @@ export class TrackingService {
     }
   }
 
-  /** Présence : passager et conducteur proches, positions fraîches. */
+  /**
+   * Présence : déclenchée par la position du téléphone du passager seulement (le conducteur,
+   * qui est payé, ne peut pas la provoquer en recopiant la position reçue), proche d'une
+   * position fiable et fraîche du conducteur, pendant au moins `PRESENCE_DWELL_MS`.
+   */
   private async checkPresence(live: LiveRide, sender: string, now: number): Promise<void> {
+    const p = live.passengers.find((x) => x.userId === sender && !x.validated);
+    if (!p) return;
+    const key = `${live.rideId}:${p.userId}`;
     const radius = await this.settings.get('tracking.presenceRadiusMeters');
     const driver = this.hub.position(live.rideId, live.driverId);
-    if (!driver || now - driver.receivedAt > PRESENCE_FRESH_MS) return;
-    const candidates = live.passengers.filter((p) => !p.validated && (sender === live.driverId || p.userId === sender));
-    for (const p of candidates) {
-      const pos = this.hub.position(live.rideId, p.userId);
-      if (!pos || now - pos.receivedAt > PRESENCE_FRESH_MS || distanceMeters(pos, driver) > radius) continue;
-      p.validated = true;
-      await this.lifecycle.validatePresence(live.rideId, p.userId);
+    const pos = this.hub.position(live.rideId, p.userId);
+    const near =
+      driver !== undefined &&
+      pos !== undefined &&
+      driver.trusted &&
+      now - driver.receivedAt <= PRESENCE_FRESH_MS &&
+      distanceMeters(pos, driver) <= radius;
+    if (!near) {
+      this.nearSince.delete(key);
+      return;
     }
+    const since = this.nearSince.get(key);
+    if (since === undefined) {
+      this.nearSince.set(key, now);
+      return;
+    }
+    if (now - since < PRESENCE_DWELL_MS) return;
+    this.nearSince.delete(key);
+    p.validated = true;
+    await this.lifecycle.validatePresence(live.rideId, p.userId);
   }
 
   /** Arrivée détectée : clôture automatique (cahier §9). */

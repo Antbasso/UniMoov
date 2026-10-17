@@ -183,8 +183,14 @@ describe('trajet en cours', () => {
 
   it('téléphones proches au ramassage : présence validée, le passager paie, conducteur et commission crédités', async () => {
     const home = { lat: user('Hugo').lat, lon: user('Hugo').lon };
-    await sendPosition(hugo, home);
+    // Le temps de rouler jusque chez Hugo : pas de saut invraisemblable.
+    ctx.clock.advance(5 * 60_000);
     await sendPosition(lea, { lat: home.lat + 0.0005, lon: home.lon }); // ~55 m
+    // Validée par le téléphone du passager, proche pendant au moins 15 s.
+    await sendPosition(hugo, home);
+    ctx.clock.advance(15_000);
+    await sendPosition(lea, { lat: home.lat + 0.0005, lon: home.lon });
+    await sendPosition(hugo, home);
     const validated = await waitFor(() => hugo.messages.find((m) => m.type === 'presence_validated'));
     expect(validated).toMatchObject({ userId: user('Hugo').id, payment: 'paid' });
 
@@ -247,8 +253,10 @@ describe('trajet en cours', () => {
 });
 
 describe('clôture', () => {
-  it('ferme le suivi, libère la retenue de l’absente et ne diffuse plus rien', async () => {
-    expect((await call('Hugo', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
+  it('ferme le suivi, libère la retenue de la passagère pas encore prise et ne diffuse plus rien', async () => {
+    // Un passager ne clôt pas le trajet.
+    expect((await call('Hugo', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(403);
+    expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
     expect(await lea.closed).toBe(4410);
     expect(await hugo.closed).toBe(4410);
     expect(hugo.messages.some((m) => m.type === 'ride_status' && m.status === 'completed')).toBe(true);
@@ -260,7 +268,15 @@ describe('clôture', () => {
       `SELECT p.status, u.first_name FROM ride_participants p JOIN users u ON u.id = p.user_id WHERE ride_id = $1 AND role = 'passenger'`,
       [rideId],
     );
-    expect(Object.fromEntries(rows.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'absent' });
+    // Clôturé avant l'heure de passage chez Inès : la conductrice n'est pas allée jusqu'à elle,
+    // ce n'est pas une absence (aucune pénalité), sa retenue est libérée.
+    expect(Object.fromEntries(rows.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'cancelled' });
+    const { rows: events } = await ctx.database.pool.query(
+      `SELECT 1 FROM reliability_events WHERE ride_id = $1 AND user_id = $2 AND kind = 'no_show'`,
+      [rideId, user('Inès').id],
+    );
+    expect(events).toHaveLength(0);
+    expect((await wallet('Inès')).heldCents).toBe(0);
     // Clôture rejouée : sans effet.
     expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
   });

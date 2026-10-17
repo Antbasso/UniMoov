@@ -184,7 +184,10 @@ describe('trajet mené à bien et absences (cahier §7, §9)', () => {
     expect((await call('Léa', 'POST', `/rides/${monFrom}/participants/${user('Hugo').id}/picked-up`)).statusCode).toBe(204);
     expect(await ctx.app.services!.lifecycle.validatePresence(monFrom, user('Inès').id)).toBe('paid');
     const hugoBefore = (await reliability('Hugo')).score;
-    expect((await call('Inès', 'POST', `/rides/${monFrom}/finish`)).statusCode).toBe(204);
+    // Clôture par la conductrice, une fois passées les heures de prise en charge.
+    ctx.clock.now = new Date('2026-10-19T17:00:00Z');
+    expect((await call('Inès', 'POST', `/rides/${monFrom}/finish`)).statusCode).toBe(403);
+    expect((await call('Léa', 'POST', `/rides/${monFrom}/finish`)).statusCode).toBe(204);
 
     const hugo = await reliability('Hugo');
     expect(hugo.noShows).toBe(1);

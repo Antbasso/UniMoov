@@ -97,8 +97,12 @@ describe('parcours complet', () => {
     await waitFor(() => driver.messages.find((m) => m.type === 'ready'));
     await waitFor(() => passenger.messages.find((m) => m.type === 'ready'));
     const home = FAKE_ADDRESSES['1 place de l hotel de ville seynod']!;
-    await sendPosition(passenger, home);
     await sendPosition(driver, { lat: home.lat + 0.0004, lon: home.lon });
+    // Le téléphone du passager déclenche la validation, après 15 s côte à côte.
+    await sendPosition(passenger, home);
+    ctx.clock.advance(15_000);
+    await sendPosition(driver, { lat: home.lat + 0.0004, lon: home.lon });
+    await sendPosition(passenger, home);
     expect(await waitFor(() => passenger.messages.find((m) => m.type === 'presence_validated'))).toMatchObject({
       userId: ids.yanis,
       payment: 'paid',
