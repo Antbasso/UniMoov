@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/session_controller.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/chat/presentation/conversation_screen.dart';
+import '../../features/chat/presentation/conversations_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/splash_screen.dart';
 import '../../features/home/presentation/welcome_screen.dart';
+import '../../features/notifications/presentation/notification_settings_screen.dart';
 import '../../features/profile/presentation/me_controller.dart';
 import '../../features/profile/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_edit_screens.dart';
@@ -64,6 +67,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'vehicle', builder: (_, _) => const EditVehicleScreen()),
           GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
           GoRoute(path: 'reliability', builder: (_, _) => const ReliabilityScreen()),
+          GoRoute(path: 'notifications', builder: (_, _) => const NotificationSettingsScreen()),
           GoRoute(
             path: 'schedule',
             builder: (_, _) => const ScheduleScreen(),
@@ -76,6 +80,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
       GoRoute(path: AppRoutes.wallet, builder: (_, _) => const WalletScreen()),
+      GoRoute(
+        path: AppRoutes.messages,
+        builder: (_, _) => const ConversationsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) => ConversationScreen(id: state.pathParameters['id']!),
+          ),
+        ],
+      ),
       GoRoute(
         path: '/disputes/:rideId',
         builder: (_, state) {

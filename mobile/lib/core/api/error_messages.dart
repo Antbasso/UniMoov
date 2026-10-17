@@ -51,5 +51,8 @@ String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'dispute_closed' => l10n.errorDisputeClosed,
   'dispute_not_applicable' => l10n.errorDisputeNotApplicable,
   'report_limit' => l10n.errorReportLimit,
+  'not_a_contact' => l10n.errorNotAContact,
+  'conversation_archived' => l10n.errorConversationArchived,
+  'group_too_large' => l10n.errorGroupTooLarge,
   _ => l10n.errorGeneric,
 };

@@ -804,5 +804,97 @@
   "disputeSendTeam": "Envoyer à l'équipe",
   "disputeAnother": "Signaler un autre problème",
   "disputeChooseReason": "Choisis un motif pour continuer.",
-  "reportEmergency": "En cas de danger immédiat, appelle le 112."
+  "reportEmergency": "En cas de danger immédiat, appelle le 112.",
+  "chatTitle": "Messages",
+  "chatNew": "Nouveau message",
+  "chatNewIntro": "Tu peux écrire aux personnes croisées sur un trajet. Choisis-en plusieurs pour créer un groupe.",
+  "chatNoContacts": "Personne pour l'instant. Après ton premier trajet, tu pourras écrire aux personnes croisées.",
+  "chatEmpty": "Pas encore de conversation. Le chat de ton trajet apparaît ici dès qu'il est confirmé.",
+  "chatGroup": "Groupe",
+  "chatGroupName": "Nom du groupe",
+  "chatCreateGroup": "Créer le groupe",
+  "chatStart": "Écrire",
+  "chatRideTitle": "Chat du trajet",
+  "chatWith": "Avec {names}",
+  "@chatWith": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "chatYouSaid": "Toi : {body}",
+  "@chatYouSaid": {
+    "placeholders": {
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "chatUnread": "{count, plural, =1{1 non lu} other{{count} non lus}}",
+  "@chatUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatArchived": "Archivé",
+  "chatArchivedBody": "Ce chat de trajet est archivé : tu peux le relire, plus y écrire.",
+  "chatNoMessages": "Aucun message pour l'instant. Lance la conversation.",
+  "chatOlder": "Voir les messages plus anciens",
+  "chatMessageLabel": "Ton message",
+  "chatSend": "Envoyer",
+  "chatLeave": "Quitter le groupe",
+  "chatFormerMember": "Ancien membre",
+  "chatMineSemantic": "Toi, {time} : {body}",
+  "@chatMineSemantic": {
+    "placeholders": {
+      "body": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTheirsSemantic": "{name}, {time} : {body}",
+  "@chatTheirsSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessagesTooltip": "Messages",
+  "chatMessagesUnreadTooltip": "{count, plural, =1{Messages, 1 non lu} other{Messages, {count} non lus}}",
+  "@chatMessagesUnreadTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rideChat": "Chat du trajet",
+  "profileNotifications": "Notifications",
+  "profileNotificationsBody": "Choisis ce qui te prévient sur ton téléphone.",
+  "notificationsTitle": "Notifications",
+  "notificationsIntro": "Tout est activé par défaut. Coupe ce dont tu n'as pas besoin.",
+  "notificationsRideReminder": "Rappel de trajet",
+  "notificationsRideReminderHelp": "Une heure avant le départ.",
+  "notificationsRideUpdate": "Changements de trajet",
+  "notificationsRideUpdateHelp": "Annulation, conducteur qui se désiste.",
+  "notificationsMatch": "Propositions",
+  "notificationsMatchHelp": "Ta semaine prête, une place qui se libère.",
+  "notificationsChat": "Messages",
+  "notificationsChatHelp": "Nouveau message dans une conversation.",
+  "errorNotAContact": "Tu ne peux écrire qu'aux personnes croisées sur un trajet.",
+  "errorConversationArchived": "Cette conversation est archivée.",
+  "errorGroupTooLarge": "Ce groupe compte trop de personnes."
 }

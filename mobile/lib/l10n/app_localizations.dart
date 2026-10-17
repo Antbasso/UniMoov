@@ -2541,6 +2541,252 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'En cas de danger immédiat, appelle le 112.'**
   String get reportEmergency;
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get chatTitle;
+
+  /// No description provided for @chatNew.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau message'**
+  String get chatNew;
+
+  /// No description provided for @chatNewIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu peux écrire aux personnes croisées sur un trajet. Choisis-en plusieurs pour créer un groupe.'**
+  String get chatNewIntro;
+
+  /// No description provided for @chatNoContacts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne pour l\'instant. Après ton premier trajet, tu pourras écrire aux personnes croisées.'**
+  String get chatNoContacts;
+
+  /// No description provided for @chatEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore de conversation. Le chat de ton trajet apparaît ici dès qu\'il est confirmé.'**
+  String get chatEmpty;
+
+  /// No description provided for @chatGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupe'**
+  String get chatGroup;
+
+  /// No description provided for @chatGroupName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get chatGroupName;
+
+  /// No description provided for @chatCreateGroup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer le groupe'**
+  String get chatCreateGroup;
+
+  /// No description provided for @chatStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire'**
+  String get chatStart;
+
+  /// No description provided for @chatRideTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chat du trajet'**
+  String get chatRideTitle;
+
+  /// No description provided for @chatWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec {names}'**
+  String chatWith(String names);
+
+  /// No description provided for @chatYouSaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi : {body}'**
+  String chatYouSaid(String body);
+
+  /// No description provided for @chatUnread.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 non lu} other{{count} non lus}}'**
+  String chatUnread(int count);
+
+  /// No description provided for @chatArchived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Archivé'**
+  String get chatArchived;
+
+  /// No description provided for @chatArchivedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce chat de trajet est archivé : tu peux le relire, plus y écrire.'**
+  String get chatArchivedBody;
+
+  /// No description provided for @chatNoMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun message pour l\'instant. Lance la conversation.'**
+  String get chatNoMessages;
+
+  /// No description provided for @chatOlder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les messages plus anciens'**
+  String get chatOlder;
+
+  /// No description provided for @chatMessageLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton message'**
+  String get chatMessageLabel;
+
+  /// No description provided for @chatSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get chatSend;
+
+  /// No description provided for @chatLeave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter le groupe'**
+  String get chatLeave;
+
+  /// No description provided for @chatFormerMember.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ancien membre'**
+  String get chatFormerMember;
+
+  /// No description provided for @chatMineSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi, {time} : {body}'**
+  String chatMineSemantic(String body, String time);
+
+  /// No description provided for @chatTheirsSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name}, {time} : {body}'**
+  String chatTheirsSemantic(String name, String body, String time);
+
+  /// No description provided for @chatMessagesTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get chatMessagesTooltip;
+
+  /// No description provided for @chatMessagesUnreadTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Messages, 1 non lu} other{Messages, {count} non lus}}'**
+  String chatMessagesUnreadTooltip(int count);
+
+  /// No description provided for @rideChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chat du trajet'**
+  String get rideChat;
+
+  /// No description provided for @profileNotifications.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications'**
+  String get profileNotifications;
+
+  /// No description provided for @profileNotificationsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ce qui te prévient sur ton téléphone.'**
+  String get profileNotificationsBody;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est activé par défaut. Coupe ce dont tu n\'as pas besoin.'**
+  String get notificationsIntro;
+
+  /// No description provided for @notificationsRideReminder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rappel de trajet'**
+  String get notificationsRideReminder;
+
+  /// No description provided for @notificationsRideReminderHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une heure avant le départ.'**
+  String get notificationsRideReminderHelp;
+
+  /// No description provided for @notificationsRideUpdate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changements de trajet'**
+  String get notificationsRideUpdate;
+
+  /// No description provided for @notificationsRideUpdateHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulation, conducteur qui se désiste.'**
+  String get notificationsRideUpdateHelp;
+
+  /// No description provided for @notificationsMatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propositions'**
+  String get notificationsMatch;
+
+  /// No description provided for @notificationsMatchHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta semaine prête, une place qui se libère.'**
+  String get notificationsMatchHelp;
+
+  /// No description provided for @notificationsChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get notificationsChat;
+
+  /// No description provided for @notificationsChatHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau message dans une conversation.'**
+  String get notificationsChatHelp;
+
+  /// No description provided for @errorNotAContact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne peux écrire qu\'aux personnes croisées sur un trajet.'**
+  String get errorNotAContact;
+
+  /// No description provided for @errorConversationArchived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette conversation est archivée.'**
+  String get errorConversationArchived;
+
+  /// No description provided for @errorGroupTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe compte trop de personnes.'**
+  String get errorGroupTooLarge;
 }
 
 class _AppLocalizationsDelegate

@@ -1471,4 +1471,161 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reportEmergency => 'En cas de danger immédiat, appelle le 112.';
+
+  @override
+  String get chatTitle => 'Messages';
+
+  @override
+  String get chatNew => 'Nouveau message';
+
+  @override
+  String get chatNewIntro =>
+      'Tu peux écrire aux personnes croisées sur un trajet. Choisis-en plusieurs pour créer un groupe.';
+
+  @override
+  String get chatNoContacts =>
+      'Personne pour l\'instant. Après ton premier trajet, tu pourras écrire aux personnes croisées.';
+
+  @override
+  String get chatEmpty =>
+      'Pas encore de conversation. Le chat de ton trajet apparaît ici dès qu\'il est confirmé.';
+
+  @override
+  String get chatGroup => 'Groupe';
+
+  @override
+  String get chatGroupName => 'Nom du groupe';
+
+  @override
+  String get chatCreateGroup => 'Créer le groupe';
+
+  @override
+  String get chatStart => 'Écrire';
+
+  @override
+  String get chatRideTitle => 'Chat du trajet';
+
+  @override
+  String chatWith(String names) {
+    return 'Avec $names';
+  }
+
+  @override
+  String chatYouSaid(String body) {
+    return 'Toi : $body';
+  }
+
+  @override
+  String chatUnread(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count non lus',
+      one: '1 non lu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatArchived => 'Archivé';
+
+  @override
+  String get chatArchivedBody =>
+      'Ce chat de trajet est archivé : tu peux le relire, plus y écrire.';
+
+  @override
+  String get chatNoMessages =>
+      'Aucun message pour l\'instant. Lance la conversation.';
+
+  @override
+  String get chatOlder => 'Voir les messages plus anciens';
+
+  @override
+  String get chatMessageLabel => 'Ton message';
+
+  @override
+  String get chatSend => 'Envoyer';
+
+  @override
+  String get chatLeave => 'Quitter le groupe';
+
+  @override
+  String get chatFormerMember => 'Ancien membre';
+
+  @override
+  String chatMineSemantic(String body, String time) {
+    return 'Toi, $time : $body';
+  }
+
+  @override
+  String chatTheirsSemantic(String name, String body, String time) {
+    return '$name, $time : $body';
+  }
+
+  @override
+  String get chatMessagesTooltip => 'Messages';
+
+  @override
+  String chatMessagesUnreadTooltip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Messages, $count non lus',
+      one: 'Messages, 1 non lu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rideChat => 'Chat du trajet';
+
+  @override
+  String get profileNotifications => 'Notifications';
+
+  @override
+  String get profileNotificationsBody =>
+      'Choisis ce qui te prévient sur ton téléphone.';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsIntro =>
+      'Tout est activé par défaut. Coupe ce dont tu n\'as pas besoin.';
+
+  @override
+  String get notificationsRideReminder => 'Rappel de trajet';
+
+  @override
+  String get notificationsRideReminderHelp => 'Une heure avant le départ.';
+
+  @override
+  String get notificationsRideUpdate => 'Changements de trajet';
+
+  @override
+  String get notificationsRideUpdateHelp =>
+      'Annulation, conducteur qui se désiste.';
+
+  @override
+  String get notificationsMatch => 'Propositions';
+
+  @override
+  String get notificationsMatchHelp =>
+      'Ta semaine prête, une place qui se libère.';
+
+  @override
+  String get notificationsChat => 'Messages';
+
+  @override
+  String get notificationsChatHelp => 'Nouveau message dans une conversation.';
+
+  @override
+  String get errorNotAContact =>
+      'Tu ne peux écrire qu\'aux personnes croisées sur un trajet.';
+
+  @override
+  String get errorConversationArchived => 'Cette conversation est archivée.';
+
+  @override
+  String get errorGroupTooLarge => 'Ce groupe compte trop de personnes.';
 }

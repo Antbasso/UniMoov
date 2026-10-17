@@ -78,6 +78,11 @@ class ProfileScreen extends ConsumerWidget {
           onEdit: () => context.push(AppRoutes.wallet),
         ),
         _Section(
+          title: l10n.profileNotifications,
+          body: l10n.profileNotificationsBody,
+          onEdit: () => context.push(AppRoutes.notificationSettings),
+        ),
+        _Section(
           title: l10n.profileReliability,
           body: l10n.profileReliabilityBody,
           actionLabel: l10n.see,
