@@ -18,7 +18,7 @@ abstract interface class ChatApi {
   Future<Conversation> createGroup(String title, List<String> userIds);
 
   /// Messages du plus récent au plus ancien ; `before` pour remonter.
-  Future<List<ChatMessage>> messages(String id, {DateTime? before});
+  Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId});
   Future<ChatMessage> send(String id, String body);
   Future<void> markRead(String id);
   Future<void> leave(String id);
@@ -78,16 +78,20 @@ class DioChatApi implements ChatApi {
   );
 
   @override
-  Future<List<ChatMessage>> messages(String id, {DateTime? before}) => guardApi(() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/api/v1/conversations/$id/messages',
-      queryParameters: {if (before != null) 'before': before.toUtc().toIso8601String()},
-    );
-    return [
-      for (final m in response.data!['messages'] as List<dynamic>)
-        ChatMessage.fromJson(m as Map<String, dynamic>),
-    ];
-  });
+  Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId}) =>
+      guardApi(() async {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/api/v1/conversations/$id/messages',
+          queryParameters: {
+            if (before != null) 'before': before.toUtc().toIso8601String(),
+            'beforeId': ?beforeId,
+          },
+        );
+        return [
+          for (final m in response.data!['messages'] as List<dynamic>)
+            ChatMessage.fromJson(m as Map<String, dynamic>),
+        ];
+      });
 
   @override
   Future<ChatMessage> send(String id, String body) => guardApi(() async {

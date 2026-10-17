@@ -103,8 +103,16 @@ class _NewConversationSheetState extends ConsumerState<NewConversationSheet> {
                     ),
                 ],
               ),
-              AsyncError(:final error) => UmErrorText(
-                apiErrorMessage(l10n, error is ApiException ? error.code : null),
+              AsyncError(:final error) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
+                  UmButton(
+                    label: l10n.retry,
+                    variant: UmButtonVariant.ghost,
+                    onPressed: () => ref.invalidate(contactsProvider),
+                  ),
+                ],
               ),
               _ => Semantics(
                 label: l10n.loading,
@@ -115,6 +123,7 @@ class _NewConversationSheetState extends ConsumerState<NewConversationSheet> {
               const SizedBox(height: UmSpace.s3),
               UmField(
                 label: l10n.chatGroupName,
+                help: l10n.chatGroupNameHelp,
                 controller: _title,
                 maxLength: 60,
                 onChanged: (_) => setState(() {}),
@@ -125,12 +134,13 @@ class _NewConversationSheetState extends ConsumerState<NewConversationSheet> {
               UmErrorText(apiErrorMessage(l10n, _errorCode)),
             ],
             const SizedBox(height: UmSpace.s4),
-            UmButton(
-              label: group ? l10n.chatCreateGroup : l10n.chatStart,
-              expand: true,
-              loading: _busy,
-              onPressed: ready && !_busy ? _create : null,
-            ),
+            if (contacts.value?.isNotEmpty ?? false)
+              UmButton(
+                label: group ? l10n.chatCreateGroup : l10n.chatStart,
+                expand: true,
+                loading: _busy,
+                onPressed: ready && !_busy ? _create : null,
+              ),
           ],
         ),
       ),

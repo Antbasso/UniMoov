@@ -82,7 +82,13 @@ void main() {
     expect(find.text('Nathan'), findsWidgets); // auteur d'un message de groupe
     expect(backend.readConversations, contains('conv-ride'));
 
-    await tester.enterText(fieldLabeled('Ton message'), 'Merci, à tout à l’heure.');
+    // Rien à envoyer : bouton désactivé.
+    expect(
+      tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.send_rounded)).onPressed,
+      isNull,
+    );
+    await tester.enterText(fieldLabeled('Écris un message'), 'Merci, à tout à l’heure.');
+    await tester.pump();
     await tester.tap(find.byTooltip('Envoyer'));
     await tester.pumpAndSettle();
     expect(find.text('Merci, à tout à l’heure.'), findsOneWidget);
@@ -134,6 +140,8 @@ void main() {
     expect(find.text('Seynod le lundi'), findsOneWidget);
     await tester.tap(find.byTooltip('Quitter le groupe'));
     await tester.pumpAndSettle();
+    expect(find.text('Quitter le groupe ?'), findsOneWidget);
+    await tapText(tester, 'Quitter');
     expect(
       backend.conversationsById.values.where((c) => c.kind == ConversationKind.group),
       isEmpty,

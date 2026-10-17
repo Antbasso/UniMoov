@@ -2647,7 +2647,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatMessageLabel.
   ///
   /// In fr, this message translates to:
-  /// **'Ton message'**
+  /// **'Écris un message'**
   String get chatMessageLabel;
 
   /// No description provided for @chatSend.
@@ -2787,6 +2787,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ce groupe compte trop de personnes.'**
   String get errorGroupTooLarge;
+
+  /// No description provided for @chatToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aujourd\'hui'**
+  String get chatToday;
+
+  /// No description provided for @chatYesterday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hier'**
+  String get chatYesterday;
+
+  /// No description provided for @chatSeeRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le trajet'**
+  String get chatSeeRide;
+
+  /// No description provided for @chatLeaveTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter le groupe ?'**
+  String get chatLeaveTitle;
+
+  /// No description provided for @chatLeaveBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne verras plus ses messages.'**
+  String get chatLeaveBody;
+
+  /// No description provided for @chatLeaveConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get chatLeaveConfirm;
+
+  /// No description provided for @chatGroupNameHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obligatoire pour un groupe.'**
+  String get chatGroupNameHelp;
+
+  /// No description provided for @chatLeaveCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rester'**
+  String get chatLeaveCancel;
 }
 
 class _AppLocalizationsDelegate

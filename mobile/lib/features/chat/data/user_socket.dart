@@ -12,6 +12,9 @@ import '../domain/chat.dart';
 abstract interface class UserSocketConnection {
   Stream<ChatMessage> get messages;
 
+  /// Le serveur a accepté le jeton (`{type: ready}`).
+  Future<void> get ready;
+
   /// Fin de la connexion (code de fermeture du serveur, `null` si coupée).
   Future<int?> get done;
   Future<void> close();
@@ -43,17 +46,24 @@ class WebSocketUserConnector implements UserSocketConnector {
 }
 
 class _Connection implements UserSocketConnection {
-  _Connection(this._channel)
-    : messages = _channel.stream
-          .map((data) => jsonDecode(data as String) as Map<String, dynamic>)
-          .where((json) => json['type'] == 'message')
-          .map((json) => ChatMessage.fromJson(json['message'] as Map<String, dynamic>))
-          .asBroadcastStream();
+  _Connection(this._channel) {
+    final events = _channel.stream
+        .map((data) => jsonDecode(data as String) as Map<String, dynamic>)
+        .asBroadcastStream();
+    messages = events
+        .where((json) => json['type'] == 'message')
+        .map((json) => ChatMessage.fromJson(json['message'] as Map<String, dynamic>))
+        .asBroadcastStream();
+    ready = events.firstWhere((json) => json['type'] == 'ready').then((_) {});
+  }
 
   final WebSocketChannel _channel;
 
   @override
-  final Stream<ChatMessage> messages;
+  late final Stream<ChatMessage> messages;
+
+  @override
+  late final Future<void> ready;
 
   @override
   Future<int?> get done => _channel.sink.done.then((_) => _channel.closeCode);

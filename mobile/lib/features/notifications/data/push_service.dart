@@ -15,6 +15,9 @@ abstract interface class PushService {
   Future<String?> token();
   Stream<String> get tokenRefresh;
 
+  /// Jeton actuel sans demander d'autorisation (déconnexion), ou `null`.
+  Future<String?> currentToken();
+
   /// Données d'une notification touchée (application ouverte ou en arrière-plan).
   Stream<Map<String, String>> get opened;
 
@@ -28,6 +31,8 @@ class DisabledPushService implements PushService {
 
   @override
   Future<String?> token() async => null;
+  @override
+  Future<String?> currentToken() async => null;
   @override
   Stream<String> get tokenRefresh => const Stream.empty();
   @override
@@ -65,6 +70,17 @@ class FirebasePushService implements PushService {
       // (`register()`/`onRegistered` donnent un identifiant d'installation, pas ce jeton).
       // ignore: deprecated_member_use
       return await messaging.getToken();
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Future<String?> currentToken() async {
+    try {
+      // Même raison que dans `token()`.
+      // ignore: deprecated_member_use
+      return await (await _messaging())?.getToken();
     } on Object {
       return null;
     }

@@ -1541,7 +1541,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatOlder => 'Voir les messages plus anciens';
 
   @override
-  String get chatMessageLabel => 'Ton message';
+  String get chatMessageLabel => 'Écris un message';
 
   @override
   String get chatSend => 'Envoyer';
@@ -1628,4 +1628,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorGroupTooLarge => 'Ce groupe compte trop de personnes.';
+
+  @override
+  String get chatToday => 'Aujourd\'hui';
+
+  @override
+  String get chatYesterday => 'Hier';
+
+  @override
+  String get chatSeeRide => 'Voir le trajet';
+
+  @override
+  String get chatLeaveTitle => 'Quitter le groupe ?';
+
+  @override
+  String get chatLeaveBody => 'Tu ne verras plus ses messages.';
+
+  @override
+  String get chatLeaveConfirm => 'Quitter';
+
+  @override
+  String get chatGroupNameHelp => 'Obligatoire pour un groupe.';
+
+  @override
+  String get chatLeaveCancel => 'Rester';
 }

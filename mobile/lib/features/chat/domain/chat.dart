@@ -48,6 +48,8 @@ class Conversation {
     required this.unread,
     this.title,
     this.rideId,
+    this.rideDay,
+    this.rideToCampus,
     this.lastMessage,
   });
 
@@ -56,6 +58,12 @@ class Conversation {
     kind: ConversationKind.values.byName(json['kind'] as String),
     title: json['title'] as String?,
     rideId: json['rideId'] as String?,
+    rideDay: (json['ride'] as Map<String, dynamic>?) == null
+        ? null
+        : DateTime.parse((json['ride'] as Map<String, dynamic>)['day'] as String),
+    rideToCampus: (json['ride'] as Map<String, dynamic>?)?['direction'] == null
+        ? null
+        : (json['ride'] as Map<String, dynamic>)['direction'] == 'to_campus',
     archived: json['archived'] as bool,
     unread: json['unread'] as int,
     members: [
@@ -72,6 +80,10 @@ class Conversation {
   final String? title;
   final String? rideId;
 
+  /// Chat de trajet : jour et sens, pour distinguer les trajets entre eux.
+  final DateTime? rideDay;
+  final bool? rideToCampus;
+
   /// Chat de trajet archivé : lecture seule (cahier §6).
   final bool archived;
   final int unread;
@@ -86,6 +98,8 @@ class Conversation {
     kind: kind,
     title: title,
     rideId: rideId,
+    rideDay: rideDay,
+    rideToCampus: rideToCampus,
     archived: archived,
     unread: unread ?? this.unread,
     members: members,

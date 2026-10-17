@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
+import '../../../core/clock.dart';
+import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
@@ -65,6 +67,13 @@ class _ConversationState extends ConsumerState<_Conversation> {
   String? _errorCode;
 
   @override
+  void initState() {
+    super.initState();
+    // Le bouton d'envoi suit le texte : désactivé quand il n'y a rien à envoyer.
+    _text.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _text.dispose();
     super.dispose();
@@ -89,8 +98,36 @@ class _ConversationState extends ConsumerState<_Conversation> {
     }
   }
 
+  Future<void> _loadOlder() async {
+    setState(() => _errorCode = null);
+    try {
+      await ref.read(conversationProvider(_id).notifier).loadOlder();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    }
+  }
+
   Future<void> _leave() async {
     final router = GoRouter.of(context);
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.chatLeaveTitle),
+        content: Text(l10n.chatLeaveBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.chatLeaveCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.chatLeaveConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await ref.read(conversationProvider(_id).notifier).leave();
       router.pop();
@@ -104,6 +141,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final me = ref.watch(meProvider.select((m) => m.value?.id));
+    final now = ref.watch(clockProvider)();
     final conversation = widget.state.conversation;
     final messages = widget.state.messages;
     final showSender = conversation.kind != ConversationKind.direct;
@@ -113,18 +151,38 @@ class _ConversationState extends ConsumerState<_Conversation> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Semantics(
-          header: true,
-          child: Text(
-            conversationTitle(l10n, conversation, me),
-            style: UmText.h3.copyWith(color: c.ink),
-          ),
+        titleSpacing: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                conversationTitle(l10n, conversation, me),
+                style: UmText.h3.copyWith(color: c.ink),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              conversationMembers(l10n, conversation, me),
+              style: UmText.bodySm.copyWith(color: c.inkMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
         actions: [
+          if (conversation.rideId != null)
+            IconButton(
+              tooltip: l10n.chatSeeRide,
+              icon: Icon(Icons.directions_car_outlined, color: c.brandStrong),
+              onPressed: () => context.push(AppRoutes.ride(conversation.rideId!)),
+            ),
           if (conversation.kind == ConversationKind.group)
             IconButton(
               tooltip: l10n.chatLeave,
-              icon: Icon(Icons.logout_rounded, color: c.brandStrong),
+              icon: Icon(Icons.group_remove_outlined, color: c.brandStrong),
               onPressed: _leave,
             ),
         ],
@@ -133,13 +191,6 @@ class _ConversationState extends ConsumerState<_Conversation> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(UmSpace.s6, 0, UmSpace.s6, UmSpace.s2),
-              child: Text(
-                conversationMembers(l10n, conversation, me),
-                style: UmText.bodySm.copyWith(color: c.inkMuted),
-              ),
-            ),
             Expanded(
               child: messages.isEmpty
                   ? Center(
@@ -166,17 +217,34 @@ class _ConversationState extends ConsumerState<_Conversation> {
                             child: UmButton(
                               label: l10n.chatOlder,
                               variant: UmButtonVariant.ghost,
-                              onPressed: () =>
-                                  ref.read(conversationProvider(_id).notifier).loadOlder(),
+                              onPressed: _loadOlder,
                             ),
                           );
                         }
-                        final message = messages[messages.length - 1 - index];
+                        final position = messages.length - 1 - index;
+                        final message = messages[position];
                         final mine = message.senderId == me;
-                        return _Bubble(
+                        final bubble = _Bubble(
                           message: message,
                           mine: mine,
                           sender: showSender && !mine ? nameOf(message.senderId) : null,
+                        );
+                        // Liste inversée : le séparateur de jour vient au-dessus du premier message du jour.
+                        final firstOfDay =
+                            position == 0 ||
+                            !sameDay(messages[position - 1].createdAt, message.createdAt);
+                        if (!firstOfDay) return bubble;
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: UmSpace.s2),
+                              child: Text(
+                                formatMessageDay(l10n, message.createdAt, now),
+                                style: UmText.caption.copyWith(color: c.inkMuted),
+                              ),
+                            ),
+                            bubble,
+                          ],
                         );
                       },
                     ),
@@ -212,6 +280,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                         controller: _text,
                         maxLines: 4,
                         maxLength: 2000,
+                        counterFrom: 1800,
                       ),
                     ),
                     Padding(
@@ -230,8 +299,11 @@ class _ConversationState extends ConsumerState<_Conversation> {
                                   color: c.brandStrong,
                                 ),
                               )
-                            : Icon(Icons.send_rounded, color: c.brandStrong),
-                        onPressed: _sending ? null : _send,
+                            : Icon(
+                                Icons.send_rounded,
+                                color: _text.text.trim().isEmpty ? c.inkMuted : c.brandStrong,
+                              ),
+                        onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
                       ),
                     ),
                   ],
@@ -288,7 +360,7 @@ class _Bubble extends StatelessWidget {
                     ),
                   ),
                 Text(message.body, style: UmText.body.copyWith(color: foreground)),
-                Text(time, style: UmText.caption.copyWith(color: foreground)),
+                Text(time, style: UmText.caption.copyWith(color: mine ? foreground : c.inkMuted)),
               ],
             ),
           ),

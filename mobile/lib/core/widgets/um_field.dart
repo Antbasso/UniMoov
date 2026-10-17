@@ -21,6 +21,7 @@ class UmField extends StatefulWidget {
     this.autofillHints,
     this.maxLines = 1,
     this.maxLength,
+    this.counterFrom,
   });
 
   final String label;
@@ -39,6 +40,9 @@ class UmField extends StatefulWidget {
   /// Texte libre sur plusieurs lignes (message à l'équipe) ; longueur bornée par l'API.
   final int maxLines;
   final int? maxLength;
+
+  /// Compteur affiché seulement à partir de ce nombre de caractères (près de la limite).
+  final int? counterFrom;
 
   @override
   State<UmField> createState() => _UmFieldState();
@@ -85,6 +89,12 @@ class _UmFieldState extends State<UmField> {
                 minLines: 1,
                 maxLines: widget.obscureText ? 1 : widget.maxLines,
                 maxLength: widget.maxLength,
+                buildCounter: widget.counterFrom == null
+                    ? null
+                    : (context, {required currentLength, required isFocused, maxLength}) =>
+                          currentLength < widget.counterFrom!
+                          ? null
+                          : Text('$currentLength/$maxLength'),
                 style: UmText.body.copyWith(color: c.ink),
                 decoration: InputDecoration(
                   hintText: widget.placeholder,

@@ -714,7 +714,7 @@ class FakeBackend
   }
 
   @override
-  Future<List<ChatMessage>> messages(String id, {DateTime? before}) async {
+  Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId}) async {
     _maybeFail();
     final all = (messagesById[id] ?? const <ChatMessage>[]).where(
       (m) => before == null || m.createdAt.isBefore(before),

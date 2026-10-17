@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/presentation/session_controller.dart';
@@ -8,55 +9,112 @@ import '../data/chat_api.dart';
 import '../data/user_socket.dart';
 import '../domain/chat.dart';
 
-/// Messages reçus en direct par `GET /ws/me`, avec reconnexion à délai croissant (1 s à 30 s).
+/// Messages reçus en direct par `GET /ws/me`, avec reconnexion à délai croissant (2 s à 30 s).
+/// Coupé en arrière-plan (le serveur envoie alors des push), rouvert au retour.
 class ChatLive {
-  ChatLive(this._connector);
+  ChatLive(this._connector, {this.refreshSession, this.retryDelay = defaultRetryDelay});
+
+  /// 2 s après un jeton refusé, sinon délai doublé à chaque échec, plafonné à 30 s.
+  static Duration defaultRetryDelay(int attempt, int? closeCode) =>
+      Duration(seconds: closeCode == 4401 ? 2 : min(30, 1 << min(attempt, 5)));
+
+  final Duration Function(int attempt, int? closeCode) retryDelay;
 
   final UserSocketConnector _connector;
+
+  /// Appel authentifié qui renouvelle le jeton d'accès (l'intercepteur s'en charge).
+  final Future<void> Function()? refreshSession;
   final _messages = StreamController<ChatMessage>.broadcast();
+  final _reconnected = StreamController<void>.broadcast();
   UserSocketConnection? _connection;
   Timer? _retry;
   int _attempt = 0;
-  bool _stopped = false;
+  bool _running = false;
+  bool _disposed = false;
+  bool _connectedOnce = false;
+
+  /// Conversations ouvertes à l'écran : leurs messages sont lus à mesure.
+  final Set<String> open = {};
 
   Stream<ChatMessage> get messages => _messages.stream;
 
-  void start() => unawaited(_connect());
+  /// Reconnecté après une coupure : des messages ont pu être manqués, à relire.
+  Stream<void> get reconnected => _reconnected.stream;
+
+  void start() {
+    if (_running || _disposed) return;
+    _running = true;
+    unawaited(_connect());
+  }
+
+  /// Arrière-plan : socket fermé, plus de reconnexion jusqu'au retour.
+  Future<void> pause() async {
+    _running = false;
+    _retry?.cancel();
+    final connection = _connection;
+    _connection = null;
+    await connection?.close();
+  }
 
   Future<void> _connect() async {
-    if (_stopped) return;
+    if (!_running) return;
+    int? code;
     try {
+      // Jeton refusé à la dernière tentative : on le renouvelle avant de réessayer.
+      if (_attempt > 0) await refreshSession?.call();
       final connection = await _connector.connect();
-      if (_stopped) {
+      if (!_running) {
         await connection.close();
         return;
       }
       _connection = connection;
-      _attempt = 0;
       final sub = connection.messages.listen(_messages.add, onError: (Object _) {});
-      await connection.done;
+      final done = connection.done;
+      // Prête (jeton accepté) ou fermée avant (4401) : seule la première compte comme réussie.
+      final accepted = await Future.any<bool>([
+        connection.ready.then((_) => true),
+        done.then((_) => false),
+      ]);
+      if (accepted && _running && _connection == connection) {
+        // Accepté par le serveur : le délai repart du minimum.
+        _attempt = 0;
+        if (_connectedOnce) _reconnected.add(null);
+        _connectedOnce = true;
+      }
+      code = await done;
       await sub.cancel();
     } on Object {
-      // Hors ligne ou serveur indisponible : nouvel essai plus tard.
+      // Hors ligne, serveur indisponible ou session expirée : nouvel essai plus tard.
     }
-    if (_stopped) return;
+    if (!_running) return;
     _attempt++;
-    _retry = Timer(Duration(seconds: min(30, 1 << min(_attempt, 5))), () => unawaited(_connect()));
+    _retry = Timer(retryDelay(_attempt, code), () => unawaited(_connect()));
   }
 
   Future<void> dispose() async {
-    _stopped = true;
-    _retry?.cancel();
-    await _connection?.close();
+    _disposed = true;
+    await pause();
     await _messages.close();
+    await _reconnected.close();
   }
 }
 
-/// Connecté seulement pendant une session ; recréé à chaque connexion ou déconnexion.
+/// Connecté seulement pendant une session et au premier plan ; recréé à chaque connexion ou
+/// déconnexion.
 final chatLiveProvider = Provider<ChatLive>((ref) {
   final signedIn = ref.watch(sessionProvider.select((s) => s.value == SessionStatus.signedIn));
-  final live = ChatLive(ref.watch(userSocketConnectorProvider));
-  if (signedIn) live.start();
+  final live = ChatLive(
+    ref.watch(userSocketConnectorProvider),
+    refreshSession: () => ref.read(chatApiProvider).conversations(),
+  );
+  if (signedIn) {
+    live.start();
+    final lifecycle = AppLifecycleListener(
+      onPause: () => unawaited(live.pause()),
+      onResume: live.start,
+    );
+    ref.onDispose(lifecycle.dispose);
+  }
   ref.onDispose(() => unawaited(live.dispose()));
   return live;
 });
@@ -64,10 +122,20 @@ final chatLiveProvider = Provider<ChatLive>((ref) {
 /// Mes conversations ; relues à chaque message reçu (non lus, ordre).
 class ConversationsController extends AsyncNotifier<List<Conversation>> {
   @override
-  Future<List<Conversation>> build() {
-    final sub = ref.watch(chatLiveProvider).messages.listen((_) => ref.invalidateSelf());
-    ref.onDispose(sub.cancel);
-    return ref.watch(chatApiProvider).conversations();
+  Future<List<Conversation>> build() async {
+    final live = ref.watch(chatLiveProvider);
+    final subs = [
+      live.messages.listen((_) => ref.invalidateSelf()),
+      live.reconnected.listen((_) => ref.invalidateSelf()),
+    ];
+    ref.onDispose(() {
+      for (final s in subs) {
+        unawaited(s.cancel());
+      }
+    });
+    final list = await ref.watch(chatApiProvider).conversations();
+    // Conversation ouverte à l'écran : ses messages sont lus à mesure, pas de pastille.
+    return [for (final c in list) live.open.contains(c.id) ? c.copyWith(unread: 0) : c];
   }
 
   /// Conversation lue : son compteur repasse à zéro sans recharger.

@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
+import '../../../core/clock.dart';
 import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
-import '../../proposals/presentation/formatting.dart';
 import '../domain/chat.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
@@ -70,16 +70,18 @@ class ConversationsScreen extends ConsumerWidget {
   }
 }
 
-class _ConversationRow extends StatelessWidget {
+class _ConversationRow extends ConsumerWidget {
   const _ConversationRow({required this.conversation, required this.me});
 
   final Conversation conversation;
   final String? me;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
+    final now = ref.watch(clockProvider)();
+    final unread = conversation.unread > 0;
     final last = conversation.lastMessage;
     final title = conversationTitle(l10n, conversation, me);
     final preview = last == null
@@ -96,66 +98,80 @@ class _ConversationRow extends StatelessWidget {
           preview,
         ].join('. '),
         excludeSemantics: true,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(UmRadius.lg),
-          onTap: () => context.push(AppRoutes.conversation(conversation.id)),
-          child: UmCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      switch (conversation.kind) {
-                        ConversationKind.ride => Icons.directions_car_outlined,
-                        ConversationKind.group => Icons.groups_outlined,
-                        ConversationKind.direct => Icons.person_outline_rounded,
-                      },
-                      size: UmSize.iconMd,
-                      color: c.brandStrong,
-                    ),
-                    const SizedBox(width: UmSpace.s2),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (last != null)
-                      Text(
-                        formatTime(last.createdAt, l10n.localeName),
-                        style: UmText.caption.copyWith(color: c.inkMuted),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: UmSpace.s1),
-                Text(
-                  preview,
-                  style: UmText.bodySm.copyWith(color: c.inkMuted),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (conversation.unread > 0 || conversation.archived) ...[
-                  const SizedBox(height: UmSpace.s2),
-                  Wrap(
-                    spacing: UmSpace.s2,
+        // L'effet de pression et l'anneau de focus passent au-dessus de la carte opaque.
+        child: Stack(
+          children: [
+            UmCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      if (conversation.unread > 0)
-                        UmChip(
-                          label: l10n.chatUnread(conversation.unread),
-                          icon: Icons.mark_chat_unread_outlined,
-                          tone: UmChipTone.success,
+                      Icon(
+                        switch (conversation.kind) {
+                          ConversationKind.ride => Icons.directions_car_outlined,
+                          ConversationKind.group => Icons.groups_outlined,
+                          ConversationKind.direct => Icons.person_outline_rounded,
+                        },
+                        size: UmSize.iconMd,
+                        color: c.brandStrong,
+                      ),
+                      const SizedBox(width: UmSpace.s2),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: UmText.body.copyWith(
+                            color: c.ink,
+                            fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      if (conversation.archived)
-                        UmChip(label: l10n.chatArchived, icon: Icons.inventory_2_outlined),
+                      ),
+                      if (last != null)
+                        Text(
+                          formatMessageWhen(l10n, last.createdAt, now),
+                          style: UmText.caption.copyWith(
+                            color: unread ? c.brandStrong : c.inkMuted,
+                          ),
+                        ),
                     ],
                   ),
+                  const SizedBox(height: UmSpace.s1),
+                  Text(
+                    preview,
+                    style: UmText.bodySm.copyWith(color: unread ? c.ink : c.inkMuted),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (conversation.unread > 0 || conversation.archived) ...[
+                    const SizedBox(height: UmSpace.s2),
+                    Wrap(
+                      spacing: UmSpace.s2,
+                      children: [
+                        if (conversation.unread > 0)
+                          UmChip(
+                            label: l10n.chatUnread(conversation.unread),
+                            icon: Icons.mark_chat_unread_outlined,
+                          ),
+                        if (conversation.archived)
+                          UmChip(label: l10n.chatArchived, icon: Icons.inventory_2_outlined),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
+            Positioned.fill(
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(UmRadius.lg),
+                  onTap: () => context.push(AppRoutes.conversation(conversation.id)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

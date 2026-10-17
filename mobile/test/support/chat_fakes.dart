@@ -26,6 +26,9 @@ class FakeUserSocketConnector implements UserSocketConnector {
 
 class _FakeConnection implements UserSocketConnection {
   final controller = StreamController<ChatMessage>.broadcast();
+
+  @override
+  Future<void> get ready => Future.value();
   final _done = Completer<int?>();
   bool closed = false;
 
@@ -55,6 +58,8 @@ class FakePushService implements PushService {
 
   @override
   Future<String?> token() async => deviceToken;
+  @override
+  Future<String?> currentToken() async => deviceToken;
   @override
   Stream<String> get tokenRefresh => const Stream.empty();
   @override

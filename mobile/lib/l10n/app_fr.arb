@@ -843,7 +843,7 @@
   "chatArchivedBody": "Ce chat de trajet est archivé : tu peux le relire, plus y écrire.",
   "chatNoMessages": "Aucun message pour l'instant. Lance la conversation.",
   "chatOlder": "Voir les messages plus anciens",
-  "chatMessageLabel": "Ton message",
+  "chatMessageLabel": "Écris un message",
   "chatSend": "Envoyer",
   "chatLeave": "Quitter le groupe",
   "chatFormerMember": "Ancien membre",
@@ -896,5 +896,13 @@
   "notificationsChatHelp": "Nouveau message dans une conversation.",
   "errorNotAContact": "Tu ne peux écrire qu'aux personnes croisées sur un trajet.",
   "errorConversationArchived": "Cette conversation est archivée.",
-  "errorGroupTooLarge": "Ce groupe compte trop de personnes."
+  "errorGroupTooLarge": "Ce groupe compte trop de personnes.",
+  "chatToday": "Aujourd'hui",
+  "chatYesterday": "Hier",
+  "chatSeeRide": "Voir le trajet",
+  "chatLeaveTitle": "Quitter le groupe ?",
+  "chatLeaveBody": "Tu ne verras plus ses messages.",
+  "chatLeaveConfirm": "Quitter",
+  "chatGroupNameHelp": "Obligatoire pour un groupe.",
+  "chatLeaveCancel": "Rester"
 }
