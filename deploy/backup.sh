@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sauvegarde quotidienne chiffrée de la base (docs/deploiement.md, « Sauvegardes »).
 # À lancer depuis la racine du dépôt sur le VPS, par cron :
-#   15 3 * * * cd ~/UniMoov && ./deploy/backup.sh >> backups/backup.log 2>&1
+#   15 3 * * * cd ~/UniMoov && mkdir -p backups && ./deploy/backup.sh >> backups/backup.log 2>&1
 # Chiffrement AES-256 avec la phrase de passe de secrets/backup-passphrase (jamais commitée).
 # Copie distante facultative avec rclone si BACKUP_REMOTE est défini (ex. r2:unimoov-backups).
 set -euo pipefail
@@ -18,10 +18,13 @@ PASSPHRASE_FILE="secrets/backup-passphrase"
 
 mkdir -p backups
 file="backups/unimoov-$(date -u +%Y%m%dT%H%M%SZ).dump.enc"
+# Écrit à part puis renommé : un vidage interrompu ne laisse jamais un fichier d'apparence valide.
+trap 'rm -f "$file.tmp"' EXIT
 
 docker compose exec -T db pg_dump -U "${POSTGRES_USER:-unimoov}" -d "${POSTGRES_DB:-unimoov}" --format=custom \
-  | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$PASSPHRASE_FILE" -out "$file"
-chmod 600 "$file"
+  | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass "file:$PASSPHRASE_FILE" -out "$file.tmp"
+chmod 600 "$file.tmp"
+mv "$file.tmp" "$file"
 
 if [ -n "${BACKUP_REMOTE:-}" ]; then
   rclone copy "$file" "$BACKUP_REMOTE"
