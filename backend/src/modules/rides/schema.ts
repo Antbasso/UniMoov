@@ -17,6 +17,8 @@ const stop = z.strictObject({
   isMeetingPoint: z.boolean(),
   pickedUp: z.boolean(),
   presenceValidated: z.boolean(),
+  arrived: z.boolean(),
+  ended: z.boolean(),
 });
 
 export const price = z.strictObject({

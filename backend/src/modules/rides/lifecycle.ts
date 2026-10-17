@@ -243,6 +243,7 @@ export class RideLifecycle {
     if (!done) return;
     this.onLiveChanged(rideId);
     this.hub.send(rideId, { type: 'passenger_arrived', userId: passengerId });
+    this.hub.dismiss(rideId, passengerId);
     await this.finishIfEveryoneDone(rideId);
   }
 
@@ -274,6 +275,10 @@ export class RideLifecycle {
       if ((await this.repo.ride(rideId, tx, true))?.status !== 'in_progress') return null;
       const me = (await this.repo.members(rideId, tx)).find((m) => m.userId === passengerId);
       if (!me || me.endedAt) return null;
+      // Pas encore à bord : renoncer, c'est annuler sa place (pénalité, cahier §8), pas terminer.
+      if (!me.presenceValidatedAt) {
+        throw new AppError(409, 'not_on_board', "Ta présence n'est pas validée : pour renoncer, annule ta place");
+      }
       await this.repo.setParticipant(rideId, passengerId, { endedAt: this.clock() }, tx);
       return me.arrivedAt === null;
     });
@@ -282,6 +287,7 @@ export class RideLifecycle {
       await this.notifier?.notify([driverId], { type: 'passenger_left', rideId }).catch(() => undefined);
       this.hub.send(rideId, { type: 'passenger_left', userId: passengerId }, (u) => u === driverId);
     }
+    this.hub.dismiss(rideId, passengerId);
     this.onLiveChanged(rideId);
     await this.finishIfEveryoneDone(rideId);
   }

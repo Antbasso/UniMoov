@@ -82,6 +82,10 @@ export class TrackingService {
       socket.close(WS_CLOSE.notStarted, 'ride_not_in_progress');
       return null;
     }
+    if (live.passengers.some((p) => p.userId === userId && p.ended)) {
+      socket.close(WS_CLOSE.closed, 'trip_ended');
+      return null;
+    }
     const client: LiveClient = { userId, socket, lastPositionAt: 0 };
     this.hub.join(rideId, client);
     // Abonné : le client sait qu'il recevra désormais les positions.
@@ -113,6 +117,8 @@ export class TrackingService {
 
     const live = await this.live(rideId);
     if (!live) return;
+    // Trajet terminé pour ce passager : plus aucune position collectée.
+    if (live.passengers.some((p) => p.userId === client.userId && p.ended)) return;
     const { lat, lon } = parsed.data;
     // Heure du serveur : le client ne choisit ni l'horodatage de la trace ni sa durée de conservation.
     const ts = new Date(now);

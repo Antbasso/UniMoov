@@ -244,11 +244,18 @@ describe('clôture', () => {
     ctx.clock.advance(10 * 60_000);
     await sendPosition(lea, { lat: 45.9195, lon: 6.158 });
     await waitFor(() => lea.messages.find((m) => m.type === 'passenger_arrived' && m.userId === user('Hugo').id));
+    // Arrivé, Hugo n'est plus suivi : sa connexion est fermée et ne peut pas se rouvrir.
+    expect(await hugo.closed).toBe(4410);
+    expect(hugo.messages.some((m) => m.type === 'passenger_arrived' && m.userId === user('Hugo').id)).toBe(true);
+    expect(await (await connect('Hugo', rideId)).closed).toBe(4410);
+    const hugoStop = (await call('Hugo', 'GET', `/rides/${rideId}`))
+      .json<{ stops: { userId: string | null; arrived: boolean; ended: boolean }[] }>()
+      .stops.find((s) => s.userId === user('Hugo').id);
+    expect(hugoStop).toMatchObject({ arrived: true, ended: true });
     // Inès attend encore (jamais prise) : la conductrice clôt.
     expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
     expect(await lea.closed).toBe(4410);
-    expect(await hugo.closed).toBe(4410);
-    expect(hugo.messages.some((m) => m.type === 'ride_status' && m.status === 'completed')).toBe(true);
+    expect(lea.messages.some((m) => m.type === 'ride_status' && m.status === 'completed')).toBe(true);
     expect(await (await connect('Hugo', rideId)).closed).toBe(4409);
 
     const { rows: statuses } = await ctx.database.pool.query<{ status: string; first_name: string }>(
@@ -311,13 +318,17 @@ describe('clôture', () => {
     for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${thursday}/accept`);
     ctx.clock.now = new Date('2026-10-22T05:30:00Z');
     expect((await call('Léa', 'POST', `/rides/${thursday}/start`)).statusCode).toBe(204);
+    // Pas encore à bord : il doit annuler sa place, pas « terminer » (pas d'absence évitée).
+    expect((await call('Hugo', 'POST', `/rides/${thursday}/finish`)).json<{ error: { code: string } }>().error.code).toBe('not_on_board');
     expect(await ctx.app.services!.lifecycle.validatePresence(thursday, user('Hugo').id)).toBe('validated');
     const before = { hugo: (await wallet('Hugo')).balanceCents + (await wallet('Hugo')).heldCents, lea: (await wallet('Léa')).balanceCents };
 
     expect((await call('Hugo', 'POST', `/rides/${thursday}/finish`)).statusCode).toBe(204);
     expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id], event: { type: 'passenger_left', rideId: thursday } });
     // Seul passager, il a fini : le trajet est clos ; il ne paie rien, Léa ne reçoit rien.
-    expect((await call('Léa', 'GET', `/rides/${thursday}`)).json<{ status: string }>().status).toBe('completed');
+    const thursdayRide = (await call('Hugo', 'GET', `/rides/${thursday}`)).json<{ status: string; stops: { userId: string | null; arrived: boolean; ended: boolean }[] }>();
+    expect(thursdayRide.status).toBe('completed');
+    expect(thursdayRide.stops.find((s) => s.userId === user('Hugo').id)).toMatchObject({ arrived: false, ended: true });
     expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: before.hugo });
     expect((await wallet('Léa')).balanceCents).toBe(before.lea);
   });

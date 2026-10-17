@@ -26,6 +26,10 @@ export interface StopView {
   /** Passager : monté (signalé par le conducteur), présence validée par proximité. */
   pickedUp: boolean;
   presenceValidated: boolean;
+  /** Passager arrivé à destination (suivi). */
+  arrived: boolean;
+  /** Passager qui a terminé son trajet, arrivé ou parti avant (clôture de sa part). */
+  ended: boolean;
 }
 
 export interface PriceView extends PriceEstimate {
@@ -200,6 +204,8 @@ export class RidesService {
       isMeetingPoint: false,
       pickedUp: false,
       presenceValidated: false,
+      arrived: false,
+      ended: false,
     };
     // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
     // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
@@ -222,6 +228,8 @@ export class RidesService {
         isMeetingPoint: pickup.isMeetingPoint,
         pickedUp: m.status === 'picked_up',
         presenceValidated: m.presenceValidatedAt !== null,
+        arrived: m.arrivedAt !== null,
+        ended: m.endedAt !== null,
       };
     };
     const driverStop = driver ? person(driver, 'driver') : null;

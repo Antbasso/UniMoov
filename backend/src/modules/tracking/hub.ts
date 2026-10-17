@@ -80,6 +80,18 @@ export class TrackingHub {
     return this.positions.get(rideId)?.get(userId);
   }
 
+  /** Passager arrivé ou sorti : son suivi s'arrête, sa position est oubliée (cahier §6). */
+  dismiss(rideId: string, userId: string): void {
+    const room = this.rooms.get(rideId);
+    for (const client of [...(room ?? [])]) {
+      if (client.userId !== userId) continue;
+      room?.delete(client);
+      client.socket.close(WS_CLOSE.closed, 'trip_ended');
+    }
+    if (room?.size === 0) this.rooms.delete(rideId);
+    this.positions.get(rideId)?.delete(userId);
+  }
+
   /** Clôture : connexions fermées, positions oubliées (seule la trace réduite reste en base). */
   close(rideId: string): void {
     for (const client of this.rooms.get(rideId) ?? []) client.socket.close(WS_CLOSE.closed, 'ride_closed');
