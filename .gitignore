@@ -9,3 +9,7 @@ build/
 
 # Fonds de carte (fichiers lourds, servis en statique)
 *.pmtiles
+
+# Clé de compte de service Firebase (secret)
+*service-account*.json
+*firebase-adminsdk*.json
