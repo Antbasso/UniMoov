@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../../src/app.js';
+import { buildApp, logError } from '../../src/app.js';
 
 const config = { LOG_LEVEL: 'silent' } as const;
 
@@ -49,6 +49,22 @@ describe('journaux', () => {
     const output = lines.join('');
     expect(output).toContain('"route":"/health"');
     expect(output).not.toMatch(/secret-jwt|203\.0\.113\.7|45\.9/);
+  });
+});
+
+describe('erreurs journalisées', () => {
+  it('gardent type, code et message, jamais le détail recopiant les valeurs', () => {
+    const error = Object.assign(new Error('duplicate key value violates unique constraint'), {
+      code: '23505',
+      detail: 'Key (university_email)=(lea.martin@etu.univ-smb.fr) already exists.',
+    });
+    const logged = logError(error);
+    expect(logged).toMatchObject({ type: 'Error', code: '23505' });
+    expect(JSON.stringify(logged)).not.toContain('lea.martin');
+  });
+
+  it('ignorent une valeur qui n’est pas une erreur', () => {
+    expect(logError({ email: 'lea.martin@etu.univ-smb.fr' })).toEqual({ type: 'object', message: '', stack: '' });
   });
 });
 

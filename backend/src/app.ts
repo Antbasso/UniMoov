@@ -125,6 +125,8 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           method: request.method,
           route: request.routeOptions.url ?? 'unknown',
         }),
+        // Sans les champs annexes (le `detail` de PostgreSQL recopie les valeurs fautives).
+        err: logError,
       },
     },
   }).withTypeProvider<ZodTypeProvider>();
@@ -280,6 +282,18 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
   }
 
   return app;
+}
+
+/** Erreur réduite au type, au code, au message et à la pile. */
+export function logError(error: unknown): { type: string; message: string; stack: string; code?: string } {
+  if (!(error instanceof Error)) return { type: typeof error, message: '', stack: '' };
+  const code = (error as { code?: unknown }).code;
+  return {
+    type: error.name,
+    message: error.message,
+    stack: error.stack ?? '',
+    ...(typeof code === 'string' ? { code } : {}),
+  };
 }
 
 function clientError(status: number): { code: string; message: string } {
