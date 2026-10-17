@@ -6,11 +6,11 @@ Un seul VPS en Docker Compose (docs/couts.md) : PostgreSQL/PostGIS, l'API et Cad
 
 - **Un VPS** : 2 vCPU, 4 Go de mémoire, Ubuntu 24.04, dans l'Union européenne (par exemple Hetzner CX22 ou un VPS OVHcloud, environ 4 à 6 € par mois).
 - **Un nom de domaine** (environ 10 € par an), avec un sous-domaine pour l'API, par exemple `api.uni-moov.fr`.
-- **Un compte Brevo** (palier gratuit) : clé d'API transactionnelle et adresse d'expéditeur vérifiée.
+- **Un compte Brevo** (palier gratuit) : clé d'API transactionnelle et expéditeur sur ton domaine (par exemple `ne-pas-repondre@uni-moov.fr`), domaine authentifié chez Brevo (enregistrements DNS DKIM et DMARC qu'il fournit). Une adresse Gmail comme expéditeur est refusée ou classée en indésirable : les codes d'inscription n'arriveraient pas.
 - **La clé du compte de service Firebase** (console Firebase, Paramètres du projet, Comptes de service).
 - Facultatif : une clé OpenRouteService pour les vrais tracés, un compte Cloudflare R2 pour la copie distante des sauvegardes.
 
-> **Point bloquant pour la production.** Avec `NODE_ENV=production`, l'API refuse de démarrer avec le portefeuille factice (`PAYMENT_PROVIDER=fake`) : aucun argent réel ne doit transiter par lui. Il faut donc avoir branché le vrai prestataire de paiement (jalon M4b) avant le lancement public. Pour une répétition avec de faux paiements, garde `NODE_ENV=development` dans `.env` (la documentation OpenAPI est alors publique sur `/docs` : à éviter au-delà des tests).
+> **Point bloquant pour la production.** Avec `NODE_ENV=production`, l'API refuse de démarrer avec le portefeuille factice (`PAYMENT_PROVIDER=fake`) : aucun argent réel ne doit transiter par lui. Il faut donc avoir branché le vrai prestataire de paiement (jalon M4b) avant le lancement public. Pour une répétition avec de faux paiements, mets `NODE_ENV=development` dans `.env` (la surcharge de production le respecte ; la documentation OpenAPI est alors publique sur `/docs` : à éviter au-delà des tests).
 
 ## 1. Préparer le serveur
 
@@ -47,7 +47,7 @@ DOMAIN=api.uni-moov.fr
 ACME_EMAIL=unimoov.support@gmail.com
 MAIL_PROVIDER=brevo
 BREVO_API_KEY=...
-MAIL_FROM=adresse-verifiee-chez-brevo
+MAIL_FROM=ne-pas-repondre@uni-moov.fr
 PUSH_PROVIDER=fcm
 FCM_SERVICE_ACCOUNT_FILE=/run/secrets/fcm-service-account.json
 ROUTING_PROVIDER=ors           # ou estimate, sans clé
@@ -84,10 +84,10 @@ Seul Caddy est exposé (ports 80 et 443). La base et l'API restent sur le résea
 
 ```bash
 crontab -e
-# 15 3 * * * cd ~/UniMoov && ./deploy/backup.sh >> backups/backup.log 2>&1
+# 15 3 * * * cd ~/UniMoov && mkdir -p backups && ./deploy/backup.sh >> backups/backup.log 2>&1
 ```
 
-Restaurer (arrête l'API, remplace la base) : `./deploy/restore.sh backups/unimoov-AAAAMMJJTHHMMSSZ.dump.enc`. Fais un essai de restauration une fois par trimestre.
+Un vidage interrompu ne laisse aucun fichier. Restaurer (arrête l'API, remplace la base, relance l'API même en cas d'erreur) : `./deploy/restore.sh backups/unimoov-AAAAMMJJTHHMMSSZ.dump.enc` ; des avertissements de `pg_restore` sur les objets PostGIS sont normaux. Fais un essai de restauration une fois par trimestre.
 
 ## 5. Mettre à jour, revenir en arrière
 
