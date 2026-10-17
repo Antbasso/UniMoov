@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../firebase_options.dart';
+import '../../demo/demo_mode.dart';
 
 /// Notifications push de l'appareil (FCM), derrière une interface : remplaçable en test et
 /// inactive tant que Firebase n'est pas configuré.
@@ -134,6 +135,8 @@ class FirebasePushService implements PushService {
 }
 
 final pushServiceProvider = Provider<PushService>((ref) {
+  // Démo : pas de notifications réelles.
+  if (ref.watch(demoProvider) != null) return const DisabledPushService();
   final options = DefaultFirebaseOptions.currentPlatform;
   return options == null ? const DisabledPushService() : FirebasePushService(options);
 });

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../domain/auth_tokens.dart';
+import '../../demo/demo_mode.dart';
 
 /// Routes d'authentification (docs/api.md, « Auth »), sans JWT.
 abstract interface class AuthApi {
@@ -63,4 +64,6 @@ class DioAuthApi implements AuthApi {
       guardApi(() => _dio.post<void>('$_base/logout', data: {'refreshToken': refreshToken}));
 }
 
-final authApiProvider = Provider<AuthApi>((ref) => DioAuthApi(ref.watch(publicDioProvider)));
+final authApiProvider = Provider<AuthApi>(
+  (ref) => ref.watch(demoProvider) ?? DioAuthApi(ref.watch(publicDioProvider)),
+);

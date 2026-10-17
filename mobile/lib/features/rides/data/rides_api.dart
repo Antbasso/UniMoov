@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../../proposals/domain/proposal.dart';
 import '../domain/ride.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class RidesApi {
   Future<RideDetails> ride(String id);
@@ -80,4 +81,6 @@ class DioRidesApi implements RidesApi {
   Future<void> finish(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/finish'));
 }
 
-final ridesApiProvider = Provider<RidesApi>((ref) => DioRidesApi(ref.watch(dioProvider)));
+final ridesApiProvider = Provider<RidesApi>(
+  (ref) => ref.watch(demoProvider) ?? DioRidesApi(ref.watch(dioProvider)),
+);

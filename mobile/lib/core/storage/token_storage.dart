@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../features/auth/domain/auth_tokens.dart';
+import '../../features/demo/demo_mode.dart';
 
 /// Stockage des jetons de session ; jamais en clair hors du trousseau du système.
 abstract interface class TokenStorage {
@@ -85,4 +86,8 @@ class MemoryTokenStorage implements TokenStorage {
   Future<void> clear() async => tokens = null;
 }
 
-final tokenStorageProvider = Provider<TokenStorage>((ref) => SecureTokenStorage());
+final tokenStorageProvider = Provider<TokenStorage>(
+  (ref) => ref.watch(demoProvider) == null
+      ? SecureTokenStorage()
+      : ref.read(demoProvider.notifier).storage,
+);

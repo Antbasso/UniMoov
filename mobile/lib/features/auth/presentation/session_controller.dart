@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/token_storage.dart';
+import '../../demo/demo_mode.dart';
 import '../data/auth_api.dart';
 import '../../notifications/data/notifications_api.dart';
 import '../../notifications/data/push_service.dart';
@@ -32,14 +33,17 @@ class SessionController extends AsyncNotifier<SessionStatus> {
     await store.unregister(ref.read(notificationsApiProvider));
     final tokens = await _storage.read();
     await _storage.clear();
+    final api = ref.read(authApiProvider);
     state = const AsyncData(SessionStatus.signedOut);
     if (tokens != null) {
       try {
-        await ref.read(authApiProvider).logout(tokens.refreshToken);
+        await api.logout(tokens.refreshToken);
       } on Object {
         // Hors ligne : les jetons locaux sont déjà effacés, le refresh expirera seul.
       }
     }
+    // Fin de la démo : l'app revient au vrai serveur.
+    ref.read(demoProvider.notifier).stop();
   }
 
   /// Compte supprimé : le serveur a déjà retiré sessions et appareils ; seul le local reste.
@@ -47,6 +51,7 @@ class SessionController extends AsyncNotifier<SessionStatus> {
     ref.read(deviceTokenStoreProvider).token = null;
     await _storage.clear();
     state = const AsyncData(SessionStatus.signedOut);
+    ref.read(demoProvider.notifier).stop();
   }
 
   /// Session perdue (refresh refusé) : retour à l'accueil.

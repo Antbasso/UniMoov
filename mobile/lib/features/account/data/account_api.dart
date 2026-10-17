@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
+import '../../demo/demo_mode.dart';
 
 /// Export et suppression du compte (docs/api.md, « Profil » ; docs/rgpd.md).
 abstract interface class AccountApi {
@@ -34,4 +35,6 @@ class DioAccountApi implements AccountApi {
       guardApi(() => _dio.delete<void>('/api/v1/me', data: {'password': password}));
 }
 
-final accountApiProvider = Provider<AccountApi>((ref) => DioAccountApi(ref.watch(dioProvider)));
+final accountApiProvider = Provider<AccountApi>(
+  (ref) => ref.watch(demoProvider) ?? DioAccountApi(ref.watch(dioProvider)),
+);

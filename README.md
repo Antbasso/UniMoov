@@ -82,6 +82,27 @@ Production : `docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 
 Pour développer l'API avec rechargement : `docker compose up -d db` puis `cd backend && npm run dev`. Toutes les commandes sont listées dans [AGENTS.md](AGENTS.md) ; l'avancement suit la [feuille de route](docs/roadmap.md) et les choix sont tracés dans le [journal des décisions](docs/decisions.md).
 
+## Essayer l'app sans serveur (mode démo)
+
+Sur l'écran d'accueil, « Essayer la démo » lance l'app sur un serveur fictif intégré : aucune connexion, aucune donnée réelle, rien de payé. Deux choix :
+
+- **Compte prêt : Camille** (passagère et conductrice, Seynod) : un trajet en cours avec Nathan (il approche, la présence se valide à la prise en charge, puis l'arrivée et le paiement), un retour à conduire avec Inès et Hugo (écran de départ, navigation GPS, « monté », arrivées, rémunération), une proposition de Léa à accepter, une demande de place de Manon, un long trajet avec Lucas qui déclenche « Solde insuffisant », deux trajets terminés à noter, le portefeuille (recharge, retrait vers un IBAN valide comme `FR76 3000 6000 0112 3456 7890 189`), la messagerie (réponses automatiques), la fiabilité, les litiges, l'export et la suppression du compte.
+- **Parcours d'inscription** : n'importe quelle adresse en `univ-smb.fr`, code `123456`, puis tout l'onboarding ; la semaine de démonstration apparaît à la fin.
+
+Un bandeau « DÉMO » reste affiché ; « Se déconnecter » ramène au vrai serveur. Le suivi est simulé (la position réelle du téléphone n'est pas utilisée pour la présence) et les notifications push ne sont pas envoyées.
+
+## Tester avec le vrai serveur sur un téléphone branché en USB
+
+`10.0.2.2` (valeur par défaut de `API_BASE_URL`) n'existe que dans l'émulateur Android : sur un vrai téléphone, l'inscription échoue avec une erreur réseau. Avec l'API lancée sur le PC (`docker compose up -d`) :
+
+```bash
+adb reverse tcp:3000 tcp:3000      # le port 3000 du téléphone mène à celui du PC (à refaire après chaque branchement)
+cd mobile && flutter run --dart-define=API_BASE_URL=http://localhost:3000
+docker compose logs -f api         # le code d'inscription s'affiche ici (mail de développement)
+```
+
+Sans câble, sur le même Wi-Fi : `--dart-define=API_BASE_URL=http://IP_DU_PC:3000` et l'API doit écouter sur toutes les interfaces (elle est liée à 127.0.0.1 par défaut, voir `docker-compose.yml`). Les comptes de démonstration du seed (`lea.martin@etu.univ-smb.fr`, mot de passe `unimoov-demo`) marchent aussi.
+
 ## Modèle économique
 
 B2B2C : partenariats avec l'université, les collectivités, la Région, les BDE et le CROUS, complétés par une faible commission par trajet. Pilote à Annecy, puis campus USMB, puis autres établissements.

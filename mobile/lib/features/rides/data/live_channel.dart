@@ -7,6 +7,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../domain/ride.dart';
+import '../../demo/demo_mode.dart';
 
 /// Connexion de suivi d'un trajet en cours (une salle par trajet, docs/api.md).
 abstract interface class LiveConnection {
@@ -75,5 +76,5 @@ class _WebSocketLiveConnection implements LiveConnection {
 }
 
 final liveConnectorProvider = Provider<LiveConnector>(
-  (ref) => WebSocketLiveConnector(ref.watch(tokenStorageProvider)),
+  (ref) => ref.watch(demoProvider)?.live ?? WebSocketLiveConnector(ref.watch(tokenStorageProvider)),
 );

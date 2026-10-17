@@ -224,6 +224,60 @@ abstract class AppLocalizations {
   /// **'J\'ai déjà un compte'**
   String get welcomeLogin;
 
+  /// No description provided for @demoTry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essayer la démo'**
+  String get demoTry;
+
+  /// No description provided for @demoSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essayer Uni-Moov sans compte'**
+  String get demoSheetTitle;
+
+  /// No description provided for @demoSheetBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Des données fictives autour du campus d\'Annecy, sans réseau : rien n\'est envoyé ni payé.'**
+  String get demoSheetBody;
+
+  /// No description provided for @demoReady.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte prêt : Camille'**
+  String get demoReady;
+
+  /// No description provided for @demoReadyHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.'**
+  String get demoReadyHelp;
+
+  /// No description provided for @demoSignup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parcours d\'inscription'**
+  String get demoSignup;
+
+  /// No description provided for @demoSignupHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'De l\'adresse mail à la semaine type, avec n\'importe quelle adresse en univ-smb.fr.'**
+  String get demoSignupHelp;
+
+  /// No description provided for @demoBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMO'**
+  String get demoBanner;
+
+  /// No description provided for @demoCodeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Démo : le code est {code}.'**
+  String demoCodeHint(String code);
+
   /// No description provided for @back.
   ///
   /// In fr, this message translates to:

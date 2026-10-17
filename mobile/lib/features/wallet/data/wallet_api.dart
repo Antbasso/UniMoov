@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/wallet.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class WalletApi {
   Future<Wallet> wallet();
@@ -60,4 +61,6 @@ class DioWalletApi implements WalletApi {
   });
 }
 
-final walletApiProvider = Provider<WalletApi>((ref) => DioWalletApi(ref.watch(dioProvider)));
+final walletApiProvider = Provider<WalletApi>(
+  (ref) => ref.watch(demoProvider) ?? DioWalletApi(ref.watch(dioProvider)),
+);

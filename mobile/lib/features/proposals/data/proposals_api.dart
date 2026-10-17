@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/proposal.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class ProposalsApi {
   Future<List<Proposal>> week(String week);
@@ -87,5 +88,5 @@ class DioProposalsApi implements ProposalsApi {
 }
 
 final proposalsApiProvider = Provider<ProposalsApi>(
-  (ref) => DioProposalsApi(ref.watch(dioProvider)),
+  (ref) => ref.watch(demoProvider) ?? DioProposalsApi(ref.watch(dioProvider)),
 );

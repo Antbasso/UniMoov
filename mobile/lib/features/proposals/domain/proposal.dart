@@ -101,7 +101,8 @@ class Proposal {
     ('cancelled', _) || (_, 'cancelled') => ProposalState.cancelled,
     // Voiture choisie par le passager : le conducteur doit accepter la demande.
     (_, 'requested') => ProposalState.requested,
-    ('confirmed', _) => ProposalState.confirmed,
+    // Trajet commencé ou terminé : toujours confirmé (« Voir la carte »).
+    ('confirmed' || 'in_progress' || 'completed', _) => ProposalState.confirmed,
     (_, 'accepted') => ProposalState.waiting,
     _ => ProposalState.proposed,
   };

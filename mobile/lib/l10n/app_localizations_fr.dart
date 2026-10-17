@@ -93,6 +93,38 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcomeLogin => 'J\'ai déjà un compte';
 
   @override
+  String get demoTry => 'Essayer la démo';
+
+  @override
+  String get demoSheetTitle => 'Essayer Uni-Moov sans compte';
+
+  @override
+  String get demoSheetBody =>
+      'Des données fictives autour du campus d\'Annecy, sans réseau : rien n\'est envoyé ni payé.';
+
+  @override
+  String get demoReady => 'Compte prêt : Camille';
+
+  @override
+  String get demoReadyHelp =>
+      'Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.';
+
+  @override
+  String get demoSignup => 'Parcours d\'inscription';
+
+  @override
+  String get demoSignupHelp =>
+      'De l\'adresse mail à la semaine type, avec n\'importe quelle adresse en univ-smb.fr.';
+
+  @override
+  String get demoBanner => 'DÉMO';
+
+  @override
+  String demoCodeHint(String code) {
+    return 'Démo : le code est $code.';
+  }
+
+  @override
   String get back => 'Retour';
 
   @override

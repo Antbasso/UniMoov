@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/um_theme.dart';
+import 'features/demo/demo_mode.dart';
 import 'l10n/app_localizations.dart';
 
 class UniMoovApp extends ConsumerWidget {
@@ -28,6 +29,15 @@ class UniMoovApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: ref.watch(appRouterProvider),
+      // Démo : bandeau permanent, pour ne jamais confondre avec de vraies données.
+      builder: (context, child) => ref.watch(demoActiveProvider)
+          ? Banner(
+              message: AppLocalizations.of(context).demoBanner,
+              location: BannerLocation.topEnd,
+              color: context.umColors.brandStrong,
+              child: child!,
+            )
+          : child!,
     );
   }
 }

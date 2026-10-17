@@ -60,6 +60,22 @@
   "welcomeBenefitConfirm": "Confirmé à deux, toujours",
   "welcomeSignup": "Créer mon compte",
   "welcomeLogin": "J'ai déjà un compte",
+  "demoTry": "Essayer la démo",
+  "demoSheetTitle": "Essayer Uni-Moov sans compte",
+  "demoSheetBody": "Des données fictives autour du campus d'Annecy, sans réseau : rien n'est envoyé ni payé.",
+  "demoReady": "Compte prêt : Camille",
+  "demoReadyHelp": "Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.",
+  "demoSignup": "Parcours d'inscription",
+  "demoSignupHelp": "De l'adresse mail à la semaine type, avec n'importe quelle adresse en univ-smb.fr.",
+  "demoBanner": "DÉMO",
+  "demoCodeHint": "Démo : le code est {code}.",
+  "@demoCodeHint": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Retour",
   "loading": "Chargement…",
   "continueAction": "Continuer",

@@ -80,6 +80,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         ],
       );
     }
+    // Trajet commencé ou terminé : plus d'annulation ici (l'écran du trajet s'en charge).
+    final open = proposal.rideStatus == 'proposed' || proposal.rideStatus == 'confirmed';
 
     final day = formatDayInline(proposal.day, l10n.localeName);
     final title = proposal.direction == Direction.toCampus
@@ -152,7 +154,7 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
             onPressed: () => context.push(AppRoutes.ride(proposal.id)),
           ),
         // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
-        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled)
+        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled && open)
           UmButton(
             label: proposal.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
             variant: UmButtonVariant.ghost,
@@ -162,7 +164,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         // Le conducteur engagé peut proposer des places, même avant la confirmation.
         if (proposal.isDriver &&
             proposal.myStatus == 'accepted' &&
-            proposal.state != ProposalState.cancelled)
+            proposal.state != ProposalState.cancelled &&
+            open)
           UmButton(
             label: l10n.rideAddPassengers,
             variant: UmButtonVariant.secondary,

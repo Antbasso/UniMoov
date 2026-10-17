@@ -6,6 +6,8 @@ import '../../../core/api/error_messages.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../demo/data/demo_world.dart';
+import '../../demo/demo_mode.dart';
 import '../domain/validators.dart';
 import 'signup_controller.dart';
 
@@ -110,6 +112,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             keyboardType: TextInputType.number,
             autofillHints: const [AutofillHints.oneTimeCode],
             error: check(AuthValidators.isCode(_code.text), l10n.fieldCodeInvalid),
+            // Démo : pas de mail envoyé, le code est donné ici.
+            help: ref.watch(demoActiveProvider) ? l10n.demoCodeHint(demoCode) : null,
           ),
         ],
       ),
