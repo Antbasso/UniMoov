@@ -62,8 +62,8 @@ class LiveState {
 const staleAfter = Duration(seconds: 30);
 
 /// Immobile, le téléphone n'envoie plus rien : la dernière position est renvoyée à ce rythme,
-/// pour que la présence puisse être validée quand le conducteur arrive.
-const heartbeat = Duration(seconds: 15);
+/// pour que la présence puisse être validée quand le conducteur arrive (20 s, docs/couts.md).
+const heartbeat = Duration(seconds: 20);
 
 /// Suivi en direct (WebSocket) et envoi de ma position pendant le trajet. Reconnexion avec
 /// délai croissant ; arrêt définitif à la clôture ou si l'accès est refusé.
