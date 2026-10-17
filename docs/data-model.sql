@@ -247,20 +247,28 @@ CREATE TABLE conversations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   kind text NOT NULL CHECK (kind IN ('direct','group','ride')),
   ride_id uuid REFERENCES rides(id) ON DELETE SET NULL,
+  direct_key text,                         -- paire triée « a|b » : une conversation privée par paire
   title text,
-  archived_at timestamptz,
-  delete_after timestamptz
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_message_at timestamptz,
+  archived_at timestamptz,                 -- lecture seule à partir de cette date (chat de trajet)
+  delete_after timestamptz                 -- supprimé avec ses messages à partir de cette date
 );
+CREATE UNIQUE INDEX conversations_ride_idx ON conversations (ride_id) WHERE kind = 'ride';
+CREATE UNIQUE INDEX conversations_direct_idx ON conversations (direct_key) WHERE kind = 'direct';
 CREATE TABLE conversation_members (
   conversation_id uuid REFERENCES conversations(id) ON DELETE CASCADE,
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  last_read_at timestamptz,                -- messages non lus : postérieurs à cette date
   PRIMARY KEY (conversation_id, user_id)
 );
 CREATE TABLE messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id uuid NOT NULL REFERENCES users(id),
-  body text NOT NULL,
+  body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX messages_conv_idx ON messages (conversation_id, created_at);
@@ -302,9 +310,9 @@ CREATE TABLE disputes (
 );
 CREATE UNIQUE INDEX disputes_once_idx ON disputes (ride_id, opened_by, reason);
 
-CREATE TABLE notification_preferences (
-  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
-  event_type text NOT NULL,
+CREATE TABLE notification_preferences (     -- pas de ligne = activé (cahier §11)
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_type text NOT NULL CHECK (event_type IN ('match','ride_update','ride_reminder','chat')),
   push_enabled boolean NOT NULL DEFAULT true,
   PRIMARY KEY (user_id, event_type)
 );
@@ -312,7 +320,14 @@ CREATE TABLE devices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   platform text NOT NULL,
-  push_token text NOT NULL UNIQUE
+  push_token text NOT NULL UNIQUE,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE ride_reminders (               -- rappel H-1 déjà envoyé (un seul par personne et trajet)
+  ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sent_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (ride_id, user_id)
 );
 
 CREATE TABLE search_quota (                -- recherche manuelle limitée par jour
