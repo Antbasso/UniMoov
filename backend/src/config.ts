@@ -16,8 +16,8 @@ const envSchema = z
   MAIL_PROVIDER: z.enum(['console', 'brevo']).default('console'),
   /** Clé de l'API transactionnelle Brevo (secret, jamais commité). */
   BREVO_API_KEY: z.string().optional(),
-  /** Expéditeur des mails, vérifié chez le fournisseur. */
-  MAIL_FROM: z.email().default('unimoov.support@gmail.com'),
+  /** Expéditeur des mails, sur un domaine vérifié chez le fournisseur (pas une messagerie gratuite). */
+  MAIL_FROM: z.union([z.email(), z.literal('')]).optional(),
   GEOCODING_PROVIDER: z.enum(['ban', 'fake']).default('ban'),
   /** Géoplateforme (successeur de api-adresse.data.gouv.fr), gratuite pour la France. */
   GEOCODING_URL: z.url().default('https://data.geopf.fr/geocodage/search'),
@@ -50,6 +50,10 @@ const envSchema = z
   .refine((env) => env.MAIL_PROVIDER !== 'brevo' || Boolean(env.BREVO_API_KEY), {
     path: ['BREVO_API_KEY'],
     message: 'clé requise avec MAIL_PROVIDER=brevo',
+  })
+  .refine((env) => env.MAIL_PROVIDER !== 'brevo' || Boolean(env.MAIL_FROM), {
+    path: ['MAIL_FROM'],
+    message: 'expéditeur requis avec MAIL_PROVIDER=brevo',
   })
   .refine((env) => env.ROUTING_PROVIDER !== 'ors' || Boolean(env.ORS_API_KEY), {
     path: ['ORS_API_KEY'],

@@ -56,8 +56,9 @@ describe('secrets et fournisseurs', () => {
   });
 
   it('Brevo exige une clé', () => {
-    expect(() => loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: '' })).toThrow(/BREVO_API_KEY/);
-    expect(loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: 'k' }).MAIL_FROM).toBe('unimoov.support@gmail.com');
+    expect(() => loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: '', MAIL_FROM: 'a@uni-moov.fr' })).toThrow(/BREVO_API_KEY/);
+    expect(() => loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: 'k', MAIL_FROM: '' })).toThrow(/MAIL_FROM/);
+    expect(loadConfig({ ...base, MAIL_PROVIDER: 'brevo', BREVO_API_KEY: 'k', MAIL_FROM: 'a@uni-moov.fr' }).MAIL_FROM).toBe('a@uni-moov.fr');
   });
 
   it('utilise la BAN par défaut', () => {

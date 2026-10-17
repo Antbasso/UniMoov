@@ -39,7 +39,7 @@ const app = await buildApp({
     calendarKey: config.CALENDAR_ENCRYPTION_KEY,
     // Console : développement uniquement (refusée en production par la config).
     mail:
-      config.MAIL_PROVIDER === 'brevo' && config.BREVO_API_KEY
+      config.MAIL_PROVIDER === 'brevo' && config.BREVO_API_KEY && config.MAIL_FROM
         ? new BrevoMailProvider(config.BREVO_API_KEY, { email: config.MAIL_FROM, name: 'Uni-Moov' })
         : new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,

@@ -26,7 +26,7 @@ services:
       JOBS_ENABLED: ${JOBS_ENABLED:-true}
       MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
       BREVO_API_KEY: ${BREVO_API_KEY:-}
-      MAIL_FROM: ${MAIL_FROM:-unimoov.support@gmail.com}
+      MAIL_FROM: ${MAIL_FROM:-}
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-ban}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-estimate}
       ORS_API_KEY: ${ORS_API_KEY:-}
