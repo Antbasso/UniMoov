@@ -25,7 +25,7 @@ export const authRoutes: FastifyPluginAsyncZod<{ service: AuthService }> = (app,
   app.post(
     '/auth/login',
     { schema: { body: loginBody, response: { 200: tokensResponse } }, config: limit(10, '15 minutes') },
-    async (request) => service.login(request.body),
+    async (request) => service.login({ ...request.body, ip: request.ip }),
   );
 
   app.post(

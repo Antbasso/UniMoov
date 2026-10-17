@@ -17,6 +17,8 @@ const stop = z.strictObject({
   isMeetingPoint: z.boolean(),
   pickedUp: z.boolean(),
   presenceValidated: z.boolean(),
+  arrived: z.boolean(),
+  ended: z.boolean(),
 });
 
 export const price = z.strictObject({
@@ -60,7 +62,7 @@ export const pickupBody = z.object({
 });
 
 export const participantParams = z.object({ id: z.uuid(), userId: z.uuid() });
-export const presenceResponse = z.object({ payment: z.enum(['paid', 'failed', 'already']) });
+export const presenceResponse = z.object({ status: z.enum(['validated', 'already']) });
 
 export const navigationResponse = z.strictObject({
   stops: z.array(

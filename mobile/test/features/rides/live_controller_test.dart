@@ -41,14 +41,14 @@ void main() {
     );
     c.emit(LiveEta(userId: 'me', eta: DateTime.utc(2026, 10, 19, 5, 50)));
     c.emit(const LivePickedUp('passenger-3'));
-    c.emit(const LivePresence(userId: 'me', paid: true));
+    c.emit(const LivePresence('me'));
+    c.emit(const LivePassengerDone('passenger-3', arrived: true));
     await settle();
     final state = container.read(liveRideProvider('ride-1'));
     expect(state.connected, isTrue);
     expect(state.positions['driver-1']!.lat, 45.9);
     expect(state.etas['me'], DateTime.utc(2026, 10, 19, 5, 50));
     expect(state.pickedUp, {'passenger-3'});
-    expect(state.presence, {'me': true});
   });
 
   test('coupure réseau : reconnexion ; clôture (4410) : arrêt définitif', () async {

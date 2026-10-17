@@ -12,6 +12,7 @@ import {
   topupEntries,
   userAccount,
 } from '../../src/modules/payments/domain.js';
+import { isValidIban, normalizeIban } from '../../src/modules/payments/domain.js';
 
 const sumFor = (entries: { account: string; amountCents: number }[], account: string) =>
   entries.filter((e) => e.account === account).reduce((s, e) => s + e.amountCents, 0);
@@ -70,5 +71,18 @@ describe('holdAmount', () => {
     expect(holdAmount(0, 20)).toBe(0);
     expect(() => holdAmount(-1, 20)).toThrow(RangeError);
     expect(() => holdAmount(10, -5)).toThrow(RangeError);
+  });
+});
+
+describe('IBAN', () => {
+  it.each([
+    ['FR76 3000 6000 0112 3456 7890 189', true],
+    ['DE89370400440532013000', true],
+    ['fr7630006000011234567890189', true],
+    ['FR7630006000011234567890188', false], // clé fausse
+    ['FR76', false],
+    ['XX00 1234', false],
+  ])('%s → %s', (raw, valid) => {
+    expect(isValidIban(normalizeIban(raw))).toBe(valid);
   });
 });

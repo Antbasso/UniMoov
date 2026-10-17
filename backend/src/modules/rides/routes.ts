@@ -29,7 +29,8 @@ export const ridesRoutes: FastifyPluginAsyncZod<{ service: RidesService; lifecyc
 
   app.put(
     '/rides/:id/me/pickup',
-    { schema: { params: rideParams, body: pickupBody, response: { 204: z.null() } } },
+    // Chaque changement relance un calcul d'itinéraire (quota externe partagé).
+    { schema: { params: rideParams, body: pickupBody, response: { 204: z.null() } }, config: { rateLimit: { max: 10, timeWindow: '1 hour' } } },
     async (request, reply) => {
       await service.setPickup(request.userId, request.params.id, request.body);
       return reply.code(204).send(null);
@@ -55,7 +56,7 @@ export const ridesRoutes: FastifyPluginAsyncZod<{ service: RidesService; lifecyc
 
   // Présence demandée par le passager : comparaison des dernières positions des deux téléphones.
   app.post('/rides/:id/presence', { schema: { params: rideParams, response: { 200: presenceResponse } } }, async (request) => ({
-    payment: await lifecycle.requestPresence(request.userId, request.params.id),
+    status: await lifecycle.requestPresence(request.userId, request.params.id),
   }));
 
   app.post('/rides/:id/finish', noContent, async (request, reply) => {

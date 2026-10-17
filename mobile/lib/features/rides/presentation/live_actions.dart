@@ -22,20 +22,33 @@ Future<void> shareLocation(BuildContext context, WidgetRef ref, String rideId) a
   );
 }
 
-/// Clôture pour tout le trajet (le suivi s'arrête pour tous) : confirmation avant.
-Future<bool> confirmFinish(BuildContext context) async {
+/// Conducteur : clôture pour tout le trajet (les passagers pas encore à destination ne paient
+/// pas) ; confirmation avant.
+Future<bool> confirmFinish(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
+  return _confirm(context, l10n.finishConfirmTitle, l10n.finishConfirmBody, l10n.finishRide);
+}
+
+/// Passager à bord, pas encore arrivé : terminer annule la rémunération du conducteur pour lui
+/// (cahier §9), qui est prévenu ; avertissement avant.
+Future<bool> confirmFinishMyTrip(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
+  return _confirm(context, l10n.finishMyTripTitle, l10n.finishMyTripBody, l10n.finishMyTripConfirm);
+}
+
+Future<bool> _confirm(BuildContext context, String title, String body, String confirm) async {
   final l10n = AppLocalizations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text(l10n.finishConfirmTitle),
-      content: Text(l10n.finishConfirmBody),
+      title: Text(title),
+      content: Text(body),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
           child: Text(l10n.finishConfirmCancel),
         ),
-        TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.finishRide)),
+        TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(confirm)),
       ],
     ),
   );

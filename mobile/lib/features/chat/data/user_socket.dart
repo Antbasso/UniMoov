@@ -7,6 +7,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../domain/chat.dart';
+import '../../demo/demo_mode.dart';
 
 /// Socket utilisateur `GET /ws/me` : messages reçus en direct (docs/api.md).
 abstract interface class UserSocketConnection {
@@ -73,5 +74,7 @@ class _Connection implements UserSocketConnection {
 }
 
 final userSocketConnectorProvider = Provider<UserSocketConnector>(
-  (ref) => WebSocketUserConnector(ref.watch(tokenStorageProvider)),
+  (ref) =>
+      ref.watch(demoProvider)?.chatSocket ??
+      WebSocketUserConnector(ref.watch(tokenStorageProvider)),
 );

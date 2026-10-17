@@ -21,17 +21,12 @@ class RideController extends AsyncNotifier<RideDetails> {
     if (ref.mounted) ref.invalidateSelf();
   }
 
-  /// Conducteur : départ (le suivi en direct s'ouvre), passager monté, clôture.
+  /// Conducteur : départ (le suivi en direct s'ouvre), passager monté, clôture pour tous.
+  /// Passager : présence validée par proximité, fin de son trajet seulement.
   Future<void> start() => _act((api) => api.start(id));
   Future<void> pickedUp(String userId) => _act((api) => api.pickedUp(id, userId));
   Future<void> finish() => _act((api) => api.finish(id));
-
-  /// Passager : présence validée par proximité ; `true` si le paiement est passé.
-  Future<bool> confirmPresence() async {
-    final paid = await ref.read(ridesApiProvider).presence(id);
-    if (ref.mounted) ref.invalidateSelf();
-    return paid;
-  }
+  Future<void> confirmPresence() => _act((api) => api.presence(id));
 
   Future<void> _act(Future<void> Function(RidesApi api) action) async {
     await action(ref.read(ridesApiProvider));

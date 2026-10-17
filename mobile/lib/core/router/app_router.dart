@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/account/presentation/delete_account_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/session_controller.dart';
 import '../../features/auth/presentation/signup_screen.dart';
@@ -26,6 +27,7 @@ import '../../features/rides/presentation/suggestions_screen.dart';
 import '../../features/trust/domain/trust.dart';
 import '../../features/trust/presentation/dispute_screen.dart';
 import '../../features/trust/presentation/reliability_screen.dart';
+import '../../features/wallet/presentation/payout_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
 import 'redirect.dart';
@@ -68,6 +70,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
           GoRoute(path: 'reliability', builder: (_, _) => const ReliabilityScreen()),
           GoRoute(path: 'notifications', builder: (_, _) => const NotificationSettingsScreen()),
+          GoRoute(path: 'delete', builder: (_, _) => const DeleteAccountScreen()),
           GoRoute(
             path: 'schedule',
             builder: (_, _) => const ScheduleScreen(),
@@ -79,7 +82,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
-      GoRoute(path: AppRoutes.wallet, builder: (_, _) => const WalletScreen()),
+      GoRoute(
+        path: AppRoutes.wallet,
+        builder: (_, _) => const WalletScreen(),
+        routes: [GoRoute(path: 'payout', builder: (_, _) => const PayoutScreen())],
+      ),
       GoRoute(
         path: AppRoutes.messages,
         builder: (_, _) => const ConversationsScreen(),

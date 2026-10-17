@@ -6,6 +6,10 @@ import { appSettings } from '../../db/schema.js';
 /** Paramètres connus et leur forme. Les valeurs vivent dans `app_settings` (jamais en dur). */
 const settingSchemas = {
   'auth.allowedEmailDomains': z.array(z.string().min(3)).min(1),
+  'auth.loginMaxFailures': z.number().int().min(3).max(100),
+  'auth.loginLockMinutes': z.number().int().min(1).max(24 * 60),
+  'auth.loginDailyMaxFailures': z.number().int().min(10).max(10_000),
+  'auth.signupCodesPerDay': z.number().int().min(1).max(100),
   'matching.roadFactor': z.number().min(1).max(3),
   'matching.avgSpeedKmh': z.number().min(5).max(130),
   'matching.arrivalWindowMinutes': z.number().int().min(0).max(180),
@@ -17,6 +21,8 @@ const settingSchemas = {
   'rides.startWindowMinutes': z.number().int().min(0).max(24 * 60),
   'rides.staleAfterHours': z.number().int().min(1).max(72),
   'wallet.minTopupCents': z.number().int().min(1).max(100_000),
+  'wallet.minPayoutCents': z.number().int().min(1).max(100_000),
+  'wallet.payoutMinIntervalDays': z.number().int().min(0).max(90),
   'wallet.holdMarginPercent': z.number().min(0).max(100),
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
   'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),

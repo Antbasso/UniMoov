@@ -6,12 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/wallet.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class WalletApi {
   Future<Wallet> wallet();
 
   /// `idempotencyKey` : la même clé ne recharge qu'une fois (double appui, requête rejouée).
   Future<Wallet> topup(int amountCents, String idempotencyKey);
+
+  /// Retrait vers un compte bancaire ; l'IBAN part au prestataire, le serveur n'en garde que
+  /// les 4 derniers caractères.
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey);
 }
 
 /// Clé d'idempotence aléatoire (128 bits).
@@ -40,6 +45,22 @@ class DioWalletApi implements WalletApi {
     );
     return Wallet.fromJson(response.data!['wallet'] as Map<String, dynamic>);
   });
+
+  @override
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/wallet/payouts',
+      data: {
+        'amountCents': request.amountCents,
+        'iban': request.iban,
+        'holderName': request.holderName,
+      },
+      options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+    );
+    return Wallet.fromJson(response.data!);
+  });
 }
 
-final walletApiProvider = Provider<WalletApi>((ref) => DioWalletApi(ref.watch(dioProvider)));
+final walletApiProvider = Provider<WalletApi>(
+  (ref) => ref.watch(demoProvider) ?? DioWalletApi(ref.watch(dioProvider)),
+);

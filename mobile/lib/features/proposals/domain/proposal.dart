@@ -36,11 +36,14 @@ class PublicPerson {
   final int detourMinutes;
   final String status;
 
+  /// Demande de place à laquelle le conducteur doit répondre.
+  bool get isRequest => status == 'requested';
+
   /// Score affiché sur 5 (le serveur le donne entre 0 et 1).
   String get scoreOutOfFive => (reliabilityScore * 5).toStringAsFixed(1).replaceAll('.', ',');
 }
 
-enum ProposalState { proposed, waiting, confirmed, cancelled }
+enum ProposalState { proposed, requested, waiting, confirmed, cancelled }
 
 class Proposal {
   const Proposal({
@@ -96,7 +99,10 @@ class Proposal {
   /// État affiché : confirmé à deux, en attente de l'autre, ou à décider.
   ProposalState get state => switch ((rideStatus, myStatus)) {
     ('cancelled', _) || (_, 'cancelled') => ProposalState.cancelled,
-    ('confirmed', _) => ProposalState.confirmed,
+    // Voiture choisie par le passager : le conducteur doit accepter la demande.
+    (_, 'requested') => ProposalState.requested,
+    // Trajet commencé ou terminé : toujours confirmé (« Voir la carte »).
+    ('confirmed' || 'in_progress' || 'completed', _) => ProposalState.confirmed,
     (_, 'accepted') => ProposalState.waiting,
     _ => ProposalState.proposed,
   };

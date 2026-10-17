@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type WebSocket from 'ws';
-import { runSeed } from '../../src/db/seed.js';
+import { runSeed, SEED_PASSENGER_BALANCE_CENTS as SEED } from '../../src/db/seed.js';
 import { DEMO_PASSWORD, seedUsers } from '../../src/db/seed-data.js';
 import { bearer, setupTestContext, type TestContext, type Tokens } from './helpers.js';
 
@@ -100,21 +100,21 @@ describe('portefeuille', () => {
     const key = { 'idempotency-key': 'recharge-hugo-0001' };
     expect((await call('Hugo', 'POST', '/wallet/topups', { amountCents: 1000 }, key)).statusCode).toBe(201);
     expect((await call('Hugo', 'POST', '/wallet/topups', { amountCents: 1000 }, key)).statusCode).toBe(201);
-    expect((await wallet('Hugo')).balanceCents).toBe(1000);
+    expect((await wallet('Hugo')).balanceCents).toBe(SEED + 1000);
     const small = await call('Hugo', 'POST', '/wallet/topups', { amountCents: 100 }, { 'idempotency-key': 'recharge-hugo-0002' });
     expect(small.json<{ error: { code: string } }>().error.code).toBe('topup_too_small');
     expect((await call('Hugo', 'POST', '/wallet/topups', { amountCents: 1000 })).statusCode).toBe(400);
     // Même clé, autre montant : refusé, rien de crédité.
     const conflict = await call('Hugo', 'POST', '/wallet/topups', { amountCents: 2000 }, key);
     expect(conflict.json<{ error: { code: string } }>().error.code).toBe('idempotency_conflict');
-    expect((await wallet('Hugo')).balanceCents).toBe(1000);
+    expect((await wallet('Hugo')).balanceCents).toBe(SEED + 1000);
   });
 
   it('recharge refusée par le prestataire : rien n’est crédité', async () => {
     ctx.payments.failingAmounts.add(1300);
     const failed = await call('Inès', 'POST', '/wallet/topups', { amountCents: 1300 }, { 'idempotency-key': 'recharge-ines-0001' });
     expect(failed.statusCode).toBe(402);
-    expect((await wallet('Inès')).balanceCents).toBe(0);
+    expect((await wallet('Inès')).balanceCents).toBe(SEED);
   });
 });
 
@@ -134,13 +134,14 @@ describe('avant le départ', () => {
 });
 
 describe('trajet en cours', () => {
-  it('au départ, le prix estimé plus la marge est retenu sur le portefeuille du passager', async () => {
+  it('au départ, le prix maximal (seul passager présent) est retenu sur le portefeuille du passager', async () => {
     expect((await call('Léa', 'POST', `/rides/${rideId}/start`)).statusCode).toBe(204);
     const view = (await call('Hugo', 'GET', `/rides/${rideId}`)).json<{ status: string; price: { youPayCents: number } }>();
     expect(view.status).toBe('in_progress');
     const w = await wallet('Hugo');
-    expect(w.heldCents).toBe(Math.ceil((view.price.youPayCents * 120) / 100));
-    expect(w.balanceCents).toBe(1000 - w.heldCents);
+    // Plus que le prix estimé à plusieurs : le prix final, partagé entre les présents, ne le dépassera pas.
+    expect(w.heldCents).toBeGreaterThan(view.price.youPayCents);
+    expect(w.balanceCents).toBe(SEED + 1000 - w.heldCents);
   });
 
   it('une fois parti, on ne monte plus en route : accepter ou refuser est impossible', async () => {
@@ -181,30 +182,21 @@ describe('trajet en cours', () => {
     expect(nav.links.googleMaps).not.toMatch(/Hugo|Bernard|Cran/);
   });
 
-  it('téléphones proches au ramassage : présence validée, le passager paie, conducteur et commission crédités', async () => {
+  it('téléphones proches au ramassage : présence validée, rien n’est encore payé', async () => {
     const home = { lat: user('Hugo').lat, lon: user('Hugo').lon };
-    await sendPosition(hugo, home);
+    // Le temps de rouler jusque chez Hugo : pas de saut invraisemblable.
+    ctx.clock.advance(5 * 60_000);
     await sendPosition(lea, { lat: home.lat + 0.0005, lon: home.lon }); // ~55 m
+    // Validée par le téléphone du passager, proche pendant au moins 15 s.
+    await sendPosition(hugo, home);
+    ctx.clock.advance(15_000);
+    await sendPosition(lea, { lat: home.lat + 0.0005, lon: home.lon });
+    await sendPosition(hugo, home);
     const validated = await waitFor(() => hugo.messages.find((m) => m.type === 'presence_validated'));
-    expect(validated).toMatchObject({ userId: user('Hugo').id, payment: 'paid' });
-
-    const price = (await call('Hugo', 'GET', `/rides/${rideId}/price`)).json<{
-      price: { shareCents: number; commissionCents: number; passengerPaysCents: number };
-    }>().price;
-    const hugoWallet = await wallet('Hugo');
-    expect(hugoWallet.heldCents).toBe(0);
-    expect(hugoWallet.balanceCents).toBe(1000 - price.passengerPaysCents);
-    expect(hugoWallet.history.map((h) => h.kind)).toEqual(['ride_charge', 'topup']);
-    expect((await wallet('Léa')).balanceCents).toBe(price.shareCents);
-
-    const { rows } = await ctx.database.pool.query<{ account: string; total: string }>(
-      `SELECT account, sum(amount_cents) AS total FROM wallet_ledger WHERE ride_id = $1 GROUP BY account`,
-      [rideId],
-    );
-    const byAccount = Object.fromEntries(rows.map((r) => [r.account, Number(r.total)]));
-    expect(Object.values(byAccount).reduce((a, b) => a + b, 0)).toBe(0);
-    expect(byAccount['platform:commission']).toBe(price.commissionCents);
-    expect(byAccount[`held:${user('Hugo').id}`]).toBe(0);
+    expect(validated).toMatchObject({ userId: user('Hugo').id });
+    // Paiement à l'arrivée seulement : la retenue est toujours là, Léa n'a rien reçu.
+    expect((await wallet('Hugo')).heldCents).toBeGreaterThan(0);
+    expect((await wallet('Léa')).balanceCents).toBe(0);
   });
 
   it('le registre est en écriture seule', async () => {
@@ -247,20 +239,58 @@ describe('trajet en cours', () => {
 });
 
 describe('clôture', () => {
-  it('ferme le suivi, libère la retenue de l’absente et ne diffuse plus rien', async () => {
-    expect((await call('Hugo', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
-    expect(await lea.closed).toBe(4410);
+  it('arrivée au campus : Hugo arrivé paie le prix final, Inès laissée avant son heure n’est pas pénalisée', async () => {
+    // Léa roule jusqu'au campus : Hugo, présent et à bord, arrive avec elle.
+    ctx.clock.advance(10 * 60_000);
+    await sendPosition(lea, { lat: 45.9195, lon: 6.158 });
+    await waitFor(() => lea.messages.find((m) => m.type === 'passenger_arrived' && m.userId === user('Hugo').id));
+    // Arrivé, Hugo n'est plus suivi : sa connexion est fermée et ne peut pas se rouvrir.
     expect(await hugo.closed).toBe(4410);
-    expect(hugo.messages.some((m) => m.type === 'ride_status' && m.status === 'completed')).toBe(true);
+    expect(hugo.messages.some((m) => m.type === 'passenger_arrived' && m.userId === user('Hugo').id)).toBe(true);
+    expect(await (await connect('Hugo', rideId)).closed).toBe(4410);
+    const hugoStop = (await call('Hugo', 'GET', `/rides/${rideId}`))
+      .json<{ stops: { userId: string | null; arrived: boolean; ended: boolean }[] }>()
+      .stops.find((s) => s.userId === user('Hugo').id);
+    expect(hugoStop).toMatchObject({ arrived: true, ended: true });
+    // Inès attend encore (jamais prise) : la conductrice clôt.
+    expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
+    expect(await lea.closed).toBe(4410);
+    expect(lea.messages.some((m) => m.type === 'ride_status' && m.status === 'completed')).toBe(true);
     expect(await (await connect('Hugo', rideId)).closed).toBe(4409);
 
-    const view = (await call('Léa', 'GET', `/rides/${rideId}`)).json<{ status: string; stops: { firstName: string | null }[] }>();
-    expect(view.status).toBe('completed');
-    const { rows } = await ctx.database.pool.query<{ status: string; first_name: string }>(
+    const { rows: statuses } = await ctx.database.pool.query<{ status: string; first_name: string }>(
       `SELECT p.status, u.first_name FROM ride_participants p JOIN users u ON u.id = p.user_id WHERE ride_id = $1 AND role = 'passenger'`,
       [rideId],
     );
-    expect(Object.fromEntries(rows.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'absent' });
+    // Léa est passée au campus avant l'heure prévue chez Inès : pas une absence, Inès est prévenue.
+    expect(Object.fromEntries(statuses.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'cancelled' });
+    expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Inès').id], event: { type: 'ride_cancelled', rideId, by: 'driver' } });
+
+    // Prix final : coût ÷ personnes présentes (Hugo et Léa), payé par Hugo seul.
+    const { rows: payments } = await ctx.database.pool.query<{ payer_id: string; status: string; share_cents: number; commission_cents: number }>(
+      `SELECT payer_id, status, share_cents, commission_cents FROM payments WHERE ride_id = $1`,
+      [rideId],
+    );
+    const hugoPayment = payments.find((p) => p.payer_id === user('Hugo').id)!;
+    expect(hugoPayment.status).toBe('paid');
+    const { rows: ride } = await ctx.database.pool.query<{ final_total_cost_cents: number }>(
+      `SELECT final_total_cost_cents FROM rides WHERE id = $1`,
+      [rideId],
+    );
+    expect(hugoPayment.share_cents).toBe(Math.ceil(ride[0]!.final_total_cost_cents / 2));
+    const paid = hugoPayment.share_cents + hugoPayment.commission_cents;
+    expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: SEED + 1000 - paid });
+    expect((await wallet('Léa')).balanceCents).toBe(hugoPayment.share_cents);
+    expect(await wallet('Inès')).toMatchObject({ heldCents: 0, balanceCents: SEED });
+
+    const { rows } = await ctx.database.pool.query<{ account: string; total: string }>(
+      `SELECT account, sum(amount_cents) AS total FROM wallet_ledger WHERE ride_id = $1 GROUP BY account`,
+      [rideId],
+    );
+    const byAccount = Object.fromEntries(rows.map((r) => [r.account, Number(r.total)]));
+    expect(Object.values(byAccount).reduce((a, b) => a + b, 0)).toBe(0);
+    expect(byAccount['platform:commission']).toBe(hugoPayment.commission_cents);
+    expect(byAccount[`held:${user('Hugo').id}`]).toBe(0);
     // Clôture rejouée : sans effet.
     expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
   });
@@ -280,6 +310,64 @@ describe('clôture', () => {
     for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${wednesday}/accept`);
     ctx.clock.now = new Date('2026-10-21T14:00:00Z');
     expect((await call('Léa', 'POST', `/rides/${wednesday}/start`)).json<{ error: { code: string } }>().error.code).toBe('too_late');
+  });
+
+  it('passager qui termine avant l’arrivée : il ne paie pas, la conductrice est prévenue tout de suite', async () => {
+    const thursday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
+      .proposals.find((p) => p.day === '2026-10-22' && p.direction === 'to_campus')!.id;
+    for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${thursday}/accept`);
+    ctx.clock.now = new Date('2026-10-22T05:30:00Z');
+    expect((await call('Léa', 'POST', `/rides/${thursday}/start`)).statusCode).toBe(204);
+    // Pas encore à bord : il doit annuler sa place, pas « terminer » (pas d'absence évitée).
+    expect((await call('Hugo', 'POST', `/rides/${thursday}/finish`)).json<{ error: { code: string } }>().error.code).toBe('not_on_board');
+    expect(await ctx.app.services!.lifecycle.validatePresence(thursday, user('Hugo').id)).toBe('validated');
+    const before = { hugo: (await wallet('Hugo')).balanceCents + (await wallet('Hugo')).heldCents, lea: (await wallet('Léa')).balanceCents };
+
+    expect((await call('Hugo', 'POST', `/rides/${thursday}/finish`)).statusCode).toBe(204);
+    expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id], event: { type: 'passenger_left', rideId: thursday } });
+    // Seul passager, il a fini : le trajet est clos ; il ne paie rien, Léa ne reçoit rien.
+    const thursdayRide = (await call('Hugo', 'GET', `/rides/${thursday}`)).json<{ status: string; stops: { userId: string | null; arrived: boolean; ended: boolean }[] }>();
+    expect(thursdayRide.status).toBe('completed');
+    expect(thursdayRide.stops.find((s) => s.userId === user('Hugo').id)).toMatchObject({ arrived: false, ended: true });
+    expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: before.hugo });
+    expect((await wallet('Léa')).balanceCents).toBe(before.lea);
+  });
+
+  it('pas encore à bord : annule sa place pendant le trajet ; prélèvement plafonné à la retenue', async () => {
+    const friday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
+      .proposals.find((p) => p.day === '2026-10-23' && p.direction === 'to_campus')!.id;
+    for (const name of ['Léa', 'Hugo', 'Chloé']) {
+      expect((await call(name, 'POST', `/proposals/${friday}/accept`)).statusCode).toBe(200);
+    }
+    ctx.clock.now = new Date('2026-10-23T05:30:00Z');
+    expect((await call('Léa', 'POST', `/rides/${friday}/start`)).statusCode).toBe(204);
+    const chloe = await connect('Chloé', friday);
+    await waitFor(() => chloe.messages.find((m) => m.type === 'ready'));
+
+    // Chloé n'est pas montée : elle annule (pénalité), sa connexion est fermée, Léa prévenue.
+    expect((await call('Chloé', 'GET', `/rides/${friday}/cancellation`)).statusCode).toBe(200);
+    expect((await call('Chloé', 'POST', `/rides/${friday}/cancel`)).statusCode).toBe(200);
+    expect(await chloe.closed).toBe(4410);
+    const cancelled = ctx.notifier.sent.find((n) => n.event.type === 'ride_cancelled' && 'rideId' in n.event && n.event.rideId === friday);
+    expect(cancelled?.userIds).toContain(user('Léa').id);
+    expect(await (await connect('Chloé', friday)).closed).toBe(4403);
+
+    // Hugo, à bord, ne peut plus annuler ; il arrive. Tracé rallongé après la retenue : il ne paie
+    // jamais plus que ce qui a été retenu.
+    expect(await ctx.app.services!.lifecycle.validatePresence(friday, user('Hugo').id)).toBe('validated');
+    expect((await call('Hugo', 'POST', `/rides/${friday}/cancel`)).json<{ error: { code: string } }>().error.code).toBe('ride_unavailable');
+    await ctx.database.pool.query(`UPDATE rides SET distance_m = distance_m * 5 WHERE id = $1`, [friday]);
+    // Seul passager restant, arrivé : le trajet se clôt de lui-même.
+    await ctx.app.services!.lifecycle.arrive(friday, user('Hugo').id);
+    expect((await call('Léa', 'GET', `/rides/${friday}`)).json<{ status: string }>().status).toBe('completed');
+    const { rows } = await ctx.database.pool.query<{ payer_id: string; status: string; held_cents: number; share_cents: number; commission_cents: number }>(
+      `SELECT payer_id, status, held_cents, share_cents, commission_cents FROM payments WHERE ride_id = $1`,
+      [friday],
+    );
+    const hugoPayment = rows.find((r) => r.payer_id === user('Hugo').id)!;
+    expect(hugoPayment.status).toBe('paid');
+    expect(hugoPayment.share_cents + hugoPayment.commission_cents).toBe(hugoPayment.held_cents);
+    expect(rows.find((r) => r.payer_id === user('Chloé').id)?.status ?? 'refunded').toBe('refunded');
   });
 
   it('trace réduite gardée pour les litiges, puis purgée après la rétention', async () => {

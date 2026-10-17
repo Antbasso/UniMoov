@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/schedule.dart';
+import '../../demo/demo_mode.dart';
 
 /// Routes « Agenda » (docs/api.md).
 abstract interface class ScheduleApi {
@@ -66,4 +67,6 @@ class DioScheduleApi implements ScheduleApi {
   });
 }
 
-final scheduleApiProvider = Provider<ScheduleApi>((ref) => DioScheduleApi(ref.watch(dioProvider)));
+final scheduleApiProvider = Provider<ScheduleApi>(
+  (ref) => ref.watch(demoProvider) ?? DioScheduleApi(ref.watch(dioProvider)),
+);

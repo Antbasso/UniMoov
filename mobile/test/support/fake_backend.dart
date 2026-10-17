@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:unimoov/features/account/data/account_api.dart';
 import 'package:unimoov/features/chat/data/chat_api.dart';
 import 'package:unimoov/features/chat/domain/chat.dart';
 import 'package:unimoov/features/notifications/data/notifications_api.dart';
@@ -32,7 +36,8 @@ class FakeBackend
         WalletApi,
         TrustApi,
         ChatApi,
-        NotificationsApi {
+        NotificationsApi,
+        AccountApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
 
@@ -253,15 +258,42 @@ class FakeBackend
     throw const ApiException('not_found', '', statusCode: 404);
   }
 
+  /// Solde exigé pour accepter en passager (prix maximal du trajet), à 0 sans vérification.
+  int requiredBalanceCents = 0;
+
   @override
   Future<Proposal> accept(String id) async {
     _maybeFail();
+    if (balanceCents < requiredBalanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 402);
+    }
     final isJoin = weeks.values.every((list) => list.every((p) => p.id != id));
     if (isJoin) {
+      // Voiture choisie par le passager : demande en attente du conducteur.
       joined.add(id);
-      return proposalFixture(id: id, myStatus: 'accepted');
+      return proposalFixture(id: id, myStatus: 'requested');
     }
     return _replace(id, (p) => p.copyWith(myStatus: 'accepted'));
+  }
+
+  final List<({String rideId, String userId, bool approve})> requestAnswers = [];
+
+  @override
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve}) async {
+    _maybeFail();
+    requestAnswers.add((rideId: rideId, userId: userId, approve: approve));
+    return _replace(
+      rideId,
+      (p) => p.copyWith(
+        passengers: [
+          for (final person in p.passengers)
+            if (person.userId != userId)
+              person
+            else if (approve)
+              person.copyWith(status: 'accepted'),
+        ],
+      ),
+    );
   }
 
   @override
@@ -387,20 +419,23 @@ class FakeBackend
     );
   }
 
-  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated}) => RideStop(
-    order: s.order,
-    kind: s.kind,
-    userId: s.userId,
-    firstName: s.firstName,
-    lastName: s.lastName,
-    label: s.label,
-    lat: s.lat,
-    lon: s.lon,
-    eta: s.eta,
-    isMeetingPoint: s.isMeetingPoint,
-    pickedUp: pickedUp ?? s.pickedUp,
-    presenceValidated: presenceValidated ?? s.presenceValidated,
-  );
+  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated, bool? ended}) =>
+      RideStop(
+        order: s.order,
+        kind: s.kind,
+        userId: s.userId,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        label: s.label,
+        lat: s.lat,
+        lon: s.lon,
+        eta: s.eta,
+        isMeetingPoint: s.isMeetingPoint,
+        pickedUp: pickedUp ?? s.pickedUp,
+        presenceValidated: presenceValidated ?? s.presenceValidated,
+        arrived: s.arrived,
+        ended: ended ?? s.ended,
+      );
 
   @override
   Future<void> start(String id) async {
@@ -454,7 +489,7 @@ class FakeBackend
   }
 
   @override
-  Future<bool> presence(String id) async {
+  Future<void> presence(String id) async {
     _maybeFail();
     final ride = rides[id]!;
     final me = idOf(_me.email);
@@ -466,14 +501,24 @@ class FakeBackend
       ],
     );
     actions.add('presence');
-    return true;
   }
 
   @override
   Future<void> finish(String id) async {
     _maybeFail();
     actions.add('finish');
-    _withStatus(id, 'completed');
+    final ride = rides[id]!;
+    if (ride.isDriver) {
+      _withStatus(id, 'completed');
+      return;
+    }
+    // Passager : son trajet seulement (parti avant l'arrivée, il ne paie pas).
+    final me = idOf(_me.email);
+    _withStatus(
+      id,
+      ride.status,
+      stops: [for (final s in ride.stops) s.userId == me ? _stopWith(s, ended: true) : s],
+    );
   }
 
   // --- Portefeuille ---
@@ -502,6 +547,27 @@ class FakeBackend
         WalletEntry(kind: 'topup', amountCents: amountCents, at: DateTime(2026, 10, 15, 9)),
       );
     }
+    return _wallet;
+  }
+
+  final List<({PayoutRequest request, String key})> payouts = [];
+
+  @override
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey) async {
+    _maybeFail();
+    if (payouts.any((p) => p.key == idempotencyKey)) return _wallet;
+    if (!request.iban.startsWith('FR76')) {
+      throw const ApiException('iban_invalid', '', statusCode: 400);
+    }
+    if (request.amountCents > balanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 409);
+    }
+    payouts.add((request: request, key: idempotencyKey));
+    balanceCents -= request.amountCents;
+    walletHistory.insert(
+      0,
+      WalletEntry(kind: 'payout', amountCents: -request.amountCents, at: DateTime(2026, 10, 16, 9)),
+    );
     return _wallet;
   }
 
@@ -793,6 +859,38 @@ class FakeBackend
     return preferencesState = prefs;
   }
 
+  // --- Compte (RGPD) ---
+
+  final List<String> deletedAccounts = [];
+
+  /// Refus du serveur à la suppression (portefeuille non vide, trajet en cours).
+  String? deleteRefusal;
+
+  @override
+  Future<Uint8List> exportData() async {
+    _maybeFail();
+    final me = _me;
+    return Uint8List.fromList(
+      utf8.encode(
+        jsonEncode({
+          'profile': {'universityEmail': me.email, 'firstName': me.firstName},
+        }),
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    _maybeFail();
+    final me = _me;
+    if (password != me.password) throw const ApiException('invalid_password', '', statusCode: 401);
+    final refusal = deleteRefusal;
+    if (refusal != null) throw ApiException(refusal, '', statusCode: 409);
+    _accounts.remove(me.email);
+    deletedAccounts.add(me.email);
+    devices.clear();
+  }
+
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).
   String idOf(String email) => 'id-$email';
 
@@ -1077,3 +1175,13 @@ Reliability reliabilityFixture({List<ReliabilityEvent>? events}) => Reliability(
         ),
       ],
 );
+
+extension PublicPersonCopy on PublicPerson {
+  PublicPerson copyWith({String? status}) => PublicPerson(
+    userId: userId,
+    firstName: firstName,
+    reliabilityScore: reliabilityScore,
+    detourMinutes: detourMinutes,
+    status: status ?? this.status,
+  );
+}

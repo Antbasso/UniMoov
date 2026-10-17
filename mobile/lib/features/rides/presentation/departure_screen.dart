@@ -103,7 +103,8 @@ class _DepartureScreenState extends ConsumerState<DepartureScreen> {
     if (app == null || !mounted) return;
     await _run('nav', () async {
       final plan = await ref.read(navigationProvider(widget.id).future);
-      final opened = await ref.read(navLauncherProvider).open(plan.linkFor(app));
+      final link = plan.linkFor(app);
+      final opened = link != null && await ref.read(navLauncherProvider).open(link);
       if (!opened && mounted) setState(() => _errorCode = 'nav_open_failed');
     });
   }

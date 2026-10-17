@@ -48,11 +48,27 @@ void main() {
   });
 
   test('lien selon l’application : Waze vers l’arrêt suivant seulement', () {
-    expect(plan.linkFor(NavApp.googleMaps).host, 'www.google.com');
-    expect(plan.linkFor(NavApp.appleMaps).host, 'maps.apple.com');
+    expect(plan.linkFor(NavApp.googleMaps)!.host, 'www.google.com');
+    expect(plan.linkFor(NavApp.appleMaps)!.host, 'maps.apple.com');
     expect(plan.linkFor(NavApp.waze).toString(), contains('ll=2,2'));
     expect(NavApp.waze.multiStop, isFalse);
     expect(NavApp.googleMaps.multiStop, isTrue);
+  });
+
+  test('lien qui ne mène pas à l’application attendue : jamais ouvert', () {
+    NavigationPlan withLinks(Map<String, dynamic> links) => NavigationPlan.fromJson({
+      'stops': <dynamic>[],
+      'links': links,
+      'supportsMultiStop': {'googleMaps': true, 'appleMaps': true, 'waze': false},
+    });
+    final hostile = withLinks({
+      'googleMaps': 'intent://evil#Intent;end',
+      'appleMaps': 'https://maps.apple.com.evil.fr/?daddr=1,1',
+      'waze': {'nextStop': 'http://waze.com/ul?ll=1,1'},
+    });
+    expect(hostile.linkFor(NavApp.googleMaps), isNull);
+    expect(hostile.linkFor(NavApp.appleMaps), isNull);
+    expect(hostile.linkFor(NavApp.waze), isNull);
   });
 
   test('arrêts restants : sans ceux déjà montés', () {
@@ -79,10 +95,16 @@ void main() {
             as LivePosition;
     expect((p.lat, p.lon), (45.0, 6.0));
     expect(
-      (LiveEvent.fromJson({'type': 'presence_validated', 'userId': 'u', 'payment': 'failed'})!
-              as LivePresence)
-          .paid,
-      isFalse,
+      (LiveEvent.fromJson({'type': 'presence_validated', 'userId': 'u'})! as LivePresence).userId,
+      'u',
+    );
+    final left =
+        LiveEvent.fromJson({'type': 'passenger_left', 'userId': 'u'})! as LivePassengerDone;
+    expect((left.userId, left.arrived), ('u', false));
+    expect(
+      (LiveEvent.fromJson({'type': 'passenger_arrived', 'userId': 'u'})! as LivePassengerDone)
+          .arrived,
+      isTrue,
     );
     expect(
       (LiveEvent.fromJson({'type': 'ride_status', 'status': 'completed'})! as LiveStatus).status,

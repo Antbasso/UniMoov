@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE ride_status AS ENUM ('proposed','confirmed','in_progress','completed','cancelled');
 CREATE TYPE participant_role AS ENUM ('driver','passenger');
-CREATE TYPE participant_status AS ENUM ('proposed','accepted','declined','picked_up','absent','cancelled');
+CREATE TYPE participant_status AS ENUM ('proposed','requested','accepted','declined','picked_up','absent','cancelled');
 CREATE TYPE role_mode AS ENUM ('auto','always_driver','always_passenger');
 
 CREATE TABLE app_settings (          -- commission, prix carburant, seuils, rétentions

@@ -60,6 +60,22 @@
   "welcomeBenefitConfirm": "Confirmé à deux, toujours",
   "welcomeSignup": "Créer mon compte",
   "welcomeLogin": "J'ai déjà un compte",
+  "demoTry": "Essayer la démo",
+  "demoSheetTitle": "Essayer Uni-Moov sans compte",
+  "demoSheetBody": "Des données fictives autour du campus d'Annecy, sans réseau : rien n'est envoyé ni payé.",
+  "demoReady": "Compte prêt : Camille",
+  "demoReadyHelp": "Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.",
+  "demoSignup": "Parcours d'inscription",
+  "demoSignupHelp": "De l'adresse mail à la semaine type, avec n'importe quelle adresse en univ-smb.fr.",
+  "demoBanner": "DÉMO",
+  "demoCodeHint": "Démo : le code est {code}.",
+  "@demoCodeHint": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Retour",
   "loading": "Chargement…",
   "continueAction": "Continuer",
@@ -361,7 +377,7 @@
   "alternativesTitle": "Autres voitures",
   "alternativesEmpty": "Aucune autre voiture compatible pour ce créneau.",
   "choose": "Choisir",
-  "joined": "C'est noté : tu as choisi cette voiture.",
+  "joined": "Demande envoyée : le conducteur doit l'accepter.",
   "searchTitle": "Chercher un trajet",
   "searchDayLabel": "Jour",
   "searchTimeOptional": "Heure (facultatif)",
@@ -552,8 +568,11 @@
   "liveReconnecting": "Connexion au suivi en direct…",
   "liveEnded": "Le suivi en direct est terminé.",
   "presenceValidated": "Présence validée",
-  "presencePaid": "Présence validée, trajet payé",
-  "presenceUnpaid": "Présence validée, paiement en attente : recharge ton portefeuille",
+  "presenceOnBoard": "Présence validée : ta part est prélevée à l'arrivée",
+  "tripArrived": "Arrivée à destination : ta part est prélevée à la clôture du trajet.",
+  "tripLeftEarly": "Tu as terminé ton trajet avant l'arrivée : tu ne le paies pas.",
+  "stopArrived": "Arrivée",
+  "stopLeftEarly": "Terminé avant l'arrivée",
   "confirmPresence": "Valider ma présence",
   "presenceDone": "Présence validée. Bon trajet.",
   "shareLocation": "Partager ma position",
@@ -627,8 +646,48 @@
   "errorTopupTooSmall": "Montant de recharge trop faible.",
   "errorTopupFailed": "La recharge a été refusée.",
   "finishConfirmTitle": "Terminer le trajet ?",
-  "finishConfirmBody": "Le suivi s'arrête pour tout le monde et les passagers dont la présence n'est pas validée sont comptés absents.",
+  "finishConfirmBody": "Le suivi s'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n'es pas rémunéré pour eux.",
   "finishConfirmCancel": "Continuer le trajet",
+  "finishMyTrip": "Terminer mon trajet",
+  "finishMyTripTitle": "Terminer ton trajet maintenant ?",
+  "finishMyTripBody": "Tu n'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n'est pas rémunéré pour toi. Il est prévenu tout de suite.",
+  "finishMyTripConfirm": "Terminer quand même",
+  "finishMyTripDone": "Trajet terminé. Le conducteur est prévenu.",
+  "insufficientFundsTitle": "Solde insuffisant",
+  "insufficientFundsBody": "Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l'arrivée que ta part réelle.",
+  "insufficientFundsTopup": "Recharger",
+  "insufficientFundsLater": "Plus tard",
+  "walletPayout": "Retirer vers mon compte",
+  "walletPayoutTitle": "Retirer ton solde",
+  "walletPayoutIntro": "Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.",
+  "walletPayoutAmount": "Montant en euros",
+  "walletPayoutIban": "IBAN",
+  "walletPayoutHolder": "Titulaire du compte",
+  "walletPayoutSubmit": "Retirer {amount}",
+  "@walletPayoutSubmit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutDone": "Retrait demandé. Le virement arrive sous quelques jours.",
+  "walletPayoutRule": "Un retrait par semaine, {amount} minimum.",
+  "@walletPayoutRule": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutAmountInvalid": "Indique un montant, par exemple 12,50.",
+  "walletPayoutHolderInvalid": "Indique le nom du titulaire du compte.",
+  "errorIbanInvalid": "Cet IBAN n'est pas valide : vérifie-le.",
+  "errorPayoutTooSmall": "Montant de retrait trop faible.",
+  "errorPayoutTooSoon": "Un seul retrait par semaine : réessaie plus tard.",
+  "errorPayoutFailed": "Le virement a été refusé.",
+  "errorInsufficientFunds": "Solde insuffisant.",
+  "errorNotOnBoard": "Ta présence n'est pas validée : pour renoncer, annule ta place.",
   "cancelMyPlace": "Annuler ma place",
   "cancelRide": "Annuler le trajet",
   "cancelSheetTitle": "Annuler ce trajet ?",
@@ -904,5 +963,65 @@
   "chatLeaveBody": "Tu ne verras plus ses messages.",
   "chatLeaveConfirm": "Quitter",
   "chatGroupNameHelp": "Obligatoire pour un groupe.",
-  "chatLeaveCancel": "Rester"
+  "chatLeaveCancel": "Rester",
+  "notificationsBlockedTitle": "Notifications bloquées",
+  "notificationsBlockedBody": "Ton téléphone bloque les notifications d'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.",
+  "profileData": "Mes données",
+  "profileDataBody": "Récupère tout ce qu'Uni-Moov garde sur toi, ou supprime ton compte.",
+  "exportAction": "Exporter mes données",
+  "exportSubject": "Mes données Uni-Moov",
+  "deleteAccountAction": "Supprimer mon compte",
+  "deleteAccountTitle": "Supprimer ton compte",
+  "deleteAccountIntro": "C'est définitif : ton compte ne pourra pas être récupéré.",
+  "deleteAccountErased": "ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.",
+  "deleteAccountKept": "les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.",
+  "deleteAccountRides": "tes trajets à venir. Les autres sont prévenus.",
+  "deleteAccountPassword": "Ton mot de passe, pour confirmer",
+  "deleteAccountConfirm": "Supprimer définitivement",
+  "deleteAccountCancel": "Garder mon compte",
+  "deleteAccountDone": "Ton compte est supprimé.",
+  "errorInvalidPassword": "Mot de passe incorrect. Réessaie.",
+  "errorWalletNotEmpty": "Ton portefeuille n'est pas vide : récupère ton solde avant de supprimer ton compte.",
+  "errorRideInProgress": "Termine ton trajet en cours avant de supprimer ton compte.",
+  "deleteAccountErasedLead": "Effacés :",
+  "deleteAccountKeptLead": "Gardés sans ton nom :",
+  "deleteAccountRidesLead": "Annulés :",
+  "deleteAccountWalletTitle": "Portefeuille à vider d'abord",
+  "deleteAccountWalletLeft": "Il te reste {amount} sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l'équipe, {email}), puis reviens supprimer ton compte.",
+  "@deleteAccountWalletLeft": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountWriteTeam": "Écrire à l'équipe",
+  "deleteAccountMailSubject": "Récupérer mon solde avant de supprimer mon compte",
+  "exportDone": "Tes données sont prêtes.",
+  "notificationsOpenSettings": "Ouvrir les réglages",
+  "notificationsBlockedHelp": "Ces choix s'appliqueront dès que tu auras réactivé les notifications.",
+  "noMailApp": "Aucune application de mail trouvée. Écris-nous à {email}.",
+  "@noMailApp": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "requestSent": "Demande envoyée",
+  "requestPending": "{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.",
+  "@requestPending": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "requestWithdraw": "Retirer ma demande",
+  "requestFrom": "Demande à monter avec toi.",
+  "requestApprove": "Accepter",
+  "requestReject": "Refuser"
 }

@@ -10,8 +10,8 @@ export interface PaymentProvider {
     providerRef: string;
     status: ProviderStatus;
   }>;
-  /** Virement du solde d'un conducteur vers son compte bancaire. */
-  createPayout(input: { userId: string; amountCents: number; idempotencyKey: string }): Promise<{
+  /** Virement du solde vers le compte bancaire (l'IBAN reste chez le prestataire). */
+  createPayout(input: { userId: string; amountCents: number; iban: string; holderName: string; idempotencyKey: string }): Promise<{
     providerRef: string;
     status: ProviderStatus;
   }>;
@@ -53,7 +53,7 @@ export class FakePaymentProvider implements PaymentProvider {
     return this.run('topup', input.amountCents, input.idempotencyKey);
   }
 
-  createPayout(input: { userId: string; amountCents: number; idempotencyKey: string }) {
+  createPayout(input: { userId: string; amountCents: number; iban: string; holderName: string; idempotencyKey: string }) {
     return this.run('payout', input.amountCents, input.idempotencyKey);
   }
 }

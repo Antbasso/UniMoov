@@ -7,16 +7,30 @@ import '../../auth/presentation/session_controller.dart';
 import '../data/notifications_api.dart';
 import '../data/push_service.dart';
 
+final _safeId = RegExp(r'^[A-Za-z0-9-]{1,64}$');
+
+/// Identifiant reçu dans une notification (un UUID en pratique) : lettres, chiffres et tirets
+/// seulement, sinon rien (pas de `/` ni de `..` glissé dans une route ou une URL d'API).
+String? _id(String? value) => value != null && _safeId.hasMatch(value) ? value : null;
+
 /// Écran à ouvrir pour une notification touchée (identifiants seulement dans les données).
-String? routeForPush(Map<String, String> data) => switch (data['type']) {
-  'chat_message' when data['conversationId'] != null => AppRoutes.conversation(
-    data['conversationId']!,
-  ),
-  'ride_cancelled' ||
-  'ride_reminder' when data['rideId'] != null => AppRoutes.ride(data['rideId']!),
-  'replacement_proposed' || 'proposals_ready' => AppRoutes.home,
-  _ => null,
-};
+String? routeForPush(Map<String, String> data) {
+  final conversationId = _id(data['conversationId']);
+  final rideId = _id(data['rideId']);
+  return switch (data['type']) {
+    'chat_message' when conversationId != null => AppRoutes.conversation(conversationId),
+    'ride_cancelled' ||
+    'ride_reminder' ||
+    'passenger_left' when rideId != null => AppRoutes.ride(rideId),
+    // Solde insuffisant au départ : place libérée, il faut recharger.
+    'payment_required' => AppRoutes.wallet,
+    'replacement_proposed' ||
+    'proposals_ready' ||
+    'ride_requested' ||
+    'request_answered' => AppRoutes.home,
+    _ => null,
+  };
+}
 
 /// Jeton de l'appareil enregistré auprès du serveur, indépendant de la session : la
 /// déconnexion le retire avant d'effacer les jetons d'accès.
@@ -115,3 +129,8 @@ final notificationPreferencesProvider =
       NotificationPreferencesController.new,
       retry: (retryCount, error) => null,
     );
+
+/// Notifications refusées au niveau du téléphone : relu à chaque retour dans l'application.
+final pushBlockedProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(pushServiceProvider).isBlocked(),
+);

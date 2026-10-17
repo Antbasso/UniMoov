@@ -92,9 +92,35 @@ export function payoutEntries(userId: string, amountCents: number): Entry[] {
   ];
 }
 
+/** Retrait refusé par le prestataire après le débit : le solde est recrédité. */
+export function payoutReversalEntries(userId: string, amountCents: number): Entry[] {
+  positive(amountCents, 'retrait annulé');
+  return [
+    { account: CLEARING, kind: 'refund', amountCents: -amountCents },
+    { account: userAccount(userId), kind: 'refund', amountCents },
+  ];
+}
+
 /** Retenue = prix estimé majoré de la marge, au centime supérieur. */
 export function holdAmount(estimatedCents: number, marginPercent: number): number {
   if (!Number.isInteger(estimatedCents) || estimatedCents < 0) throw new RangeError('prix invalide');
   if (!Number.isFinite(marginPercent) || marginPercent < 0) throw new RangeError('marge invalide');
   return Math.ceil((estimatedCents * (100 + marginPercent)) / 100);
+}
+
+/** IBAN sans espaces, en majuscules. */
+export function normalizeIban(raw: string): string {
+  return raw.replace(/\s+/g, '').toUpperCase();
+}
+
+/** Contrôle ISO 13616 : format, longueur et clé (modulo 97). */
+export function isValidIban(iban: string): boolean {
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false;
+  const rearranged = iban.slice(4) + iban.slice(0, 4);
+  let remainder = 0;
+  for (const char of rearranged) {
+    const digits = /\d/.test(char) ? char : String(char.charCodeAt(0) - 55);
+    for (const d of digits) remainder = (remainder * 10 + Number(d)) % 97;
+  }
+  return remainder === 1;
 }

@@ -36,6 +36,8 @@ export interface ParticipantRow {
   photoUrl: string | null;
   sector: string | null;
   reliability: number;
+  /** Lu seulement par `participants` (annulation pendant le trajet). */
+  presenceValidated?: boolean;
 }
 
 export interface RideRow {
@@ -134,16 +136,16 @@ export class MatchingRepo {
       WHERE r.day = ${day} AND r.direction = ${direction} AND r.status <> 'cancelled'
         AND p.status NOT IN ('declined', 'cancelled')
         AND (r.status = 'confirmed' OR EXISTS (
-          SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status = 'accepted'))`);
+          SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status IN ('accepted', 'requested')))`);
     return new Set(rows.map((r) => r.user_id));
   }
 
-  /** Supprime les propositions encore ouvertes (personne n'a accepté) du jour et du sens. */
+  /** Supprime les propositions encore ouvertes (personne n'a accepté ni demandé) du jour et du sens. */
   async deleteOpenRides(day: string, direction: Direction, db: DbOrTx = this.db): Promise<void> {
     await db.execute(sql`
       DELETE FROM rides r
       WHERE r.day = ${day} AND r.direction = ${direction} AND r.status = 'proposed'
-        AND NOT EXISTS (SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status = 'accepted')`);
+        AND NOT EXISTS (SELECT 1 FROM ride_participants a WHERE a.ride_id = r.id AND a.status IN ('accepted', 'requested'))`);
   }
 
   async declines(day: string, direction: Direction, db: DbOrTx = this.db): Promise<Set<string>> {
@@ -214,8 +216,9 @@ export class MatchingRepo {
       photo_url: string | null;
       home_sector: string | null;
       reliability: string;
+      presence_validated: boolean;
     }>(sql`
-      SELECT p.ride_id, p.user_id, p.role, p.status, p.detour_s,
+      SELECT p.ride_id, p.user_id, p.role, p.status, p.detour_s, p.presence_validated_at IS NOT NULL AS presence_validated,
              u.first_name, u.photo_url, u.home_sector, u.reliability_score AS reliability
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id IN (${sql.join(rideIds.map((id) => sql`${id}::uuid`), sql`, `)})`);
@@ -229,6 +232,7 @@ export class MatchingRepo {
       photoUrl: r.photo_url,
       sector: r.home_sector,
       reliability: Number(r.reliability),
+      presenceValidated: r.presence_validated,
     }));
   }
 
@@ -283,7 +287,7 @@ export class MatchingRepo {
     return new Map(rows.map((r) => [r.id, { lat: Number(r.lat), lon: Number(r.lon), maxDetourMinutes: r.max_detour }]));
   }
 
-  async setParticipantStatus(rideId: string, userId: string, status: 'accepted' | 'declined', db: DbOrTx = this.db) {
+  async setParticipantStatus(rideId: string, userId: string, status: 'accepted' | 'declined' | 'requested', db: DbOrTx = this.db) {
     await db
       .update(rideParticipants)
       .set({ status })
@@ -295,7 +299,7 @@ export class MatchingRepo {
     userId: string,
     detourS: number,
     db: DbOrTx = this.db,
-    status: 'accepted' | 'proposed' = 'accepted',
+    status: 'accepted' | 'proposed' | 'requested' = 'accepted',
   ) {
     await db
       .insert(rideParticipants)
@@ -365,14 +369,29 @@ export class MatchingRepo {
       .where(and(eq(rideParticipants.rideId, rideId), ne(rideParticipants.status, 'declined')));
   }
 
-  /** Retire un utilisateur des propositions non confirmées d'un jour (horaire modifié). */
-  async releaseUnconfirmed(userId: string, day: string, db: DbOrTx = this.db): Promise<void> {
+  /**
+   * Retire un utilisateur des propositions non confirmées d'un jour (horaire modifié). Un trajet
+   * qu'il conduit et qu'un passager a déjà accepté n'est pas effacé en silence : il est annulé et
+   * ses passagers acceptés sont renvoyés pour être prévenus.
+   */
+  async releaseUnconfirmed(userId: string, day: string, now: Date, db: DbOrTx = this.db): Promise<{ rideId: string; passengers: string[] }[]> {
+    const { rows } = await db.execute<{ ride_id: string; passengers: string[] }>(sql`
+      SELECT r.id AS ride_id, array_agg(p.user_id) AS passengers
+      FROM rides r JOIN ride_participants p ON p.ride_id = r.id
+      WHERE r.day = ${day} AND r.driver_id = ${userId} AND r.status = 'proposed'
+        AND p.role = 'passenger' AND p.status IN ('accepted', 'requested')
+      GROUP BY r.id`);
+    for (const r of rows) {
+      await this.setRideStatus(r.ride_id, 'cancelled', db);
+      await this.cancelParticipants(r.ride_id, now, db);
+    }
     await db.execute(sql`
       DELETE FROM rides r WHERE r.day = ${day} AND r.driver_id = ${userId} AND r.status = 'proposed'`);
     await db.execute(sql`
       DELETE FROM ride_participants p USING rides r
       WHERE p.ride_id = r.id AND r.day = ${day} AND p.user_id = ${userId}
         AND p.role = 'passenger' AND r.status = 'proposed'`);
+    return rows.map((r) => ({ rideId: r.ride_id, passengers: r.passengers }));
   }
 
   async otherActiveRides(userId: string, day: string, direction: Direction, exceptRideId: string, db: DbOrTx = this.db) {

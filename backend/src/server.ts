@@ -8,6 +8,7 @@ import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-pro
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
 import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
 import { FakePaymentProvider } from './shared/payments/payment-provider.js';
+import { BrevoMailProvider } from './shared/mail/brevo-mail-provider.js';
 import { ConsoleMailProvider } from './shared/mail/console-mail-provider.js';
 import { FcmPushProvider, type ServiceAccount } from './shared/push/push-provider.js';
 
@@ -36,8 +37,11 @@ const app = await buildApp({
     db: database.db,
     jwtSecret: config.JWT_SECRET,
     calendarKey: config.CALENDAR_ENCRYPTION_KEY,
-    // Développement uniquement (refusé en production par la config).
-    mail: new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
+    // Console : développement uniquement (refusée en production par la config).
+    mail:
+      config.MAIL_PROVIDER === 'brevo' && config.BREVO_API_KEY && config.MAIL_FROM
+        ? new BrevoMailProvider(config.BREVO_API_KEY, { email: config.MAIL_FROM, name: 'Uni-Moov' })
+        : new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
     // Développement uniquement (refusé en production par la config) ; prestataire réel en M4b.
     payments: new FakePaymentProvider(),

@@ -61,8 +61,7 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,8 +69,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -225,6 +223,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'J\'ai déjà un compte'**
   String get welcomeLogin;
+
+  /// No description provided for @demoTry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essayer la démo'**
+  String get demoTry;
+
+  /// No description provided for @demoSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Essayer Uni-Moov sans compte'**
+  String get demoSheetTitle;
+
+  /// No description provided for @demoSheetBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Des données fictives autour du campus d\'Annecy, sans réseau : rien n\'est envoyé ni payé.'**
+  String get demoSheetBody;
+
+  /// No description provided for @demoReady.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte prêt : Camille'**
+  String get demoReady;
+
+  /// No description provided for @demoReadyHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.'**
+  String get demoReadyHelp;
+
+  /// No description provided for @demoSignup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parcours d\'inscription'**
+  String get demoSignup;
+
+  /// No description provided for @demoSignupHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'De l\'adresse mail à la semaine type, avec n\'importe quelle adresse en univ-smb.fr.'**
+  String get demoSignupHelp;
+
+  /// No description provided for @demoBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉMO'**
+  String get demoBanner;
+
+  /// No description provided for @demoCodeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Démo : le code est {code}.'**
+  String demoCodeHint(String code);
 
   /// No description provided for @back.
   ///
@@ -1243,7 +1295,7 @@ abstract class AppLocalizations {
   /// No description provided for @joined.
   ///
   /// In fr, this message translates to:
-  /// **'C\'est noté : tu as choisi cette voiture.'**
+  /// **'Demande envoyée : le conducteur doit l\'accepter.'**
   String get joined;
 
   /// No description provided for @searchTitle.
@@ -1648,17 +1700,35 @@ abstract class AppLocalizations {
   /// **'Présence validée'**
   String get presenceValidated;
 
-  /// No description provided for @presencePaid.
+  /// No description provided for @presenceOnBoard.
   ///
   /// In fr, this message translates to:
-  /// **'Présence validée, trajet payé'**
-  String get presencePaid;
+  /// **'Présence validée : ta part est prélevée à l\'arrivée'**
+  String get presenceOnBoard;
 
-  /// No description provided for @presenceUnpaid.
+  /// No description provided for @tripArrived.
   ///
   /// In fr, this message translates to:
-  /// **'Présence validée, paiement en attente : recharge ton portefeuille'**
-  String get presenceUnpaid;
+  /// **'Arrivée à destination : ta part est prélevée à la clôture du trajet.'**
+  String get tripArrived;
+
+  /// No description provided for @tripLeftEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.'**
+  String get tripLeftEarly;
+
+  /// No description provided for @stopArrived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée'**
+  String get stopArrived;
+
+  /// No description provided for @stopLeftEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé avant l\'arrivée'**
+  String get stopLeftEarly;
 
   /// No description provided for @confirmPresence.
   ///
@@ -1975,7 +2045,7 @@ abstract class AppLocalizations {
   /// No description provided for @finishConfirmBody.
   ///
   /// In fr, this message translates to:
-  /// **'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.'**
+  /// **'Le suivi s\'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n\'es pas rémunéré pour eux.'**
   String get finishConfirmBody;
 
   /// No description provided for @finishConfirmCancel.
@@ -1983,6 +2053,162 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Continuer le trajet'**
   String get finishConfirmCancel;
+
+  /// No description provided for @finishMyTrip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer mon trajet'**
+  String get finishMyTrip;
+
+  /// No description provided for @finishMyTripTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer ton trajet maintenant ?'**
+  String get finishMyTripTitle;
+
+  /// No description provided for @finishMyTripBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n\'est pas rémunéré pour toi. Il est prévenu tout de suite.'**
+  String get finishMyTripBody;
+
+  /// No description provided for @finishMyTripConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer quand même'**
+  String get finishMyTripConfirm;
+
+  /// No description provided for @finishMyTripDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet terminé. Le conducteur est prévenu.'**
+  String get finishMyTripDone;
+
+  /// No description provided for @insufficientFundsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde insuffisant'**
+  String get insufficientFundsTitle;
+
+  /// No description provided for @insufficientFundsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l\'arrivée que ta part réelle.'**
+  String get insufficientFundsBody;
+
+  /// No description provided for @insufficientFundsTopup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recharger'**
+  String get insufficientFundsTopup;
+
+  /// No description provided for @insufficientFundsLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get insufficientFundsLater;
+
+  /// No description provided for @walletPayout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer vers mon compte'**
+  String get walletPayout;
+
+  /// No description provided for @walletPayoutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ton solde'**
+  String get walletPayoutTitle;
+
+  /// No description provided for @walletPayoutIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.'**
+  String get walletPayoutIntro;
+
+  /// No description provided for @walletPayoutAmount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant en euros'**
+  String get walletPayoutAmount;
+
+  /// No description provided for @walletPayoutIban.
+  ///
+  /// In fr, this message translates to:
+  /// **'IBAN'**
+  String get walletPayoutIban;
+
+  /// No description provided for @walletPayoutHolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Titulaire du compte'**
+  String get walletPayoutHolder;
+
+  /// No description provided for @walletPayoutSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {amount}'**
+  String walletPayoutSubmit(String amount);
+
+  /// No description provided for @walletPayoutDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrait demandé. Le virement arrive sous quelques jours.'**
+  String get walletPayoutDone;
+
+  /// No description provided for @walletPayoutRule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un retrait par semaine, {amount} minimum.'**
+  String walletPayoutRule(String amount);
+
+  /// No description provided for @walletPayoutAmountInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique un montant, par exemple 12,50.'**
+  String get walletPayoutAmountInvalid;
+
+  /// No description provided for @walletPayoutHolderInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique le nom du titulaire du compte.'**
+  String get walletPayoutHolderInvalid;
+
+  /// No description provided for @errorIbanInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet IBAN n\'est pas valide : vérifie-le.'**
+  String get errorIbanInvalid;
+
+  /// No description provided for @errorPayoutTooSmall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant de retrait trop faible.'**
+  String get errorPayoutTooSmall;
+
+  /// No description provided for @errorPayoutTooSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un seul retrait par semaine : réessaie plus tard.'**
+  String get errorPayoutTooSoon;
+
+  /// No description provided for @errorPayoutFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le virement a été refusé.'**
+  String get errorPayoutFailed;
+
+  /// No description provided for @errorInsufficientFunds.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde insuffisant.'**
+  String get errorInsufficientFunds;
+
+  /// No description provided for @errorNotOnBoard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta présence n\'est pas validée : pour renoncer, annule ta place.'**
+  String get errorNotOnBoard;
 
   /// No description provided for @cancelMyPlace.
   ///
@@ -2835,10 +3061,225 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Rester'**
   String get chatLeaveCancel;
+
+  /// No description provided for @notificationsBlockedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notifications bloquées'**
+  String get notificationsBlockedTitle;
+
+  /// No description provided for @notificationsBlockedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton téléphone bloque les notifications d\'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.'**
+  String get notificationsBlockedBody;
+
+  /// No description provided for @profileData.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes données'**
+  String get profileData;
+
+  /// No description provided for @profileDataBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupère tout ce qu\'Uni-Moov garde sur toi, ou supprime ton compte.'**
+  String get profileDataBody;
+
+  /// No description provided for @exportAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter mes données'**
+  String get exportAction;
+
+  /// No description provided for @exportSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes données Uni-Moov'**
+  String get exportSubject;
+
+  /// No description provided for @deleteAccountAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer mon compte'**
+  String get deleteAccountAction;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ton compte'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est définitif : ton compte ne pourra pas être récupéré.'**
+  String get deleteAccountIntro;
+
+  /// No description provided for @deleteAccountErased.
+  ///
+  /// In fr, this message translates to:
+  /// **'ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.'**
+  String get deleteAccountErased;
+
+  /// No description provided for @deleteAccountKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.'**
+  String get deleteAccountKept;
+
+  /// No description provided for @deleteAccountRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'tes trajets à venir. Les autres sont prévenus.'**
+  String get deleteAccountRides;
+
+  /// No description provided for @deleteAccountPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton mot de passe, pour confirmer'**
+  String get deleteAccountPassword;
+
+  /// No description provided for @deleteAccountConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer définitivement'**
+  String get deleteAccountConfirm;
+
+  /// No description provided for @deleteAccountCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder mon compte'**
+  String get deleteAccountCancel;
+
+  /// No description provided for @deleteAccountDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton compte est supprimé.'**
+  String get deleteAccountDone;
+
+  /// No description provided for @errorInvalidPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe incorrect. Réessaie.'**
+  String get errorInvalidPassword;
+
+  /// No description provided for @errorWalletNotEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton portefeuille n\'est pas vide : récupère ton solde avant de supprimer ton compte.'**
+  String get errorWalletNotEmpty;
+
+  /// No description provided for @errorRideInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Termine ton trajet en cours avant de supprimer ton compte.'**
+  String get errorRideInProgress;
+
+  /// No description provided for @deleteAccountErasedLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacés :'**
+  String get deleteAccountErasedLead;
+
+  /// No description provided for @deleteAccountKeptLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardés sans ton nom :'**
+  String get deleteAccountKeptLead;
+
+  /// No description provided for @deleteAccountRidesLead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulés :'**
+  String get deleteAccountRidesLead;
+
+  /// No description provided for @deleteAccountWalletTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portefeuille à vider d\'abord'**
+  String get deleteAccountWalletTitle;
+
+  /// No description provided for @deleteAccountWalletLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il te reste {amount} sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l\'équipe, {email}), puis reviens supprimer ton compte.'**
+  String deleteAccountWalletLeft(String amount, String email);
+
+  /// No description provided for @deleteAccountWriteTeam.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire à l\'équipe'**
+  String get deleteAccountWriteTeam;
+
+  /// No description provided for @deleteAccountMailSubject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récupérer mon solde avant de supprimer mon compte'**
+  String get deleteAccountMailSubject;
+
+  /// No description provided for @exportDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes données sont prêtes.'**
+  String get exportDone;
+
+  /// No description provided for @notificationsOpenSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les réglages'**
+  String get notificationsOpenSettings;
+
+  /// No description provided for @notificationsBlockedHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.'**
+  String get notificationsBlockedHelp;
+
+  /// No description provided for @noMailApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application de mail trouvée. Écris-nous à {email}.'**
+  String noMailApp(String email);
+
+  /// No description provided for @requestSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée'**
+  String get requestSent;
+
+  /// No description provided for @requestPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.'**
+  String requestPending(String driver);
+
+  /// No description provided for @requestWithdraw.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ma demande'**
+  String get requestWithdraw;
+
+  /// No description provided for @requestFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande à monter avec toi.'**
+  String get requestFrom;
+
+  /// No description provided for @requestApprove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepter'**
+  String get requestApprove;
+
+  /// No description provided for @requestReject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Refuser'**
+  String get requestReject;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -2847,8 +3288,7 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

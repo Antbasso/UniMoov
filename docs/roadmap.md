@@ -48,7 +48,7 @@ Travaille dans l'ordre. Chaque jalon est livrable, testé et documenté avant de
 
 ## M7 – Finitions pilote
 - Mode découverte, états vides/erreur, accessibilité, export et suppression de compte, internationalisation, journaux sans données personnelles, tests d'intégration du parcours complet, documentation de déploiement, performances (batterie en suivi, volume de positions).
-- **Accepté si** : parcours inscription → proposition → trajet → clôture → note passe en test d'intégration ; checklist RGPD du cahier remplie.
+- **Accepté si** : parcours inscription → proposition → trajet → clôture → note passe en test d'intégration ; checklist RGPD remplie (`docs/rgpd.md`).
 
 ## Mise en production du pilote
 VPS unique avec Docker Compose et Caddy, sauvegardes quotidiennes, fichier PMTiles de la région, supervision et alertes de quotas, publication Android (puis iOS si le compte Apple est pris en charge). Voir `docs/couts.md`.

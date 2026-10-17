@@ -109,6 +109,34 @@ export class PaymentsRepo {
       ON CONFLICT (ride_id, payer_id) DO NOTHING`);
   }
 
+  /** Prix final à la clôture : part et commission réelles, puis statut. */
+  async settlePayment(
+    p: { rideId: string; payerId: string; shareCents: number; commissionCents: number; paidAt: Date },
+    tx: Tx,
+  ): Promise<void> {
+    await tx.execute(sql`
+      UPDATE payments SET share_cents = ${p.shareCents}, commission_cents = ${p.commissionCents}, status = 'paid', paid_at = ${p.paidAt}
+      WHERE ride_id = ${p.rideId} AND payer_id = ${p.payerId}`);
+  }
+
+  /** Dernier retrait demandé (fréquence limitée). */
+  async lastPayoutAt(userId: string, tx: Tx): Promise<Date | null> {
+    const { rows } = await tx.execute<{ at: Date | null }>(sql`
+      SELECT max(created_at) AS at FROM payouts WHERE user_id = ${userId} AND status <> 'failed'`);
+    return rows[0]?.at ? new Date(rows[0].at) : null;
+  }
+
+  async insertPayout(p: { userId: string; amountCents: number; ibanLast4: string }, tx: Tx): Promise<string> {
+    const { rows } = await tx.execute<{ id: string }>(sql`
+      INSERT INTO payouts (user_id, amount_cents, status, iban_last4)
+      VALUES (${p.userId}, ${p.amountCents}, 'pending', ${p.ibanLast4}) RETURNING id`);
+    return rows[0]!.id;
+  }
+
+  async setPayoutResult(id: string, status: 'pending' | 'paid' | 'failed', providerRef: string | null, tx: Tx): Promise<void> {
+    await tx.execute(sql`UPDATE payouts SET status = ${status}, provider_ref = ${providerRef} WHERE id = ${id}`);
+  }
+
   async setPaymentStatus(rideId: string, payerId: string, status: string, paidAt: Date | null, tx: Tx): Promise<void> {
     await tx.execute(sql`
       UPDATE payments SET status = ${status}, paid_at = ${paidAt} WHERE ride_id = ${rideId} AND payer_id = ${payerId}`);

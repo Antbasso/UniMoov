@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/chat.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class ChatApi {
   Future<List<Conversation>> conversations();
@@ -111,4 +112,6 @@ class DioChatApi implements ChatApi {
       guardApi(() => _dio.delete<void>('/api/v1/conversations/$id/members/me'));
 }
 
-final chatApiProvider = Provider<ChatApi>((ref) => DioChatApi(ref.watch(dioProvider)));
+final chatApiProvider = Provider<ChatApi>(
+  (ref) => ref.watch(demoProvider) ?? DioChatApi(ref.watch(dioProvider)),
+);

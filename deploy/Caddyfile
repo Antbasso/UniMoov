@@ -1,0 +1,27 @@
+# Production : HTTPS automatique (Let's Encrypt) devant l'API, docs/deploiement.md.
+# Aucun journal d'accès (ni IP, ni paramètres d'URL : le jeton du WebSocket y passe).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# Fond de carte PMTiles (fichier statique, lectures partielles), s'il est posé dans tiles/.
+	handle_path /tiles/* {
+		root * /srv/tiles
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	handle {
+		reverse_proxy api:3000
+	}
+}

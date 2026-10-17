@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/trust.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class TrustApi {
   /// Palier de pénalité si j'annule maintenant (annulation après acceptation).
@@ -96,4 +97,6 @@ class DioTrustApi implements TrustApi {
   );
 }
 
-final trustApiProvider = Provider<TrustApi>((ref) => DioTrustApi(ref.watch(dioProvider)));
+final trustApiProvider = Provider<TrustApi>(
+  (ref) => ref.watch(demoProvider) ?? DioTrustApi(ref.watch(dioProvider)),
+);

@@ -12,6 +12,9 @@ import {
 } from 'fastify-type-provider-zod';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
+import { AccountRepo } from './modules/account/repo.js';
+import { accountRoutes } from './modules/account/routes.js';
+import { AccountService } from './modules/account/service.js';
 import { AuthRepo } from './modules/auth/repo.js';
 import { CalendarRepo } from './modules/calendar/repo.js';
 import { calendarRoutes } from './modules/calendar/routes.js';
@@ -71,6 +74,7 @@ declare module 'fastify' {
       trust: TrustService;
       chat: ChatService;
       notifications: NotificationService;
+      account: AccountService;
     };
   }
 }
@@ -111,7 +115,8 @@ export interface AppDeps {
 export async function buildApp({ config, pingDb, logStream, modules }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     // Derrière Caddy en production : l'IP réelle sert à la limite de débit, jamais aux journaux.
-    trustProxy: config.TRUST_PROXY ?? false,
+    // Un seul saut de confiance (Caddy) : un X-Forwarded-For forgé par le client est ignoré.
+    trustProxy: config.TRUST_PROXY ? (_address: string, hop: number) => hop === 0 : false,
     logger: {
       level: config.LOG_LEVEL,
       ...(logStream ? { stream: logStream } : {}),
@@ -122,6 +127,8 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           method: request.method,
           route: request.routeOptions.url ?? 'unknown',
         }),
+        // Sans les champs annexes (le `detail` de PostgreSQL recopie les valeurs fautives).
+        err: logError,
       },
     },
   }).withTypeProvider<ZodTypeProvider>();
@@ -152,6 +159,19 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
 
   await app.register(rateLimit, {
     global: false,
+    // Par utilisateur quand le jeton est valide (tout un campus partage une IP) ; sinon par IP.
+    // Le jeton est vérifié : un identifiant inventé ne donne pas un nouveau quota.
+    keyGenerator: (request) => {
+      const header = request.headers.authorization;
+      if (header?.startsWith('Bearer ') && app.hasDecorator('jwt')) {
+        try {
+          return `user:${app.jwt.verify<{ sub: string }>(header.slice(7)).sub}`;
+        } catch {
+          // Jeton invalide : la route le refusera ; compté sur l'IP.
+        }
+      }
+      return request.ip;
+    },
     ...(modules?.rateLimit === false ? { allowList: () => true } : {}),
   });
 
@@ -214,6 +234,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),
       trust,
+      notifier,
     );
     const tracking = new TrackingService(hub, lifecycle, ridesRepo, settings, () => clock().getTime());
     const matchingService = new MatchingService(
@@ -225,9 +246,16 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         // indépendant du calcul d'itinéraire (appel externe qui peut échouer).
         await chat.syncRideChat(rideId).catch((err: unknown) => app.log.error({ err }, 'ride chat sync'));
         await ridesService.onRideChanged(rideId);
+        await lifecycle.onParticipantsChanged(rideId);
       },
       trust,
       notifier,
+      async (userId, rideId, detourS) => {
+        const max = await ridesService.maxPassengerPrice(rideId, userId, detourS);
+        if (max !== null && (await wallet.wallet(userId)).balanceCents < max) {
+          throw new AppError(402, 'insufficient_funds', 'Solde insuffisant pour ce trajet : recharge ton portefeuille');
+        }
+      },
     );
     const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
       await matchingService.onProfileChanged(userId);
@@ -242,17 +270,35 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust, chat, notifications });
+    const accountService = new AccountService({
+      repo: new AccountRepo(modules.db),
+      checkPassword: (userId, password) => authService.checkPassword(userId, password),
+      cancelRide: (userId, rideId) => matchingService.cancel(userId, rideId),
+      declineRide: (userId, rideId) => matchingService.decline(userId, rideId),
+      disconnect: (userId) => userHub.disconnect(userId),
+      clock,
+      log: (data, message) => app.log.error(data, message),
+    });
+    app.decorate('services', {
+      calendar: calendarService,
+      matching: matchingService,
+      lifecycle,
+      trust,
+      chat,
+      notifications,
+      account: accountService,
+    });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(
       async (api) => {
         await api.register(authRoutes, { service: authService });
         await api.register(profileRoutes, { service: profileService });
+        await api.register(accountRoutes, { service: accountService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
         await api.register(ridesRoutes, { service: ridesService, lifecycle });
-        await api.register(walletRoutes, { service: wallet });
+        await api.register(walletRoutes, { service: wallet, clock });
         await api.register(trustRoutes, { service: trust });
         await api.register(chatRoutes, { service: chat });
         await api.register(notificationRoutes, { service: notifications });
@@ -267,6 +313,18 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
   }
 
   return app;
+}
+
+/** Erreur réduite au type, au code, au message et à la pile. */
+export function logError(error: unknown): { type: string; message: string; stack: string; code?: string } {
+  if (!(error instanceof Error)) return { type: typeof error, message: '', stack: '' };
+  const code = (error as { code?: unknown }).code;
+  return {
+    type: error.name,
+    message: error.message,
+    stack: error.stack ?? '',
+    ...(typeof code === 'string' ? { code } : {}),
+  };
 }
 
 function clientError(status: number): { code: string; message: string } {

@@ -26,6 +26,10 @@ export interface StopView {
   /** Passager : monté (signalé par le conducteur), présence validée par proximité. */
   pickedUp: boolean;
   presenceValidated: boolean;
+  /** Passager arrivé à destination (suivi). */
+  arrived: boolean;
+  /** Passager qui a terminé son trajet, arrivé ou parti avant (clôture de sa part). */
+  ended: boolean;
 }
 
 export interface PriceView extends PriceEstimate {
@@ -130,6 +134,50 @@ export class RidesService {
     });
   }
 
+  /**
+   * Prix maximal pour un passager (cahier §5, décision du 17/10/2026) : ce qu'il paierait s'il
+   * était le seul passager présent. Son solde doit le couvrir pour accepter, et il est retenu au
+   * départ ; le prix final, partagé entre les présents, ne le dépasse jamais. Avant le calcul de
+   * l'itinéraire, distance estimée (ligne droite × facteur routier, plus son détour).
+   */
+  /** Distance de facturation : le tracé calculé, sinon l'estimation utilisée pour la retenue. */
+  async billingDistance(rideId: string): Promise<number | null> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride) return null;
+    if (ride.distanceM !== null) return ride.distanceM;
+    const members = (await this.repo.members(rideId)).filter(isAccepted);
+    const home = members.find((m) => m.role === 'driver')?.home;
+    if (!home) return null;
+    const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
+    const detours = members.filter((m) => m.role === 'passenger').reduce((sum, m) => sum + (m.detourS ?? 0) * speed, 0);
+    return Math.round(distanceMeters(home, ride.campus) * (await this.settings.get('matching.roadFactor')) + detours);
+  }
+
+  /** Replan après le départ (passagers retirés faute de solde) : le tracé raccourcit. */
+  async replanStarted(rideId: string): Promise<void> {
+    await this.plan(rideId);
+  }
+
+  async maxPassengerPrice(rideId: string, passengerId: string, detourOverrideS?: number | null): Promise<number | null> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride || ride.consumptionLPer100km === null) return null;
+    const members = await this.repo.members(rideId);
+    const driver = members.find((m) => m.role === 'driver');
+    const me = members.find((m) => m.userId === passengerId);
+    let distanceM = ride.distanceM;
+    if (distanceM === null) {
+      if (!driver?.home) return null;
+      distanceM = distanceMeters(driver.home, ride.campus) * (await this.settings.get('matching.roadFactor'));
+    }
+    // Pas encore dans l'itinéraire calculé : son détour s'ajoute.
+    if (detourOverrideS !== undefined || !me || me.stopOrder === null || ride.distanceM === null) {
+      const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
+      distanceM += (detourOverrideS ?? me?.detourS ?? 0) * speed;
+    }
+    const estimate = await this.estimate(ride, Math.round(distanceM), 2);
+    return estimate?.passengerPaysCents ?? null;
+  }
+
   /** Participant accepté d'un trajet confirmé, sinon 403 (ou 404 si le trajet n'existe pas). */
   private async access(userId: string, rideId: string): Promise<{ ride: RideInfo; members: Member[]; me: Member }> {
     const ride = await this.repo.ride(rideId);
@@ -148,7 +196,8 @@ export class RidesService {
 
   async get(userId: string, rideId: string): Promise<RideView> {
     let { ride, members, me } = await this.access(userId, rideId);
-    if (!ride.plannedAt) {
+    // Plan figé une fois le trajet commencé : le prix retenu au départ en dépend.
+    if (!ride.plannedAt && ride.status === 'confirmed') {
       await this.plan(rideId);
       ({ ride, members, me } = await this.access(userId, rideId));
     }
@@ -174,6 +223,8 @@ export class RidesService {
       isMeetingPoint: false,
       pickedUp: false,
       presenceValidated: false,
+      arrived: false,
+      ended: false,
     };
     // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
     // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
@@ -196,6 +247,8 @@ export class RidesService {
         isMeetingPoint: pickup.isMeetingPoint,
         pickedUp: m.status === 'picked_up',
         presenceValidated: m.presenceValidatedAt !== null,
+        arrived: m.arrivedAt !== null,
+        ended: m.endedAt !== null,
       };
     };
     const driverStop = driver ? person(driver, 'driver') : null;

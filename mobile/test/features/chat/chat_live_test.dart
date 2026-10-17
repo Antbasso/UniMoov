@@ -20,6 +20,8 @@ class _Connection implements UserSocketConnection {
   @override
   Future<int?> get done => _done.future;
 
+  bool get closed => _done.isCompleted;
+
   void serverClose(int code) {
     if (!_done.isCompleted) _done.complete(code);
   }
@@ -108,4 +110,36 @@ void main() {
     expect(connector.connections, hasLength(2));
     await live.dispose();
   });
+
+  test('pause pendant la connexion puis reprise : un seul socket reste ouvert', () async {
+    final gate = Completer<void>();
+    final connector = _SlowConnector(gate.future);
+    final live = ChatLive(connector, retryDelay: (_, _) => const Duration(milliseconds: 10));
+    live.start(); // connexion en cours…
+    await _settle();
+    await live.pause(); // …l'application passe en arrière-plan…
+    live.start(); // …et revient avant la fin de la première connexion.
+    gate.complete();
+    await _settle();
+    final open = connector.connections.where((c) => !c.closed).toList();
+    expect(open, hasLength(1));
+    await live.dispose();
+    expect(connector.connections.every((c) => c.closed), isTrue);
+  });
+}
+
+/// Connexion lente : se termine quand le test l'autorise.
+class _SlowConnector implements UserSocketConnector {
+  _SlowConnector(this.gate);
+
+  final Future<void> gate;
+  final List<_Connection> connections = [];
+
+  @override
+  Future<UserSocketConnection> connect() async {
+    await gate;
+    final c = _Connection(accepted: true);
+    connections.add(c);
+    return c;
+  }
 }

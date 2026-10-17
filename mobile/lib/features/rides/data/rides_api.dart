@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../../proposals/domain/proposal.dart';
 import '../domain/ride.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class RidesApi {
   Future<RideDetails> ride(String id);
@@ -20,7 +21,7 @@ abstract interface class RidesApi {
   Future<NavigationPlan> navigation(String id);
 
   /// Passager : présence validée par proximité ; renvoie `true` si le paiement est passé.
-  Future<bool> presence(String id);
+  Future<void> presence(String id);
   Future<void> finish(String id);
 }
 
@@ -73,13 +74,13 @@ class DioRidesApi implements RidesApi {
   });
 
   @override
-  Future<bool> presence(String id) => guardApi(() async {
-    final response = await _dio.post<Map<String, dynamic>>('/api/v1/rides/$id/presence');
-    return response.data!['payment'] != 'failed';
-  });
+  Future<void> presence(String id) =>
+      guardApi(() => _dio.post<Map<String, dynamic>>('/api/v1/rides/$id/presence'));
 
   @override
   Future<void> finish(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/finish'));
 }
 
-final ridesApiProvider = Provider<RidesApi>((ref) => DioRidesApi(ref.watch(dioProvider)));
+final ridesApiProvider = Provider<RidesApi>(
+  (ref) => ref.watch(demoProvider) ?? DioRidesApi(ref.watch(dioProvider)),
+);

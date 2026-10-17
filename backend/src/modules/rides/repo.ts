@@ -19,6 +19,7 @@ export interface RideInfo {
   durationS: number | null;
   routeEstimated: boolean;
   plannedAt: Date | null;
+  startedAt: Date | null;
   campus: LatLon & { name: string };
   /** Consommation du véhicule du conducteur (null s'il l'a retiré). */
   consumptionLPer100km: number | null;
@@ -39,6 +40,11 @@ export interface Member {
   stopOrder: number | null;
   eta: Date | null;
   presenceValidatedAt: Date | null;
+  /** Arrivé à destination (passager) : son trajet est payé à la clôture. */
+  arrivedAt: Date | null;
+  /** Trajet terminé de son côté (arrivé, ou sorti avant l'arrivée). */
+  endedAt: Date | null;
+  detourS: number | null;
 }
 
 export const isAccepted = (m: Member) => m.status === 'accepted' || m.status === 'picked_up';
@@ -71,13 +77,14 @@ export class RidesRepo {
       duration_s: number | null;
       route_estimated: boolean;
       planned_at: Date | null;
+      started_at: Date | null;
       campus_name: string;
       campus_lat: number;
       campus_lon: number;
       consumption: string | null;
     }>(sql`
       SELECT r.id, r.driver_id, r.direction, r.day::text, r.target_time, r.status, r.seats_total,
-             r.distance_m, r.duration_s, r.route_estimated, r.planned_at,
+             r.distance_m, r.duration_s, r.route_estimated, r.planned_at, r.started_at,
              c.name AS campus_name, ST_Y(c.location::geometry) AS campus_lat,
              ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption
       FROM rides r JOIN campuses c ON c.id = r.campus_id
@@ -98,6 +105,7 @@ export class RidesRepo {
       durationS: r.duration_s,
       routeEstimated: r.route_estimated,
       plannedAt: r.planned_at ? new Date(r.planned_at) : null,
+      startedAt: r.started_at ? new Date(r.started_at) : null,
       campus: { name: r.campus_name, lat: Number(r.campus_lat), lon: Number(r.campus_lon) },
       consumptionLPer100km: r.consumption === null ? null : Number(r.consumption),
     };
@@ -121,12 +129,15 @@ export class RidesRepo {
       stop_order: number | null;
       eta: Date | null;
       presence_validated_at: Date | null;
+      arrived_at: Date | null;
+      ended_at: Date | null;
+      detour_s: number | null;
     }>(sql`
       SELECT p.user_id, p.role, p.status, u.first_name, u.last_name, u.photo_url,
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at
+             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -145,6 +156,9 @@ export class RidesRepo {
       stopOrder: r.stop_order,
       eta: r.eta ? new Date(r.eta) : null,
       presenceValidatedAt: r.presence_validated_at ? new Date(r.presence_validated_at) : null,
+      arrivedAt: r.arrived_at ? new Date(r.arrived_at) : null,
+      endedAt: r.ended_at ? new Date(r.ended_at) : null,
+      detourS: r.detour_s,
     }));
   }
 
@@ -205,6 +219,13 @@ export class RidesRepo {
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
   }
 
+  async declinePendingRequests(rideId: string, tx: Tx): Promise<string[]> {
+    const { rows } = await tx.execute<{ user_id: string }>(sql`
+      UPDATE ride_participants SET status = 'declined' WHERE ride_id = ${rideId} AND status = 'requested'
+      RETURNING user_id`);
+    return rows.map((r) => r.user_id);
+  }
+
   async setRideStatus(
     rideId: string,
     status: 'in_progress' | 'completed',
@@ -225,7 +246,15 @@ export class RidesRepo {
   async setParticipant(
     rideId: string,
     userId: string,
-    fields: { status?: 'picked_up' | 'absent'; pickedUpAt?: Date; presenceValidatedAt?: Date; amountCents?: number },
+    fields: {
+      status?: 'picked_up' | 'absent' | 'cancelled';
+      pickedUpAt?: Date;
+      presenceValidatedAt?: Date;
+      amountCents?: number;
+      cancelledAt?: Date;
+      arrivedAt?: Date;
+      endedAt?: Date;
+    },
     tx: Tx,
   ): Promise<void> {
     await tx

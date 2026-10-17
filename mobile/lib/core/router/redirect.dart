@@ -27,8 +27,10 @@ abstract final class AppRoutes {
   static String rideDeparture(String id) => '/rides/$id/departure';
   static String rideLocation(String id) => '/rides/$id/location';
   static const wallet = '/wallet';
+  static const walletPayout = '/wallet/payout';
   static const reliability = '/profile/reliability';
   static const notificationSettings = '/profile/notifications';
+  static const deleteAccount = '/profile/delete';
   static const messages = '/messages';
   static String conversation(String id) => '/messages/$id';
 

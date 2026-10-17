@@ -29,6 +29,24 @@ const V4_BLOCKED: [string, number][] = [
   ['240.0.0.0', 4],
 ];
 
+const V6_BLOCKED = new net.BlockList();
+for (const [prefix, bits] of [
+  ['::', 96], // non spécifiée, boucle locale, IPv4 compatible
+  ['::ffff:0:0', 96], // IPv4 mappée
+  ['64:ff9b::', 96], // NAT64
+  ['64:ff9b:1::', 48],
+  ['100::', 64], // à jeter
+  ['2001::', 32], // Teredo
+  ['2001:db8::', 32], // documentation
+  ['2002::', 16], // 6to4
+  ['fc00::', 7], // local unique
+  ['fe80::', 10], // lien local
+  ['fec0::', 10], // site local
+  ['ff00::', 8], // multidiffusion
+] as const) {
+  V6_BLOCKED.addSubnet(prefix, bits, 'ipv6');
+}
+
 function v4ToInt(ip: string): number {
   return ip.split('.').reduce((acc, part) => (acc << 8) + Number(part), 0) >>> 0;
 }
@@ -44,15 +62,8 @@ export function isPublicAddress(ip: string): boolean {
     });
   }
   if (version === 6) {
-    const lower = ip.toLowerCase();
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(lower);
-    if (mapped) return isPublicAddress(mapped[1]!);
-    if (lower === '::' || lower === '::1') return false;
-    const first = parseInt(lower.split(':')[0] || '0', 16);
-    if ((first & 0xfe00) === 0xfc00) return false; // fc00::/7 local unique
-    if ((first & 0xffc0) === 0xfe80) return false; // fe80::/10 lien local
-    if ((first & 0xff00) === 0xff00) return false; // multidiffusion
-    return true;
+    // Une adresse IPv4 masquée (::ffff:7f00:1, NAT64, 6to4…) ou réservée ne passe jamais.
+    return !V6_BLOCKED.check(ip, 'ipv6');
   }
   return false;
 }
@@ -69,7 +80,9 @@ export function normalizeCalendarUrl(raw: string): URL {
   if (url.port && url.port !== '443') throw new UnsafeUrlError('Port non autorisé');
   if (url.username || url.password) throw new UnsafeUrlError('Identifiants interdits dans le lien');
   const host = url.hostname.replace(/^\[|\]$/g, '');
-  if (net.isIP(host) && !isPublicAddress(host)) throw new UnsafeUrlError('Adresse non autorisée');
+  // Un agenda se publie sous un nom de domaine ; une adresse IP en clair échappe au contrôle
+  // fait à la résolution DNS (Node ne résout pas un littéral) : refusée.
+  if (net.isIP(host)) throw new UnsafeUrlError('Adresse non autorisée');
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal')) {
     throw new UnsafeUrlError('Adresse non autorisée');
   }

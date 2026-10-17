@@ -12,6 +12,7 @@ import '../../trust/presentation/cancel_sheet.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
+import '../../wallet/presentation/insufficient_funds_dialog.dart';
 
 /// Détail d'une proposition : informations publiques seulement, puis accepter, refuser ou
 /// voir d'autres voitures.
@@ -50,7 +51,11 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
       await action();
       if (popAfter && router.canPop()) router.pop();
     } on ApiException catch (error) {
-      if (mounted) setState(() => _errorCode = error.code);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // Solde trop bas pour le prix maximal : explication et recharge (cahier §5).
+      if (error.code == 'insufficient_funds') return showInsufficientFunds(context);
+      setState(() => _errorCode = error.code);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -75,6 +80,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         ],
       );
     }
+    // Trajet commencé ou terminé : plus d'annulation ici (l'écran du trajet s'en charge).
+    final open = proposal.rideStatus == 'proposed' || proposal.rideStatus == 'confirmed';
 
     final day = formatDayInline(proposal.day, l10n.localeName);
     final title = proposal.direction == Direction.toCampus
@@ -88,6 +95,10 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
       ),
       ProposalState.waiting => UmChip(
         label: l10n.proposalWaiting,
+        icon: Icons.hourglass_empty_rounded,
+      ),
+      ProposalState.requested => UmChip(
+        label: l10n.requestSent,
         icon: Icons.hourglass_empty_rounded,
       ),
       ProposalState.cancelled => UmChip(
@@ -128,6 +139,14 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                 : () => _run(() => controller.decline(proposal.id), popAfter: true),
           ),
         ],
+        if (proposal.state == ProposalState.requested)
+          UmButton(
+            label: l10n.requestWithdraw,
+            variant: UmButtonVariant.ghost,
+            expand: true,
+            loading: _busy,
+            onPressed: () => _run(() => controller.decline(proposal.id), popAfter: true),
+          ),
         if (proposal.state == ProposalState.confirmed)
           UmButton(
             label: l10n.rideMapOpen,
@@ -135,7 +154,7 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
             onPressed: () => context.push(AppRoutes.ride(proposal.id)),
           ),
         // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
-        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled)
+        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled && open)
           UmButton(
             label: proposal.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
             variant: UmButtonVariant.ghost,
@@ -145,7 +164,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         // Le conducteur engagé peut proposer des places, même avant la confirmation.
         if (proposal.isDriver &&
             proposal.myStatus == 'accepted' &&
-            proposal.state != ProposalState.cancelled)
+            proposal.state != ProposalState.cancelled &&
+            open)
           UmButton(
             label: l10n.rideAddPassengers,
             variant: UmButtonVariant.secondary,
@@ -158,6 +178,13 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
           Align(alignment: Alignment.centerLeft, child: status),
           const SizedBox(height: UmSpace.s4),
         ],
+        if (proposal.state == ProposalState.requested) ...[
+          Text(
+            l10n.requestPending(proposal.driver!.firstName),
+            style: UmText.body.copyWith(color: c.ink),
+          ),
+          const SizedBox(height: UmSpace.s4),
+        ],
         Text(
           proposal.isDriver ? l10n.proposalPassengersIntro : l10n.proposalDriverIntro,
           style: UmText.label.copyWith(color: c.brandStrong),
@@ -168,7 +195,34 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         for (final person in proposal.isDriver ? proposal.passengers : [proposal.driver!])
           Padding(
             padding: const EdgeInsets.only(bottom: UmSpace.s3),
-            child: PersonCard(person: person),
+            child: PersonCard(
+              person: person,
+              // Conducteur : une demande de place attend sa réponse.
+              actions: proposal.isDriver && person.isRequest
+                  ? [
+                      UmButton(
+                        label: l10n.requestApprove,
+                        loading: _busy,
+                        onPressed: () => _run(
+                          () => controller.answerRequest(proposal.id, person.userId, approve: true),
+                        ),
+                      ),
+                      UmButton(
+                        label: l10n.requestReject,
+                        variant: UmButtonVariant.ghost,
+                        onPressed: _busy
+                            ? null
+                            : () => _run(
+                                () => controller.answerRequest(
+                                  proposal.id,
+                                  person.userId,
+                                  approve: false,
+                                ),
+                              ),
+                      ),
+                    ]
+                  : const [],
+            ),
           ),
         // Le détour est déjà dans la carte ; un texte collé sous son ombre manquerait de contraste.
         const SizedBox(height: UmSpace.s4),
@@ -184,16 +238,23 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
 
 /// Personne avant acceptation : prénom, score, détour, secteur approximatif.
 class PersonCard extends StatelessWidget {
-  const PersonCard({super.key, required this.person});
+  const PersonCard({super.key, required this.person, this.actions = const []});
 
   final PublicPerson person;
+
+  /// Réponse à une demande de place (conducteur).
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final details = l10n.personDetails(person.scoreOutOfFive, person.detourMinutes);
     return UmCard(
       title: person.firstName,
-      body: l10n.personDetails(person.scoreOutOfFive, person.detourMinutes),
+      body: person.isRequest ? '${l10n.requestFrom}\n$details' : details,
+      child: actions.isEmpty
+          ? null
+          : Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: actions),
     );
   }
 }

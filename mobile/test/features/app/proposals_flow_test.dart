@@ -67,6 +67,26 @@ void main() {
     expect(find.text('En attente'), findsOneWidget);
   });
 
+  testWidgets('solde insuffisant : explication, puis recharge en un geste', (tester) async {
+    backend.requiredBalanceCents = 500;
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    await tapText(tester, 'Accepter');
+    expect(find.text('Solde insuffisant'), findsOneWidget);
+    await tapText(tester, 'Plus tard');
+    expect(find.text('Accepter'), findsOneWidget);
+
+    await tapText(tester, 'Accepter');
+    await tapText(tester, 'Recharger');
+    expect(find.text('Ton portefeuille'), findsOneWidget);
+    await tester.tap(find.textContaining('Recharger 10,00'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Accepter');
+    expect(find.text('Tu as accepté. On attend la réponse de l\'autre.'), findsOneWidget);
+  });
+
   testWidgets('conducteur : voit ses passagers, sans « voir d’autres »', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     await tester.tap(find.text('Voir').last);
@@ -74,6 +94,38 @@ void main() {
     expect(find.text('Tes passagers'), findsOneWidget);
     expect(find.text('Hugo'), findsOneWidget);
     expect(find.text('Voir d\'autres voitures'), findsNothing);
+  });
+
+  testWidgets('conducteur : accepter une demande de place', (tester) async {
+    backend.weeks[week]![1] = backend.weeks[week]![1].copyWith(
+      passengers: const [
+        PublicPerson(
+          userId: 'p9',
+          firstName: 'Inès',
+          reliabilityScore: 0.9,
+          detourMinutes: 3,
+          status: 'requested',
+        ),
+      ],
+    );
+    await launchApp(tester, backend: backend, storage: storage);
+    await tester.tap(find.text('Voir').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Demande à monter avec toi.'), findsOneWidget);
+    await tapText(tester, 'Accepter', index: 0);
+    expect(backend.requestAnswers.single, (rideId: 'from-monday', userId: 'p9', approve: true));
+    expect(find.textContaining('Demande à monter avec toi.'), findsNothing);
+  });
+
+  testWidgets('passager : demande en attente, puis retirée', (tester) async {
+    backend.weeks[week]![0] = backend.weeks[week]![0].copyWith(myStatus: 'requested');
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    expect(find.text('Demande envoyée'), findsOneWidget);
+    expect(find.textContaining('Nathan doit accepter ta demande'), findsOneWidget);
+    expect(find.text('Accepter'), findsNothing);
+    await tapText(tester, 'Retirer ma demande');
+    expect(find.textContaining('avec Nathan'), findsNothing);
   });
 
   testWidgets('refuser retire la proposition', (tester) async {
@@ -107,7 +159,7 @@ void main() {
     expect(find.textContaining('avec Chloé'), findsOneWidget);
     await tapText(tester, 'Choisir');
     expect(backend.joined, ['other-ride']);
-    expect(find.text('C\'est noté : tu as choisi cette voiture.'), findsOneWidget);
+    expect(find.text('Demande envoyée : le conducteur doit l\'accepter.'), findsOneWidget);
     expect(find.text('Ta semaine'), findsOneWidget);
   });
 

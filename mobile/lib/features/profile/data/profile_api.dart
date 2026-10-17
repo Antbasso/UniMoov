@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/me.dart';
+import '../../demo/demo_mode.dart';
 
 /// Routes du profil (docs/api.md, « Profil ») ; toutes exigent un JWT.
 abstract interface class ProfileApi {
@@ -81,4 +82,6 @@ class DioProfileApi implements ProfileApi {
   Future<void> removePause(String id) => guardApi(() => _dio.delete<void>('$_me/pauses/$id'));
 }
 
-final profileApiProvider = Provider<ProfileApi>((ref) => DioProfileApi(ref.watch(dioProvider)));
+final profileApiProvider = Provider<ProfileApi>(
+  (ref) => ref.watch(demoProvider) ?? DioProfileApi(ref.watch(dioProvider)),
+);
