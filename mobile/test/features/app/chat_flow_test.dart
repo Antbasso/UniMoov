@@ -101,7 +101,7 @@ void main() {
       rideId: 'ride-1',
       archived: true,
       unread: 0,
-      members: const [
+      members: [
         ChatMember(userId: me, firstName: 'Léa'),
         nathan,
       ],
