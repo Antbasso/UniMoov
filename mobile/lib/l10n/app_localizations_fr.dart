@@ -1698,4 +1698,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get notificationsBlockedHelp =>
       'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.';
+
+  @override
+  String noMailApp(String email) {
+    return 'Aucune application de mail trouvée. Écris-nous à $email.';
+  }
 }

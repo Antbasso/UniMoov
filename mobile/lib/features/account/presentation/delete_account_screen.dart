@@ -50,14 +50,24 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       messenger.showSnackBar(SnackBar(content: Text(l10n.deleteAccountDone)));
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
+    } on Object {
+      // Erreur hors API (stockage local) : message générique, compte inchangé côté app.
+      if (mounted) setState(() => _errorCode = 'unknown');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _writeToTeam() => ref
-      .read(navLauncherProvider)
-      .open(supportMailto(subject: AppLocalizations.of(context).deleteAccountMailSubject));
+  Future<void> _writeToTeam() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await ref
+        .read(navLauncherProvider)
+        .open(supportMailto(subject: l10n.deleteAccountMailSubject))
+        .catchError((Object _) => false);
+    // Pas d'application de mail : l'adresse reste affichée à l'écran.
+    if (!opened) messenger.showSnackBar(SnackBar(content: Text(l10n.noMailApp(supportEmail))));
+  }
 
   @override
   Widget build(BuildContext context) {

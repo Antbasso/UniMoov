@@ -3007,6 +3007,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.'**
   String get notificationsBlockedHelp;
+
+  /// No description provided for @noMailApp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune application de mail trouvée. Écris-nous à {email}.'**
+  String noMailApp(String email);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

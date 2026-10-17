@@ -240,6 +240,9 @@ class _DataSectionState extends ConsumerState<_DataSection> {
       messenger.showSnackBar(SnackBar(content: Text(l10n.exportDone)));
     } on ApiException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(l10n, error.code))));
+    } on Object {
+      // Feuille de partage indisponible.
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

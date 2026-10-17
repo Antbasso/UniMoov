@@ -104,6 +104,10 @@ void main() {
     expect(fieldLabeled('Ton mot de passe, pour confirmer'), findsNothing);
     await tapText(tester, 'Écrire à l\'équipe');
     expect(launcher.opened.single.scheme, 'mailto');
+    // Sans application de mail : l'adresse est donnée.
+    launcher.succeed = false;
+    await tapText(tester, 'Écrire à l\'équipe');
+    expect(find.textContaining('Aucune application de mail'), findsOneWidget);
     expect(backend.deletedAccounts, isEmpty);
   });
 

@@ -943,5 +943,13 @@
   "deleteAccountMailSubject": "Récupérer mon solde avant de supprimer mon compte",
   "exportDone": "Tes données sont prêtes.",
   "notificationsOpenSettings": "Ouvrir les réglages",
-  "notificationsBlockedHelp": "Ces choix s'appliqueront dès que tu auras réactivé les notifications."
+  "notificationsBlockedHelp": "Ces choix s'appliqueront dès que tu auras réactivé les notifications.",
+  "noMailApp": "Aucune application de mail trouvée. Écris-nous à {email}.",
+  "@noMailApp": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  }
 }
