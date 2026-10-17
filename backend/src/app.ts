@@ -159,6 +159,19 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
 
   await app.register(rateLimit, {
     global: false,
+    // Par utilisateur quand le jeton est valide (tout un campus partage une IP) ; sinon par IP.
+    // Le jeton est vérifié : un identifiant inventé ne donne pas un nouveau quota.
+    keyGenerator: (request) => {
+      const header = request.headers.authorization;
+      if (header?.startsWith('Bearer ') && app.hasDecorator('jwt')) {
+        try {
+          return `user:${app.jwt.verify<{ sub: string }>(header.slice(7)).sub}`;
+        } catch {
+          // Jeton invalide : la route le refusera ; compté sur l'IP.
+        }
+      }
+      return request.ip;
+    },
     ...(modules?.rateLimit === false ? { allowList: () => true } : {}),
   });
 

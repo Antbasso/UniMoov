@@ -365,14 +365,29 @@ export class MatchingRepo {
       .where(and(eq(rideParticipants.rideId, rideId), ne(rideParticipants.status, 'declined')));
   }
 
-  /** Retire un utilisateur des propositions non confirmées d'un jour (horaire modifié). */
-  async releaseUnconfirmed(userId: string, day: string, db: DbOrTx = this.db): Promise<void> {
+  /**
+   * Retire un utilisateur des propositions non confirmées d'un jour (horaire modifié). Un trajet
+   * qu'il conduit et qu'un passager a déjà accepté n'est pas effacé en silence : il est annulé et
+   * ses passagers acceptés sont renvoyés pour être prévenus.
+   */
+  async releaseUnconfirmed(userId: string, day: string, now: Date, db: DbOrTx = this.db): Promise<{ rideId: string; passengers: string[] }[]> {
+    const { rows } = await db.execute<{ ride_id: string; passengers: string[] }>(sql`
+      SELECT r.id AS ride_id, array_agg(p.user_id) AS passengers
+      FROM rides r JOIN ride_participants p ON p.ride_id = r.id
+      WHERE r.day = ${day} AND r.driver_id = ${userId} AND r.status = 'proposed'
+        AND p.role = 'passenger' AND p.status = 'accepted'
+      GROUP BY r.id`);
+    for (const r of rows) {
+      await this.setRideStatus(r.ride_id, 'cancelled', db);
+      await this.cancelParticipants(r.ride_id, now, db);
+    }
     await db.execute(sql`
       DELETE FROM rides r WHERE r.day = ${day} AND r.driver_id = ${userId} AND r.status = 'proposed'`);
     await db.execute(sql`
       DELETE FROM ride_participants p USING rides r
       WHERE p.ride_id = r.id AND r.day = ${day} AND p.user_id = ${userId}
         AND p.role = 'passenger' AND r.status = 'proposed'`);
+    return rows.map((r) => ({ rideId: r.ride_id, passengers: r.passengers }));
   }
 
   async otherActiveRides(userId: string, day: string, direction: Direction, exceptRideId: string, db: DbOrTx = this.db) {

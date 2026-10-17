@@ -19,6 +19,9 @@ import {
 import type { DbOrTx, MatchingRepo, ParticipantRow, RideRow } from './repo.js';
 
 const DIRECTIONS: Direction[] = ['to_campus', 'from_campus'];
+/** Semaines générables à l'avance (la génération du vendredi couvre la suivante). */
+const MAX_WEEKS_AHEAD = 4;
+
 const ACTIVE = (p: ParticipantRow) => p.status !== 'declined' && p.status !== 'cancelled';
 
 /**
@@ -184,10 +187,13 @@ export class MatchingService {
     const today = this.today();
     for (const day of days) {
       if (day < today) continue;
-      await this.repo.transaction(async (tx) => {
+      const cancelled = await this.repo.transaction(async (tx) => {
         await this.repo.lockDay(tx, day);
-        await this.repo.releaseUnconfirmed(userId, day, tx);
+        return this.repo.releaseUnconfirmed(userId, day, this.clock(), tx);
       });
+      for (const ride of cancelled) {
+        await this.notifier.notify(ride.passengers, { type: 'ride_cancelled', rideId: ride.rideId, by: 'driver' }).catch(() => undefined);
+      }
       if (await this.repo.isWeekGenerated(isoWeekOf(day))) await this.regenerateDay(day);
     }
   }
@@ -202,7 +208,13 @@ export class MatchingService {
   }
 
   async listProposals(userId: string, week: string): Promise<ProposalView[]> {
-    await this.ensureWeek(week);
+    // Génération seulement pour les semaines utiles : passées en lecture seule, futur borné.
+    const monday = weekDays(week)[0]!;
+    const today = this.today();
+    if (monday > addDaysIso(today, MAX_WEEKS_AHEAD * 7)) {
+      throw new AppError(400, 'week_out_of_range', 'Semaine trop lointaine');
+    }
+    if (addDaysIso(monday, 6) >= today) await this.ensureWeek(week);
     const days = weekDays(week);
     const rides = await this.repo.ridesForUser(userId, days[0]!, addDaysIso(days[6]!, 1));
     const participants = await this.repo.participants(rides.map((r) => r.id));

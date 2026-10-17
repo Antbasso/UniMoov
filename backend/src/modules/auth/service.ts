@@ -51,6 +51,11 @@ export class AuthService {
       throw new AppError(429, 'code_cooldown', 'Attends une minute avant de redemander un code');
     }
 
+    // Plafond par adresse, quelle que soit l'IP : borne la recherche du code par force brute.
+    if ((await repo.codesSince(email, addMinutes(now, -24 * 60))) >= (await settings.get('auth.signupCodesPerDay'))) {
+      throw new AppError(429, 'code_daily_limit', 'Trop de codes demandés aujourd’hui pour cette adresse');
+    }
+
     const existing = await repo.findUserByEmail(email);
     if (existing) {
       await mail.send(accountExistsMail(email));
@@ -109,14 +114,26 @@ export class AuthService {
   }
 
   async login(input: { universityEmail: string; password: string }): Promise<TokensResponse> {
-    const user = await this.deps.repo.findUserByEmail(normalizeEmail(input.universityEmail));
-    if (!user?.passwordHash || user.deletedAt) {
-      // Même coût de calcul qu'un vrai essai : la durée ne révèle pas si le compte existe.
-      await verify(await this.getDummyHash(), input.password);
+    const { repo, settings, clock } = this.deps;
+    const email = normalizeEmail(input.universityEmail);
+    const now = clock();
+    // Blocage par adresse (compte existant ou non : la réponse ne révèle rien).
+    if (await repo.loginLockedUntil(email, now)) {
+      throw new AppError(429, 'login_locked', 'Trop d’essais : réessaie dans quelques minutes');
+    }
+    const user = await repo.findUserByEmail(email);
+    const active = user?.passwordHash && !user.deletedAt ? user : null;
+    // Même coût de calcul qu'un vrai essai : la durée ne révèle pas si le compte existe.
+    const matches = await verify(active?.passwordHash ?? (await this.getDummyHash()), input.password);
+    if (!active || !matches) {
+      await repo.recordLoginFailure(email, now, {
+        maxFailures: await settings.get('auth.loginMaxFailures'),
+        lockMinutes: await settings.get('auth.loginLockMinutes'),
+      });
       throw invalidCredentials();
     }
-    if (!(await verify(user.passwordHash, input.password))) throw invalidCredentials();
-    return this.issueTokens(user.id, randomUUID());
+    await repo.clearLoginFailures(email);
+    return this.issueTokens(active.id, randomUUID());
   }
 
   /** Confirmation d'une action sensible (suppression du compte) par le mot de passe. */

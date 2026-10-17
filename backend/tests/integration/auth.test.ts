@@ -134,6 +134,17 @@ describe('inscription par code', () => {
     expect(ctx.mail.lastTo(email)?.text).not.toMatch(/\d{6}/);
   });
 
+  it('plafond quotidien de codes par adresse', async () => {
+    const email = freshEmail();
+    for (let i = 0; i < 10; i++) {
+      expect((await post('/auth/signup/request-code', { universityEmail: email })).statusCode).toBe(202);
+      ctx.clock.advance(61_000);
+    }
+    const capped = await post('/auth/signup/request-code', { universityEmail: email });
+    expect(capped.statusCode).toBe(429);
+    expect(capped.json<{ error: { code: string } }>().error.code).toBe('code_daily_limit');
+  });
+
   it('refuse un mot de passe trop court', async () => {
     const email = freshEmail();
     await post('/auth/signup/request-code', { universityEmail: email });
@@ -183,6 +194,23 @@ describe('connexion', () => {
     expect(wrong.statusCode).toBe(401);
     expect(unknown.statusCode).toBe(401);
     expect(wrong.json()).toEqual(unknown.json());
+  });
+
+  it('trop d’échecs sur une adresse : bloquée un moment, même avec le bon mot de passe, puis libérée', async () => {
+    const target = freshEmail();
+    await signUp(ctx, target);
+    for (let i = 0; i < 10; i++) {
+      expect((await post('/auth/login', { universityEmail: target, password: `essai-${i}` })).statusCode).toBe(401);
+    }
+    const locked = await post('/auth/login', { universityEmail: target, password: 'motdepasse-solide' });
+    expect(locked.statusCode).toBe(429);
+    expect(locked.json<{ error: { code: string } }>().error.code).toBe('login_locked');
+    // Même blocage pour une adresse inconnue : rien n'indique si le compte existe.
+    for (let i = 0; i < 10; i++) await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' });
+    expect((await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' })).statusCode).toBe(429);
+
+    ctx.clock.advance(16 * 60_000);
+    expect((await post('/auth/login', { universityEmail: target, password: 'motdepasse-solide' })).statusCode).toBe(200);
   });
 });
 

@@ -152,6 +152,7 @@ export const rideStatus = pgEnum('ride_status', ['proposed', 'confirmed', 'in_pr
 export const participantRole = pgEnum('participant_role', ['driver', 'passenger']);
 export const participantStatus = pgEnum('participant_status', [
   'proposed',
+  'requested',
   'accepted',
   'declined',
   'picked_up',

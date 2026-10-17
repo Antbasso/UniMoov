@@ -198,9 +198,21 @@ export class ChatRepo {
     return rows.map((r) => ({ userId: r.id, firstName: r.first_name, photoUrl: r.photo_url }));
   }
 
+  /** Même règle que `contacts`, vérifiée directement (sans la limite d'affichage de la liste). */
   async sharedRideWithAll(userId: string, others: readonly string[]): Promise<boolean> {
-    const known = new Set((await this.contacts(userId)).map((c) => c.userId));
-    return others.every((o) => known.has(o));
+    if (others.length === 0) return true;
+    const { rows } = await this.db.execute<{ n: number }>(sql`
+      SELECT count(DISTINCT y.user_id)::int AS n
+      FROM ride_participants x JOIN ride_participants y ON y.ride_id = x.ride_id
+      JOIN users u ON u.id = y.user_id
+      WHERE x.user_id = ${userId} AND u.deleted_at IS NULL
+        AND y.user_id IN (${sql.join(
+          others.map((o) => sql`${o}`),
+          sql`, `,
+        )})
+        AND x.status IN ('proposed', 'accepted', 'picked_up', 'absent')
+        AND y.status IN ('proposed', 'accepted', 'picked_up', 'absent')`);
+    return (rows[0]?.n ?? 0) === new Set(others).size;
   }
 
   /** Personnes acceptées d'un trajet confirmé, en cours ou terminé (membres du chat de trajet). */

@@ -17,6 +17,12 @@ describe('isPublicAddress', () => {
     ['fd00::1', false],
     ['fe80::1', false],
     ['::ffff:127.0.0.1', false],
+    ['::ffff:7f00:1', false], // même adresse, écrite en hexadécimal
+    ['::ffff:a9fe:a9fe', false], // 169.254.169.254
+    ['::7f00:1', false],
+    ['64:ff9b::7f00:1', false],
+    ['2002:7f00:1::1', false],
+    ['2001:0:4136:e378::1', false],
     ['pas-une-ip', false],
   ])('%s → %s', (ip, expected) => {
     expect(isPublicAddress(ip)).toBe(expected);
@@ -34,6 +40,8 @@ describe('normalizeCalendarUrl', () => {
     'http://ade.univ-smb.fr/cal.ics',
     'https://127.0.0.1/cal.ics',
     'https://[::1]/cal.ics',
+    'https://[::ffff:127.0.0.1]/cal.ics', // réécrit en [::ffff:7f00:1] par l'analyseur d'URL
+    'https://93.184.216.34/cal.ics', // aucune adresse IP en clair, même publique
     'https://localhost/cal.ics',
     'https://ade.univ-smb.fr:8443/cal.ics',
     'https://user:pass@ade.univ-smb.fr/cal.ics',

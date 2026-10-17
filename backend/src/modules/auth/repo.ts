@@ -42,6 +42,38 @@ export class AuthRepo {
     });
   }
 
+  /** Codes demandés pour cette adresse depuis `since` (plafond quotidien). */
+  async codesSince(email: string, since: Date): Promise<number> {
+    const { rows } = await this.db.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM verification_codes WHERE email = ${email} AND created_at > ${since}`);
+    return rows[0]?.n ?? 0;
+  }
+
+  /** Adresse bloquée après trop d'échecs de connexion (`null` : libre). */
+  async loginLockedUntil(email: string, now: Date): Promise<Date | null> {
+    const { rows } = await this.db.execute<{ locked_until: Date | null }>(sql`
+      SELECT locked_until FROM login_failures WHERE email = ${email} AND locked_until > ${now}`);
+    return rows[0]?.locked_until ?? null;
+  }
+
+  /** Compte un échec dans la fenêtre ; au seuil, bloque l'adresse. */
+  async recordLoginFailure(email: string, now: Date, policy: { maxFailures: number; lockMinutes: number }): Promise<void> {
+    const windowStart = new Date(now.getTime() - policy.lockMinutes * 60_000);
+    const lockUntil = new Date(now.getTime() + policy.lockMinutes * 60_000);
+    await this.db.execute(sql`
+      INSERT INTO login_failures (email, failures, window_start) VALUES (${email}, 1, ${now})
+      ON CONFLICT (email) DO UPDATE SET
+        failures = CASE WHEN login_failures.window_start < ${windowStart} THEN 1 ELSE login_failures.failures + 1 END,
+        window_start = CASE WHEN login_failures.window_start < ${windowStart} THEN ${now} ELSE login_failures.window_start END,
+        locked_until = CASE
+          WHEN login_failures.window_start >= ${windowStart} AND login_failures.failures + 1 >= ${policy.maxFailures}
+          THEN ${lockUntil} ELSE login_failures.locked_until END`);
+  }
+
+  async clearLoginFailures(email: string): Promise<void> {
+    await this.db.execute(sql`DELETE FROM login_failures WHERE email = ${email}`);
+  }
+
   async incrementAttempts(id: string, db: DbOrTx = this.db): Promise<void> {
     await db
       .update(verificationCodes)

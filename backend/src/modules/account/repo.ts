@@ -16,11 +16,12 @@ export class AccountRepo {
    */
   async lockOut(userId: string, now: Date): Promise<'locked' | 'ride_in_progress' | 'wallet_not_empty' | 'gone'> {
     return this.db.transaction(async (tx: Tx) => {
+      // Portefeuille puis utilisateur : même ordre que la clôture d'un trajet (pas d'interblocage).
+      const { rows: wallet } = await tx.execute<{ balance_cents: number; held_cents: number }>(sql`
+        SELECT balance_cents, held_cents FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
       const { rows: user } = await tx.execute(sql`
         SELECT 1 FROM users WHERE id = ${userId} AND deleted_at IS NULL FOR UPDATE`);
       if (user.length === 0) return 'gone';
-      const { rows: wallet } = await tx.execute<{ balance_cents: number; held_cents: number }>(sql`
-        SELECT balance_cents, held_cents FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
       const { rows: riding } = await tx.execute(sql`
         SELECT 1 FROM ride_participants rp JOIN rides r ON r.id = rp.ride_id
         WHERE rp.user_id = ${userId} AND r.status = 'in_progress' AND rp.status IN ('accepted', 'picked_up')

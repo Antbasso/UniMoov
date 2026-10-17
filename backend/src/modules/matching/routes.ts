@@ -20,7 +20,7 @@ import type { MatchingService } from './service.js';
 export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }> = (app, { service }) => {
   app.addHook('preHandler', app.authenticate);
 
-  app.get('/proposals', { schema: { querystring: weekQuery, response: { 200: proposalsResponse } } }, async (request) => {
+  app.get('/proposals', { schema: { querystring: weekQuery, response: { 200: proposalsResponse } }, config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request) => {
     try {
       isoWeekMonday(request.query.week);
     } catch {
@@ -57,7 +57,8 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
 
   app.get(
     '/proposals/:id/alternatives',
-    { schema: { params: idParams, response: { 200: alternativesResponse } } },
+    // Même recherche que /search/rides : bornée elle aussi.
+    { schema: { params: idParams, response: { 200: alternativesResponse } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
     async (request) => ({ rides: await service.alternatives(request.userId, request.params.id) }),
   );
 
