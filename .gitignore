@@ -13,3 +13,4 @@ build/
 # Clé de compte de service Firebase (secret)
 *service-account*.json
 *firebase-adminsdk*.json
+secrets/

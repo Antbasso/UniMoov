@@ -31,7 +31,7 @@ const envSchema = z
   /** `fcm` : Firebase Cloud Messaging (clé de compte de service) ; `log` : journal seulement. */
   PUSH_PROVIDER: z.enum(['log', 'fcm']).default('log'),
   /** Chemin du fichier JSON de la clé du compte de service Firebase (secret, jamais commité). */
-  FCM_SERVICE_ACCOUNT_FILE: z.string().min(1).optional(),
+  FCM_SERVICE_ACCOUNT_FILE: z.string().optional(),
   /** Tâches planifiées (synchronisation des agendas, génération hebdomadaire). */
   JOBS_ENABLED: z.stringbool().default(true),
 })
