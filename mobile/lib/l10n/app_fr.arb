@@ -552,8 +552,11 @@
   "liveReconnecting": "Connexion au suivi en direct…",
   "liveEnded": "Le suivi en direct est terminé.",
   "presenceValidated": "Présence validée",
-  "presencePaid": "Présence validée, trajet payé",
-  "presenceUnpaid": "Présence validée, paiement en attente : recharge ton portefeuille",
+  "presenceOnBoard": "Présence validée : ta part est prélevée à l'arrivée",
+  "tripArrived": "Arrivée à destination : ta part est prélevée à la clôture du trajet.",
+  "tripLeftEarly": "Tu as terminé ton trajet avant l'arrivée : tu ne le paies pas.",
+  "stopArrived": "Arrivée",
+  "stopLeftEarly": "Terminé avant l'arrivée",
   "confirmPresence": "Valider ma présence",
   "presenceDone": "Présence validée. Bon trajet.",
   "shareLocation": "Partager ma position",
@@ -627,8 +630,48 @@
   "errorTopupTooSmall": "Montant de recharge trop faible.",
   "errorTopupFailed": "La recharge a été refusée.",
   "finishConfirmTitle": "Terminer le trajet ?",
-  "finishConfirmBody": "Le suivi s'arrête pour tout le monde et les passagers dont la présence n'est pas validée sont comptés absents.",
+  "finishConfirmBody": "Le suivi s'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n'es pas rémunéré pour eux.",
   "finishConfirmCancel": "Continuer le trajet",
+  "finishMyTrip": "Terminer mon trajet",
+  "finishMyTripTitle": "Terminer ton trajet maintenant ?",
+  "finishMyTripBody": "Tu n'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n'est pas rémunéré pour toi. Il est prévenu tout de suite.",
+  "finishMyTripConfirm": "Terminer quand même",
+  "finishMyTripDone": "Trajet terminé. Le conducteur est prévenu.",
+  "insufficientFundsTitle": "Solde insuffisant",
+  "insufficientFundsBody": "Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l'arrivée que ta part réelle.",
+  "insufficientFundsTopup": "Recharger",
+  "insufficientFundsLater": "Plus tard",
+  "walletPayout": "Retirer vers mon compte",
+  "walletPayoutTitle": "Retirer ton solde",
+  "walletPayoutIntro": "Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.",
+  "walletPayoutAmount": "Montant en euros",
+  "walletPayoutIban": "IBAN",
+  "walletPayoutHolder": "Titulaire du compte",
+  "walletPayoutSubmit": "Retirer {amount}",
+  "@walletPayoutSubmit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutDone": "Retrait demandé. Le virement arrive sous quelques jours.",
+  "walletPayoutRule": "Un retrait par semaine, {amount} minimum.",
+  "@walletPayoutRule": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutAmountInvalid": "Indique un montant, par exemple 12,50.",
+  "walletPayoutHolderInvalid": "Indique le nom du titulaire du compte.",
+  "errorIbanInvalid": "Cet IBAN n'est pas valide : vérifie-le.",
+  "errorPayoutTooSmall": "Montant de retrait trop faible.",
+  "errorPayoutTooSoon": "Un seul retrait par semaine : réessaie plus tard.",
+  "errorPayoutFailed": "Le virement a été refusé.",
+  "errorInsufficientFunds": "Solde insuffisant.",
+  "errorNotOnBoard": "Ta présence n'est pas validée : pour renoncer, annule ta place.",
   "cancelMyPlace": "Annuler ma place",
   "cancelRide": "Annuler le trajet",
   "cancelSheetTitle": "Annuler ce trajet ?",
@@ -928,7 +971,7 @@
   "deleteAccountKeptLead": "Gardés sans ton nom :",
   "deleteAccountRidesLead": "Annulés :",
   "deleteAccountWalletTitle": "Portefeuille à vider d'abord",
-  "deleteAccountWalletLeft": "Il te reste {amount} sur ton portefeuille. Écris à l'équipe ({email}) pour les récupérer, puis reviens supprimer ton compte.",
+  "deleteAccountWalletLeft": "Il te reste {amount} sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l'équipe, {email}), puis reviens supprimer ton compte.",
   "@deleteAccountWalletLeft": {
     "placeholders": {
       "amount": {

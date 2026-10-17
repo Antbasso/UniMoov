@@ -14,6 +14,8 @@ class RideStop {
     required this.isMeetingPoint,
     this.pickedUp = false,
     this.presenceValidated = false,
+    this.arrived = false,
+    this.ended = false,
     this.userId,
     this.firstName,
     this.lastName,
@@ -33,6 +35,8 @@ class RideStop {
     isMeetingPoint: json['isMeetingPoint'] as bool,
     pickedUp: json['pickedUp'] as bool? ?? false,
     presenceValidated: json['presenceValidated'] as bool? ?? false,
+    arrived: json['arrived'] as bool? ?? false,
+    ended: json['ended'] as bool? ?? false,
   );
 
   final int order;
@@ -48,9 +52,16 @@ class RideStop {
   final DateTime? eta;
   final bool isMeetingPoint;
 
-  /// Passager monté (signalé par le conducteur) ; présence validée par proximité (paiement).
+  /// Passager monté (signalé par le conducteur) ; présence validée par proximité.
   final bool pickedUp;
   final bool presenceValidated;
+
+  /// Passager arrivé à destination (il paiera à la clôture) ; trajet terminé pour lui,
+  /// arrivé ou parti avant l'arrivée (il ne paie pas).
+  final bool arrived;
+  final bool ended;
+
+  bool get leftEarly => ended && !arrived;
 
   String? get fullName => firstName == null ? null : [firstName, ?lastName].join(' ');
 }
@@ -312,10 +323,9 @@ sealed class LiveEvent {
     ),
     'eta' => LiveEta(userId: json['userId'] as String, eta: DateTime.parse(json['eta'] as String)),
     'stop_picked_up' => LivePickedUp(json['userId'] as String),
-    'presence_validated' => LivePresence(
-      userId: json['userId'] as String,
-      paid: json['payment'] == 'paid',
-    ),
+    'presence_validated' => LivePresence(json['userId'] as String),
+    'passenger_arrived' => LivePassengerDone(json['userId'] as String, arrived: true),
+    'passenger_left' => LivePassengerDone(json['userId'] as String, arrived: false),
     'ride_status' => LiveStatus(json['status'] as String),
     _ => null,
   };
@@ -353,10 +363,17 @@ class LivePickedUp extends LiveEvent {
 }
 
 class LivePresence extends LiveEvent {
-  const LivePresence({required this.userId, required this.paid});
+  const LivePresence(this.userId);
 
   final String userId;
-  final bool paid;
+}
+
+/// Trajet terminé pour un passager : arrivé à destination, ou parti avant (conducteur prévenu).
+class LivePassengerDone extends LiveEvent {
+  const LivePassengerDone(this.userId, {required this.arrived});
+
+  final String userId;
+  final bool arrived;
 }
 
 class LiveStatus extends LiveEvent {

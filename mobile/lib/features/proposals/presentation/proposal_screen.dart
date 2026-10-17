@@ -12,6 +12,7 @@ import '../../trust/presentation/cancel_sheet.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
+import '../../wallet/presentation/insufficient_funds_dialog.dart';
 
 /// Détail d'une proposition : informations publiques seulement, puis accepter, refuser ou
 /// voir d'autres voitures.
@@ -50,7 +51,11 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
       await action();
       if (popAfter && router.canPop()) router.pop();
     } on ApiException catch (error) {
-      if (mounted) setState(() => _errorCode = error.code);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // Solde trop bas pour le prix maximal : explication et recharge (cahier §5).
+      if (error.code == 'insufficient_funds') return showInsufficientFunds(context);
+      setState(() => _errorCode = error.code);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

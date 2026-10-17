@@ -12,6 +12,10 @@ abstract interface class WalletApi {
 
   /// `idempotencyKey` : la même clé ne recharge qu'une fois (double appui, requête rejouée).
   Future<Wallet> topup(int amountCents, String idempotencyKey);
+
+  /// Retrait vers un compte bancaire ; l'IBAN part au prestataire, le serveur n'en garde que
+  /// les 4 derniers caractères.
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey);
 }
 
 /// Clé d'idempotence aléatoire (128 bits).
@@ -39,6 +43,20 @@ class DioWalletApi implements WalletApi {
       options: Options(headers: {'Idempotency-Key': idempotencyKey}),
     );
     return Wallet.fromJson(response.data!['wallet'] as Map<String, dynamic>);
+  });
+
+  @override
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/wallet/payouts',
+      data: {
+        'amountCents': request.amountCents,
+        'iban': request.iban,
+        'holderName': request.holderName,
+      },
+      options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+    );
+    return Wallet.fromJson(response.data!);
   });
 }
 

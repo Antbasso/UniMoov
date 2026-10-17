@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
+import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
@@ -11,8 +13,9 @@ import '../../auth/presentation/session_controller.dart';
 import '../data/wallet_api.dart';
 import '../domain/wallet.dart';
 
-/// Clé de la recharge en cours, gardée même si l'écran est quitté : une requête sans réponse
-/// (réseau coupé) puis réessayée ne recharge qu'une fois. Renouvelée quand l'issue est connue.
+/// Clé de la recharge (ou du retrait) en cours, gardée même si l'écran est quitté : une requête
+/// sans réponse (réseau coupé) puis réessayée ne s'exécute qu'une fois. Renouvelée quand
+/// l'issue est connue.
 class PendingTopupKey extends Notifier<String> {
   @override
   String build() {
@@ -25,8 +28,9 @@ class PendingTopupKey extends Notifier<String> {
 }
 
 final pendingTopupKeyProvider = NotifierProvider<PendingTopupKey, String>(PendingTopupKey.new);
+final pendingPayoutKeyProvider = NotifierProvider<PendingTopupKey, String>(PendingTopupKey.new);
 
-/// Portefeuille (cahier §5) ; le parcours complet de recharge et de retrait arrive en M4b.
+/// Portefeuille (cahier §5) : solde, recharge et retrait vers un compte bancaire.
 class WalletController extends AsyncNotifier<Wallet> {
   @override
   Future<Wallet> build() => ref.watch(walletApiProvider).wallet();
@@ -42,6 +46,22 @@ class WalletController extends AsyncNotifier<Wallet> {
     } on ApiException catch (error) {
       // Refus définitif du prestataire : la prochaine tentative est une nouvelle recharge.
       if (error.code == 'topup_failed' || error.code == 'idempotency_conflict') keys.rotate();
+      rethrow;
+    }
+  }
+
+  Future<void> payout(PayoutRequest request) async {
+    final keys = ref.read(pendingPayoutKeyProvider.notifier);
+    try {
+      final wallet = await ref
+          .read(walletApiProvider)
+          .payout(request, ref.read(pendingPayoutKeyProvider));
+      keys.rotate();
+      if (ref.mounted) state = AsyncData(wallet);
+    } on ApiException catch (error) {
+      // Réponse reçue (refus, saisie invalide) : rien n'a été retiré, nouvelle clé. Sans
+      // réponse (réseau), la même clé est réutilisée au prochain essai.
+      if (error.code != 'network_error') keys.rotate();
       rethrow;
     }
   }
@@ -101,6 +121,13 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
             expand: true,
             loading: _busy,
             onPressed: _topup,
+          ),
+        if (wallet.value case final value? when value.balanceCents > 0)
+          UmButton(
+            label: l10n.walletPayout,
+            variant: UmButtonVariant.secondary,
+            expand: true,
+            onPressed: _busy ? null : () => context.push(AppRoutes.walletPayout),
           ),
       ],
       children: switch (wallet) {

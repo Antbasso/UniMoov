@@ -95,10 +95,16 @@ void main() {
             as LivePosition;
     expect((p.lat, p.lon), (45.0, 6.0));
     expect(
-      (LiveEvent.fromJson({'type': 'presence_validated', 'userId': 'u', 'payment': 'failed'})!
-              as LivePresence)
-          .paid,
-      isFalse,
+      (LiveEvent.fromJson({'type': 'presence_validated', 'userId': 'u'})! as LivePresence).userId,
+      'u',
+    );
+    final left =
+        LiveEvent.fromJson({'type': 'passenger_left', 'userId': 'u'})! as LivePassengerDone;
+    expect((left.userId, left.arrived), ('u', false));
+    expect(
+      (LiveEvent.fromJson({'type': 'passenger_arrived', 'userId': 'u'})! as LivePassengerDone)
+          .arrived,
+      isTrue,
     );
     expect(
       (LiveEvent.fromJson({'type': 'ride_status', 'status': 'completed'})! as LiveStatus).status,

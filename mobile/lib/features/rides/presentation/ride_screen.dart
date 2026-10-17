@@ -162,8 +162,24 @@ class _RideContentState extends ConsumerState<_RideContent> {
           loading: _busy,
           onPressed: _busy ? null : () => _act(controller.confirmPresence, done: l10n.presenceDone),
         ),
-      // La clôture revient au conducteur (ou se fait seule à l'arrivée) : un passager ne peut pas
-      // faire compter absents ceux qui ne sont pas encore montés.
+      // À bord, pas encore à destination : il peut terminer son trajet (et ne pas le payer),
+      // après un avertissement ; le conducteur est prévenu. Avant d'être à bord, il annule.
+      if (!ride.isDriver &&
+          ride.inProgress &&
+          myStop != null &&
+          myStop.presenceValidated &&
+          !myStop.ended)
+        UmButton(
+          label: l10n.finishMyTrip,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          onPressed: _busy
+              ? null
+              : () async {
+                  if (!await confirmFinishMyTrip(context)) return;
+                  await _act(controller.finish, done: l10n.finishMyTripDone);
+                },
+        ),
       if (ride.editable && ride.isDriver)
         UmButton(
           label: l10n.rideAddPassengers,
@@ -178,7 +194,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
           expand: true,
           onPressed: () => context.push(AppRoutes.rideMeetingPoint(ride.id)),
         ),
-      if (ride.editable)
+      if (ride.editable ||
+          (ride.inProgress && !ride.isDriver && myStop != null && !myStop.presenceValidated))
         UmButton(
           label: ride.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
           variant: UmButtonVariant.ghost,
@@ -267,14 +284,21 @@ class _RideContentState extends ConsumerState<_RideContent> {
                         myEta: myId == null ? null : live.etas[myId],
                       ),
                     ],
-                    if (myStop != null && myStop.presenceValidated && !ride.isDriver) ...[
+                    if (myStop != null && !ride.isDriver && myStop.arrived) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      TrustInfo(icon: Icons.where_to_vote_outlined, text: l10n.tripArrived),
+                    ] else if (myStop != null && !ride.isDriver && myStop.leftEarly) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      TrustInfo(icon: Icons.logout_rounded, text: l10n.tripLeftEarly),
+                    ] else if (myStop != null &&
+                        !ride.isDriver &&
+                        myStop.presenceValidated &&
+                        !ride.completed) ...[
                       const SizedBox(height: UmSpace.s3),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: UmChip(
-                          label: live?.presence[myId] == false
-                              ? l10n.presenceUnpaid
-                              : l10n.presencePaid,
+                          label: l10n.presenceOnBoard,
                           icon: Icons.verified_outlined,
                           tone: UmChipTone.success,
                         ),
@@ -472,10 +496,19 @@ class _StopRow extends StatelessWidget {
         ? null
         : (stop.label.isEmpty ? l10n.rideStopApproximate : stop.label);
     final time = stop.eta == null ? null : formatTime(stop.eta!, l10n.localeName);
+    // Fin de trajet d'un passager : arrivé (il paie) ou parti avant (il ne paie pas).
+    final (String, IconData)? done = stop.arrived
+        ? (l10n.stopArrived, Icons.where_to_vote_outlined)
+        : stop.leftEarly
+        ? (l10n.stopLeftEarly, Icons.logout_rounded)
+        : null;
 
     return Semantics(
       container: true,
-      label: l10n.rideStopSemantic(stop.order + 1, name, place ?? '', time ?? ''),
+      label: [
+        l10n.rideStopSemantic(stop.order + 1, name, place ?? '', time ?? ''),
+        ?done?.$1,
+      ].join(', '),
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: UmSpace.s4),
@@ -496,6 +529,10 @@ class _StopRow extends StatelessWidget {
                   if (stop.isMeetingPoint) ...[
                     const SizedBox(height: UmSpace.s1),
                     UmChip(label: l10n.rideMeetingPoint, icon: Icons.place_outlined),
+                  ],
+                  if (done != null) ...[
+                    const SizedBox(height: UmSpace.s1),
+                    UmChip(label: done.$1, icon: done.$2),
                   ],
                 ],
               ),

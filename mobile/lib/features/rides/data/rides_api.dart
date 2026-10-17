@@ -20,7 +20,7 @@ abstract interface class RidesApi {
   Future<NavigationPlan> navigation(String id);
 
   /// Passager : présence validée par proximité ; renvoie `true` si le paiement est passé.
-  Future<bool> presence(String id);
+  Future<void> presence(String id);
   Future<void> finish(String id);
 }
 
@@ -73,10 +73,8 @@ class DioRidesApi implements RidesApi {
   });
 
   @override
-  Future<bool> presence(String id) => guardApi(() async {
-    final response = await _dio.post<Map<String, dynamic>>('/api/v1/rides/$id/presence');
-    return response.data!['payment'] != 'failed';
-  });
+  Future<void> presence(String id) =>
+      guardApi(() => _dio.post<Map<String, dynamic>>('/api/v1/rides/$id/presence'));
 
   @override
   Future<void> finish(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/finish'));

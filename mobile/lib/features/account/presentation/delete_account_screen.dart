@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
+import '../../../core/router/redirect.dart';
 import '../../../core/support.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -106,8 +107,22 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       appBar: AppBar(),
       title: l10n.deleteAccountTitle,
       footer: [
+        // Solde disponible : la personne le retire elle-même ; l'équipe reste joignable.
+        if (blocked && (wallet?.balanceCents ?? 0) > 0 && wallet?.heldCents == 0)
+          UmButton(
+            label: l10n.walletPayout,
+            expand: true,
+            onPressed: () => context.push(AppRoutes.walletPayout),
+          ),
         if (blocked)
-          UmButton(label: l10n.deleteAccountWriteTeam, expand: true, onPressed: _writeToTeam)
+          UmButton(
+            label: l10n.deleteAccountWriteTeam,
+            variant: (wallet?.balanceCents ?? 0) > 0 && wallet?.heldCents == 0
+                ? UmButtonVariant.secondary
+                : UmButtonVariant.primary,
+            expand: true,
+            onPressed: _writeToTeam,
+          )
         else
           UmButton(
             label: l10n.deleteAccountConfirm,

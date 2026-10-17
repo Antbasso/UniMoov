@@ -911,10 +911,19 @@ class AppLocalizationsFr extends AppLocalizations {
   String get presenceValidated => 'Présence validée';
 
   @override
-  String get presencePaid => 'Présence validée, trajet payé';
+  String get presenceOnBoard => 'Présence validée : ta part est prélevée à l\'arrivée';
 
   @override
-  String get presenceUnpaid => 'Présence validée, paiement en attente : recharge ton portefeuille';
+  String get tripArrived => 'Arrivée à destination : ta part est prélevée à la clôture du trajet.';
+
+  @override
+  String get tripLeftEarly => 'Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.';
+
+  @override
+  String get stopArrived => 'Arrivée';
+
+  @override
+  String get stopLeftEarly => 'Terminé avant l\'arrivée';
 
   @override
   String get confirmPresence => 'Valider ma présence';
@@ -1086,10 +1095,95 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishConfirmBody =>
-      'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.';
+      'Le suivi s\'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n\'es pas rémunéré pour eux.';
 
   @override
   String get finishConfirmCancel => 'Continuer le trajet';
+
+  @override
+  String get finishMyTrip => 'Terminer mon trajet';
+
+  @override
+  String get finishMyTripTitle => 'Terminer ton trajet maintenant ?';
+
+  @override
+  String get finishMyTripBody =>
+      'Tu n\'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n\'est pas rémunéré pour toi. Il est prévenu tout de suite.';
+
+  @override
+  String get finishMyTripConfirm => 'Terminer quand même';
+
+  @override
+  String get finishMyTripDone => 'Trajet terminé. Le conducteur est prévenu.';
+
+  @override
+  String get insufficientFundsTitle => 'Solde insuffisant';
+
+  @override
+  String get insufficientFundsBody =>
+      'Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l\'arrivée que ta part réelle.';
+
+  @override
+  String get insufficientFundsTopup => 'Recharger';
+
+  @override
+  String get insufficientFundsLater => 'Plus tard';
+
+  @override
+  String get walletPayout => 'Retirer vers mon compte';
+
+  @override
+  String get walletPayoutTitle => 'Retirer ton solde';
+
+  @override
+  String get walletPayoutIntro =>
+      'Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.';
+
+  @override
+  String get walletPayoutAmount => 'Montant en euros';
+
+  @override
+  String get walletPayoutIban => 'IBAN';
+
+  @override
+  String get walletPayoutHolder => 'Titulaire du compte';
+
+  @override
+  String walletPayoutSubmit(String amount) {
+    return 'Retirer $amount';
+  }
+
+  @override
+  String get walletPayoutDone => 'Retrait demandé. Le virement arrive sous quelques jours.';
+
+  @override
+  String walletPayoutRule(String amount) {
+    return 'Un retrait par semaine, $amount minimum.';
+  }
+
+  @override
+  String get walletPayoutAmountInvalid => 'Indique un montant, par exemple 12,50.';
+
+  @override
+  String get walletPayoutHolderInvalid => 'Indique le nom du titulaire du compte.';
+
+  @override
+  String get errorIbanInvalid => 'Cet IBAN n\'est pas valide : vérifie-le.';
+
+  @override
+  String get errorPayoutTooSmall => 'Montant de retrait trop faible.';
+
+  @override
+  String get errorPayoutTooSoon => 'Un seul retrait par semaine : réessaie plus tard.';
+
+  @override
+  String get errorPayoutFailed => 'Le virement a été refusé.';
+
+  @override
+  String get errorInsufficientFunds => 'Solde insuffisant.';
+
+  @override
+  String get errorNotOnBoard => 'Ta présence n\'est pas validée : pour renoncer, annule ta place.';
 
   @override
   String get cancelMyPlace => 'Annuler ma place';
@@ -1680,7 +1774,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String deleteAccountWalletLeft(String amount, String email) {
-    return 'Il te reste $amount sur ton portefeuille. Écris à l\'équipe ($email) pour les récupérer, puis reviens supprimer ton compte.';
+    return 'Il te reste $amount sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l\'équipe, $email), puis reviens supprimer ton compte.';
   }
 
   @override

@@ -258,9 +258,15 @@ class FakeBackend
     throw const ApiException('not_found', '', statusCode: 404);
   }
 
+  /// Solde exigé pour accepter en passager (prix maximal du trajet), à 0 sans vérification.
+  int requiredBalanceCents = 0;
+
   @override
   Future<Proposal> accept(String id) async {
     _maybeFail();
+    if (balanceCents < requiredBalanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 402);
+    }
     final isJoin = weeks.values.every((list) => list.every((p) => p.id != id));
     if (isJoin) {
       // Voiture choisie par le passager : demande en attente du conducteur.
@@ -413,20 +419,23 @@ class FakeBackend
     );
   }
 
-  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated}) => RideStop(
-    order: s.order,
-    kind: s.kind,
-    userId: s.userId,
-    firstName: s.firstName,
-    lastName: s.lastName,
-    label: s.label,
-    lat: s.lat,
-    lon: s.lon,
-    eta: s.eta,
-    isMeetingPoint: s.isMeetingPoint,
-    pickedUp: pickedUp ?? s.pickedUp,
-    presenceValidated: presenceValidated ?? s.presenceValidated,
-  );
+  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated, bool? ended}) =>
+      RideStop(
+        order: s.order,
+        kind: s.kind,
+        userId: s.userId,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        label: s.label,
+        lat: s.lat,
+        lon: s.lon,
+        eta: s.eta,
+        isMeetingPoint: s.isMeetingPoint,
+        pickedUp: pickedUp ?? s.pickedUp,
+        presenceValidated: presenceValidated ?? s.presenceValidated,
+        arrived: s.arrived,
+        ended: ended ?? s.ended,
+      );
 
   @override
   Future<void> start(String id) async {
@@ -480,7 +489,7 @@ class FakeBackend
   }
 
   @override
-  Future<bool> presence(String id) async {
+  Future<void> presence(String id) async {
     _maybeFail();
     final ride = rides[id]!;
     final me = idOf(_me.email);
@@ -492,14 +501,24 @@ class FakeBackend
       ],
     );
     actions.add('presence');
-    return true;
   }
 
   @override
   Future<void> finish(String id) async {
     _maybeFail();
     actions.add('finish');
-    _withStatus(id, 'completed');
+    final ride = rides[id]!;
+    if (ride.isDriver) {
+      _withStatus(id, 'completed');
+      return;
+    }
+    // Passager : son trajet seulement (parti avant l'arrivée, il ne paie pas).
+    final me = idOf(_me.email);
+    _withStatus(
+      id,
+      ride.status,
+      stops: [for (final s in ride.stops) s.userId == me ? _stopWith(s, ended: true) : s],
+    );
   }
 
   // --- Portefeuille ---
@@ -528,6 +547,27 @@ class FakeBackend
         WalletEntry(kind: 'topup', amountCents: amountCents, at: DateTime(2026, 10, 15, 9)),
       );
     }
+    return _wallet;
+  }
+
+  final List<({PayoutRequest request, String key})> payouts = [];
+
+  @override
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey) async {
+    _maybeFail();
+    if (payouts.any((p) => p.key == idempotencyKey)) return _wallet;
+    if (!request.iban.startsWith('FR76')) {
+      throw const ApiException('iban_invalid', '', statusCode: 400);
+    }
+    if (request.amountCents > balanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 409);
+    }
+    payouts.add((request: request, key: idempotencyKey));
+    balanceCents -= request.amountCents;
+    walletHistory.insert(
+      0,
+      WalletEntry(kind: 'payout', amountCents: -request.amountCents, at: DateTime(2026, 10, 16, 9)),
+    );
     return _wallet;
   }
 

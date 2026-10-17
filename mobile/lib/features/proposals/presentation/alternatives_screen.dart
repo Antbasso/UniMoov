@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
+import '../../wallet/presentation/insufficient_funds_dialog.dart';
 
 /// Liste de voitures où monter (« voir d'autres » et résultats de recherche).
 class JoinableList extends ConsumerStatefulWidget {
@@ -39,7 +40,11 @@ class _JoinableListState extends ConsumerState<JoinableList> {
       messenger.showSnackBar(SnackBar(content: Text(l10n.joined)));
       router.go(AppRoutes.home);
     } on ApiException catch (error) {
-      if (mounted) setState(() => _errorCode = error.code);
+      if (!mounted) return;
+      setState(() => _busyId = null);
+      // Solde trop bas pour le prix maximal : explication et recharge (cahier §5).
+      if (error.code == 'insufficient_funds') return showInsufficientFunds(context);
+      setState(() => _errorCode = error.code);
     } finally {
       if (mounted) setState(() => _busyId = null);
     }

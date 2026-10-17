@@ -67,6 +67,26 @@ void main() {
     expect(find.text('En attente'), findsOneWidget);
   });
 
+  testWidgets('solde insuffisant : explication, puis recharge en un geste', (tester) async {
+    backend.requiredBalanceCents = 500;
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    await tapText(tester, 'Accepter');
+    expect(find.text('Solde insuffisant'), findsOneWidget);
+    await tapText(tester, 'Plus tard');
+    expect(find.text('Accepter'), findsOneWidget);
+
+    await tapText(tester, 'Accepter');
+    await tapText(tester, 'Recharger');
+    expect(find.text('Ton portefeuille'), findsOneWidget);
+    await tester.tap(find.textContaining('Recharger 10,00'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Accepter');
+    expect(find.text('Tu as accepté. On attend la réponse de l\'autre.'), findsOneWidget);
+  });
+
   testWidgets('conducteur : voit ses passagers, sans « voir d’autres »', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     await tester.tap(find.text('Voir').last);

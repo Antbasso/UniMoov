@@ -161,14 +161,42 @@ void main() {
       expect(find.textContaining('Dernière position connue à'), findsOneWidget);
     });
 
-    testWidgets('valider sa présence : paiement confirmé', (tester) async {
+    testWidgets('valider sa présence : paiement à l’arrivée annoncé', (tester) async {
       await openLive(tester);
+      // Pas encore à bord : renoncer, c'est annuler sa place.
+      expect(find.text('Annuler ma place'), findsOneWidget);
+      expect(find.text('Terminer mon trajet'), findsNothing);
       await tapText(tester, 'Valider ma présence');
       expect(backend.actions.last, 'presence');
       expect(find.text('Présence validée. Bon trajet.'), findsOneWidget);
-      expect(find.text('Présence validée, trajet payé'), findsOneWidget);
+      expect(find.text('Présence validée : ta part est prélevée à l\'arrivée'), findsOneWidget);
       expect(find.text('Valider ma présence'), findsNothing);
+      expect(find.text('Annuler ma place'), findsNothing);
     });
+
+    testWidgets(
+      'terminer son trajet avant l’arrivée : avertissement, puis le conducteur est prévenu',
+      (tester) async {
+        await openLive(tester);
+        await tapText(tester, 'Valider ma présence');
+        await tester.pump(const Duration(seconds: 5)); // le message disparaît
+        await tester.pumpAndSettle();
+        await tapText(tester, 'Terminer mon trajet');
+        expect(find.textContaining('le conducteur n\'est pas rémunéré pour toi'), findsOneWidget);
+        await tapText(tester, 'Continuer le trajet');
+        expect(backend.actions, isNot(contains('finish')));
+
+        await tapText(tester, 'Terminer mon trajet');
+        await tapText(tester, 'Terminer quand même');
+        expect(backend.actions.last, 'finish');
+        expect(find.text('Trajet terminé. Le conducteur est prévenu.'), findsOneWidget);
+        expect(
+          find.text('Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.'),
+          findsOneWidget,
+        );
+        expect(find.text('Terminer mon trajet'), findsNothing);
+      },
+    );
 
     testWidgets('partager sa position ; refus définitif : lien vers les réglages', (tester) async {
       location.onRequest = LocationAccess.deniedForever;
@@ -259,6 +287,46 @@ void main() {
       expect(backend.topupKeys, hasLength(2));
       expect(backend.balanceCents, 2000);
       expect(backend.topupKeys.length, 2);
+    });
+
+    testWidgets('retirer vers un IBAN : erreurs claires, puis solde et historique à jour', (
+      tester,
+    ) async {
+      Future<void> tapSubmit() async {
+        // Montant formaté avec une espace insécable avant l'euro.
+        await tester.tap(find.textContaining('Retirer 12,50'));
+        await tester.pumpAndSettle();
+      }
+
+      backend.balanceCents = 2500;
+      await openWallet(tester);
+      await tapText(tester, 'Retirer vers mon compte');
+      expect(find.text('Retirer ton solde'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), '12,5');
+      await tester.enterText(find.byType(TextField).at(1), 'DE89 3704 0044 0532 0130 00');
+      await tester.enterText(find.byType(TextField).at(2), 'Léa Martin');
+      await tester.pumpAndSettle();
+      await tapSubmit();
+      expect(find.textContaining('Cet IBAN n\'est pas valide'), findsOneWidget);
+      expect(backend.payouts, isEmpty);
+
+      await tester.enterText(find.byType(TextField).at(1), 'fr76 3000 6000 0112 3456 7890 189');
+      await tester.pumpAndSettle();
+      await tapSubmit();
+      expect(backend.payouts.single.request.amountCents, 1250);
+      expect(backend.payouts.single.request.iban, 'FR7630006000011234567890189');
+      expect(find.text('Ton portefeuille'), findsOneWidget);
+      expect(find.text('Retrait'), findsOneWidget);
+      expect(backend.balanceCents, 1250);
+    });
+
+    testWidgets('golden retrait', (tester) async {
+      backend.balanceCents = 2500;
+      await openWallet(tester);
+      await tapText(tester, 'Retirer vers mon compte');
+      await tester.enterText(find.byType(TextField).at(0), '25');
+      await tester.pumpAndSettle();
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/payout_light.png'));
     });
 
     testWidgets('golden portefeuille', (tester) async {

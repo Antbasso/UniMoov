@@ -1646,17 +1646,35 @@ abstract class AppLocalizations {
   /// **'Présence validée'**
   String get presenceValidated;
 
-  /// No description provided for @presencePaid.
+  /// No description provided for @presenceOnBoard.
   ///
   /// In fr, this message translates to:
-  /// **'Présence validée, trajet payé'**
-  String get presencePaid;
+  /// **'Présence validée : ta part est prélevée à l\'arrivée'**
+  String get presenceOnBoard;
 
-  /// No description provided for @presenceUnpaid.
+  /// No description provided for @tripArrived.
   ///
   /// In fr, this message translates to:
-  /// **'Présence validée, paiement en attente : recharge ton portefeuille'**
-  String get presenceUnpaid;
+  /// **'Arrivée à destination : ta part est prélevée à la clôture du trajet.'**
+  String get tripArrived;
+
+  /// No description provided for @tripLeftEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.'**
+  String get tripLeftEarly;
+
+  /// No description provided for @stopArrived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée'**
+  String get stopArrived;
+
+  /// No description provided for @stopLeftEarly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminé avant l\'arrivée'**
+  String get stopLeftEarly;
 
   /// No description provided for @confirmPresence.
   ///
@@ -1973,7 +1991,7 @@ abstract class AppLocalizations {
   /// No description provided for @finishConfirmBody.
   ///
   /// In fr, this message translates to:
-  /// **'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.'**
+  /// **'Le suivi s\'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n\'es pas rémunéré pour eux.'**
   String get finishConfirmBody;
 
   /// No description provided for @finishConfirmCancel.
@@ -1981,6 +1999,162 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Continuer le trajet'**
   String get finishConfirmCancel;
+
+  /// No description provided for @finishMyTrip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer mon trajet'**
+  String get finishMyTrip;
+
+  /// No description provided for @finishMyTripTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer ton trajet maintenant ?'**
+  String get finishMyTripTitle;
+
+  /// No description provided for @finishMyTripBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu n\'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n\'est pas rémunéré pour toi. Il est prévenu tout de suite.'**
+  String get finishMyTripBody;
+
+  /// No description provided for @finishMyTripConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminer quand même'**
+  String get finishMyTripConfirm;
+
+  /// No description provided for @finishMyTripDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet terminé. Le conducteur est prévenu.'**
+  String get finishMyTripDone;
+
+  /// No description provided for @insufficientFundsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde insuffisant'**
+  String get insufficientFundsTitle;
+
+  /// No description provided for @insufficientFundsBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l\'arrivée que ta part réelle.'**
+  String get insufficientFundsBody;
+
+  /// No description provided for @insufficientFundsTopup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recharger'**
+  String get insufficientFundsTopup;
+
+  /// No description provided for @insufficientFundsLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get insufficientFundsLater;
+
+  /// No description provided for @walletPayout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer vers mon compte'**
+  String get walletPayout;
+
+  /// No description provided for @walletPayoutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ton solde'**
+  String get walletPayoutTitle;
+
+  /// No description provided for @walletPayoutIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.'**
+  String get walletPayoutIntro;
+
+  /// No description provided for @walletPayoutAmount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant en euros'**
+  String get walletPayoutAmount;
+
+  /// No description provided for @walletPayoutIban.
+  ///
+  /// In fr, this message translates to:
+  /// **'IBAN'**
+  String get walletPayoutIban;
+
+  /// No description provided for @walletPayoutHolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Titulaire du compte'**
+  String get walletPayoutHolder;
+
+  /// No description provided for @walletPayoutSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {amount}'**
+  String walletPayoutSubmit(String amount);
+
+  /// No description provided for @walletPayoutDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrait demandé. Le virement arrive sous quelques jours.'**
+  String get walletPayoutDone;
+
+  /// No description provided for @walletPayoutRule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un retrait par semaine, {amount} minimum.'**
+  String walletPayoutRule(String amount);
+
+  /// No description provided for @walletPayoutAmountInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique un montant, par exemple 12,50.'**
+  String get walletPayoutAmountInvalid;
+
+  /// No description provided for @walletPayoutHolderInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique le nom du titulaire du compte.'**
+  String get walletPayoutHolderInvalid;
+
+  /// No description provided for @errorIbanInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet IBAN n\'est pas valide : vérifie-le.'**
+  String get errorIbanInvalid;
+
+  /// No description provided for @errorPayoutTooSmall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant de retrait trop faible.'**
+  String get errorPayoutTooSmall;
+
+  /// No description provided for @errorPayoutTooSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un seul retrait par semaine : réessaie plus tard.'**
+  String get errorPayoutTooSoon;
+
+  /// No description provided for @errorPayoutFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le virement a été refusé.'**
+  String get errorPayoutFailed;
+
+  /// No description provided for @errorInsufficientFunds.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde insuffisant.'**
+  String get errorInsufficientFunds;
+
+  /// No description provided for @errorNotOnBoard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta présence n\'est pas validée : pour renoncer, annule ta place.'**
+  String get errorNotOnBoard;
 
   /// No description provided for @cancelMyPlace.
   ///
@@ -2975,7 +3149,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountWalletLeft.
   ///
   /// In fr, this message translates to:
-  /// **'Il te reste {amount} sur ton portefeuille. Écris à l\'équipe ({email}) pour les récupérer, puis reviens supprimer ton compte.'**
+  /// **'Il te reste {amount} sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l\'équipe, {email}), puis reviens supprimer ton compte.'**
   String deleteAccountWalletLeft(String amount, String email);
 
   /// No description provided for @deleteAccountWriteTeam.

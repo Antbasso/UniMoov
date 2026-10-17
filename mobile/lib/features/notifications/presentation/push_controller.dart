@@ -19,7 +19,11 @@ String? routeForPush(Map<String, String> data) {
   final rideId = _id(data['rideId']);
   return switch (data['type']) {
     'chat_message' when conversationId != null => AppRoutes.conversation(conversationId),
-    'ride_cancelled' || 'ride_reminder' when rideId != null => AppRoutes.ride(rideId),
+    'ride_cancelled' ||
+    'ride_reminder' ||
+    'passenger_left' when rideId != null => AppRoutes.ride(rideId),
+    // Solde insuffisant au départ : place libérée, il faut recharger.
+    'payment_required' => AppRoutes.wallet,
     'replacement_proposed' ||
     'proposals_ready' ||
     'ride_requested' ||

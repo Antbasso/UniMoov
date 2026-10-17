@@ -16,7 +16,6 @@ class LiveState {
     this.positions = const {},
     this.etas = const {},
     this.pickedUp = const {},
-    this.presence = const {},
     this.sharing = false,
     this.ended = false,
   });
@@ -29,9 +28,6 @@ class LiveState {
   final Map<String, DateTime> etas;
   final Set<String> pickedUp;
 
-  /// Présence validée, et paiement passé ou non.
-  final Map<String, bool> presence;
-
   /// Ma position est envoyée (permission accordée, trajet en cours).
   final bool sharing;
 
@@ -43,7 +39,6 @@ class LiveState {
     Map<String, LivePosition>? positions,
     Map<String, DateTime>? etas,
     Set<String>? pickedUp,
-    Map<String, bool>? presence,
     bool? sharing,
     bool? ended,
   }) => LiveState(
@@ -51,7 +46,6 @@ class LiveState {
     positions: positions ?? this.positions,
     etas: etas ?? this.etas,
     pickedUp: pickedUp ?? this.pickedUp,
-    presence: presence ?? this.presence,
     sharing: sharing ?? this.sharing,
     ended: ended ?? this.ended,
   );
@@ -122,9 +116,9 @@ class LiveRideController extends Notifier<LiveState> {
       case LivePickedUp():
         state = state.copyWith(pickedUp: {...state.pickedUp, event.userId});
         ref.invalidate(rideProvider(rideId));
-      case LivePresence():
-        state = state.copyWith(presence: {...state.presence, event.userId: event.paid});
+      case LivePresence() || LivePassengerDone():
         ref.invalidate(rideProvider(rideId));
+        ref.invalidate(navigationProvider(rideId));
       case LiveStatus(:final status):
         if (status == 'completed') {
           state = state.copyWith(ended: true, connected: false);
