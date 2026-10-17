@@ -10,8 +10,8 @@ Document de référence pour la conformité du pilote d'Annecy. Responsable du t
 | Profil de trajet | adresse du domicile et coordonnées, secteur, véhicule, rôle, application GPS | calcul des trajets et des détours | contrat | durée du compte |
 | Emploi du temps | début et fin de chaque journée de cours, jamais les titres ni les lieux ; lien ICS chiffré | proposer les trajets de la semaine | consentement explicite (agenda), contrat (semaine type) | créneaux passés effacés après 7 jours ; lien supprimé à la déconnexion de l'agenda |
 | Trajets | participations, arrêts, heures, statuts, montants, tracé | organiser le covoiturage, historique | contrat | conservés pour la comptabilité et les litiges ; à la suppression du compte, point de prise en charge et tracé des trajets passés effacés |
-| Suivi en direct | position pendant un trajet en cours uniquement | suivi, validation de présence | contrat | dernière position en mémoire ; trace toutes les 30 s supprimée après 7 jours (`tracking.traceRetentionDays`) |
-| Paiements | portefeuille, registre comptable, recharges, retraits | partage des frais | contrat, obligation légale (comptabilité) | registre en écriture seule, conservé (obligation comptable), rattaché à un compte anonyme après suppression |
+| Suivi en direct | position pendant un trajet en cours uniquement, arrêtée pour un passager dès son arrivée ou sa sortie | suivi, validation de présence | contrat | dernière position en mémoire ; trace toutes les 30 s supprimée après 7 jours (`tracking.traceRetentionDays`) |
+| Paiements | portefeuille, registre comptable, recharges, retraits (IBAN transmis au prestataire, jamais stocké : 4 derniers caractères seulement) | partage des frais | contrat, obligation légale (comptabilité) | registre en écriture seule, conservé (obligation comptable), rattaché à un compte anonyme après suppression |
 | Confiance | notes, événements de fiabilité, litiges, signalements | sécurité et fiabilité du service | intérêt légitime | fenêtre de 180 jours pour le score ; litiges et signalements conservés, messages libres effacés à la suppression |
 | Messagerie | conversations et messages | coordination des trajets | contrat | chat de trajet archivé 7 jours après le trajet, supprimé 30 jours plus tard (`chat.rideArchiveDays`, `chat.rideDeleteDays`) ; messages d'un compte supprimé effacés, sauf un message signalé, gardé sans nom comme preuve |
 | Notifications | jeton de l'appareil, préférences | rappels et alertes | contrat ; autorisation du téléphone | jeton retiré à la déconnexion, à la suppression ou quand FCM le déclare périmé |
@@ -27,13 +27,13 @@ Document de référence pour la conformité du pilote d'Annecy. Responsable du t
 | Firebase Cloud Messaging (Google) | jeton de l'appareil, texte court de la notification, sans adresse ni contenu de message | hors UE possible (clauses contractuelles types de Google) |
 | Géoplateforme (Base Adresse Nationale) | adresse saisie, sans identité | France |
 | OpenRouteService (HeiGIT) | coordonnées des arrêts d'un trajet, sans identité | Allemagne |
-| Prestataire de paiement (à venir, M4b) | à compléter au choix du prestataire | à vérifier |
+| Prestataire de paiement (à venir, M4b) | montants ; pour un retrait, IBAN et nom du titulaire ; à compléter au choix du prestataire | à vérifier |
 
 ## Droits des personnes
 
 - **Accès et portabilité** : profil, « Mes données », « Exporter mes données » (`GET /me/export`, traces de position comprises) : fichier JSON avec tout ce qui concerne la personne, sans aucun secret ni donnée d'un tiers.
 - **Rectification** : profil (nom, adresse, véhicule, rôle, emploi du temps, préférences).
-- **Effacement** : « Supprimer mon compte » (`DELETE /me`), confirmé par le mot de passe. Refusé pendant un trajet en cours et tant que le portefeuille n'est pas vide (l'argent appartient à la personne : retrait d'abord, par l'équipe tant que le prestataire n'est pas branché). Ce qui reste : trajets (sans point de prise en charge ni tracé), paiements, notes et registre, rattachés à « Ancien membre », sans nom, mail ni adresse ; un message signalé reste comme preuve, sans nom. Le compte est fermé avant la libération des trajets : ni connexion, ni recharge, ni nouvelle proposition ensuite.
+- **Effacement** : « Supprimer mon compte » (`DELETE /me`), confirmé par le mot de passe. Refusé pendant un trajet en cours et tant que le portefeuille n'est pas vide (l'argent appartient à la personne : retrait d'abord, depuis le portefeuille vers son IBAN). Ce qui reste : trajets (sans point de prise en charge ni tracé), paiements, notes et registre, rattachés à « Ancien membre », sans nom, mail ni adresse ; un message signalé reste comme preuve, sans nom. Le compte est fermé avant la libération des trajets : ni connexion, ni recharge, ni nouvelle proposition ensuite.
 - **Retrait du consentement** : déconnexion de l'agenda (lien et créneaux supprimés), notifications coupables par catégorie ou dans les réglages du téléphone.
 - **Opposition, questions, réclamation** : unimoov.support@gmail.com ; réponse sous un mois. Réclamation possible auprès de la CNIL.
 
