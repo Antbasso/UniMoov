@@ -3853,6 +3853,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu reçois environ {price} au total'**
   String proposalPriceReceive(String price);
+
+  /// No description provided for @chatAttach.
+  ///
+  /// In fr, this message translates to:
+  /// **'Joindre une photo ou un trajet'**
+  String get chatAttach;
+
+  /// No description provided for @chatPhotoSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo'**
+  String get chatPhotoSemantic;
+
+  /// No description provided for @chatReact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réagir'**
+  String get chatReact;
+
+  /// No description provided for @chatReactWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réagir avec {emoji}'**
+  String chatReactWith(String emoji);
+
+  /// No description provided for @chatReactionRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ma réaction'**
+  String get chatReactionRemove;
+
+  /// No description provided for @chatReactionSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réaction {emoji}, {count}'**
+  String chatReactionSemantic(String emoji, int count);
+
+  /// No description provided for @chatReactionMineSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta réaction {emoji}, {count}. Touche pour la retirer'**
+  String chatReactionMineSemantic(String emoji, int count);
+
+  /// No description provided for @chatLastPhoto.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo'**
+  String get chatLastPhoto;
+
+  /// No description provided for @close.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get close;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

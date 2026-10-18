@@ -896,6 +896,50 @@ class FakeBackend
     return message;
   }
 
+  /// Photos envoyées dans les conversations : (conversation, légende, octets).
+  final List<(String, String, Uint8List)> chatPhotos = [];
+
+  @override
+  Future<ChatMessage> sendPhoto(
+    String id,
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+  }) async {
+    _maybeFail();
+    chatPhotos.add((id, caption, bytes));
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: id,
+      senderId: idOf(_me.email),
+      body: caption,
+      createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      photoUrl: '/api/v1/conversations/$id/messages/msg-$_chatCounter/photo',
+    );
+    messagesById.putIfAbsent(id, () => []).add(message);
+    conversationsById[id] = conversationsById[id]!.copyWith(lastMessage: message);
+    return message;
+  }
+
+  /// Réactions envoyées : (message, emoji ou null).
+  final List<(String, String?)> reactionsSent = [];
+
+  @override
+  Future<ChatMessage> react(String id, String messageId, String? emoji) async {
+    _maybeFail();
+    reactionsSent.add((messageId, emoji));
+    final list = messagesById[id]!;
+    final i = list.indexWhere((m) => m.id == messageId);
+    final me = idOf(_me.email);
+    return list[i] = list[i].copyWith(
+      reactions: [
+        for (final r in list[i].reactions)
+          if (r.userId != me) r,
+        if (emoji != null) (userId: me, emoji: emoji),
+      ],
+    );
+  }
+
   /// Propositions publiées depuis l'app.
   final List<({String? rideId, DateTime? day, bool toCampus, String? time, bool create})>
   carpoolPosts = [];

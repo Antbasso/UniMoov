@@ -84,9 +84,15 @@ class _ConversationRow extends ConsumerWidget {
     final unread = conversation.unread > 0;
     final last = conversation.lastMessage;
     final title = conversationTitle(l10n, conversation, me);
+    // Photo sans légende : « Photo » plutôt qu'un aperçu vide.
+    final lastText = last == null
+        ? null
+        : last.photoUrl != null && last.body.isEmpty
+        ? l10n.chatLastPhoto
+        : last.body;
     final preview = last == null
         ? conversationMembers(l10n, conversation, me)
-        : (last.senderId == me ? l10n.chatYouSaid(last.body) : last.body);
+        : (last.senderId == me ? l10n.chatYouSaid(lastText!) : lastText!);
     return Padding(
       padding: const EdgeInsets.only(bottom: UmSpace.s3),
       child: Semantics(

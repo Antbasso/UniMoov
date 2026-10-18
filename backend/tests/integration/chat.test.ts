@@ -194,6 +194,55 @@ describe('messages en direct et push', () => {
   });
 });
 
+describe('réactions et photos', () => {
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 1)]);
+
+  it('une réaction par personne, remplacée ou retirée, vue par tous ; jeu fermé', async () => {
+    const [latest] = (await call('Inès', 'GET', `/conversations/${chatId}/messages?limit=1`)).json<{ messages: { id: string }[] }>().messages;
+    const url = `/conversations/${chatId}/messages/${latest!.id}/reaction`;
+    expect((await call('Inès', 'PUT', url, { emoji: '👍' })).statusCode).toBe(200);
+    expect((await call('Hugo', 'PUT', url, { emoji: '😂' })).statusCode).toBe(200);
+    const replaced = await call('Inès', 'PUT', url, { emoji: '❤️' });
+    expect(replaced.json<{ reactions: unknown[] }>().reactions).toEqual([
+      { userId: user('Hugo').id, emoji: '😂' },
+      { userId: user('Inès').id, emoji: '❤️' },
+    ]);
+    expect((await call('Inès', 'PUT', url, { emoji: '🤡' })).statusCode).toBe(400);
+    expect((await call('Nathan', 'PUT', url, { emoji: '👍' })).statusCode).toBe(404);
+    const removed = await call('Hugo', 'DELETE', url);
+    expect(removed.json<{ reactions: unknown[] }>().reactions).toEqual([{ userId: user('Inès').id, emoji: '❤️' }]);
+  });
+
+  it('photo avec légende facultative, servie aux seuls membres ; contrôlée sur ses octets', async () => {
+    const send = (body: Buffer, type: string, query = '') =>
+      login('Léa').then((t) =>
+        ctx.app.inject({
+          method: 'POST',
+          url: `/api/v1/conversations/${chatId}/photos${query}`,
+          headers: { ...bearer(t), 'content-type': type },
+          payload: body,
+        }),
+      );
+    const sent = await send(jpeg, 'image/jpeg', `?caption=${encodeURIComponent('Je suis là')}`);
+    expect(sent.statusCode).toBe(201);
+    const message = sent.json<{ id: string; body: string; photoUrl: string }>();
+    expect(message.body).toBe('Je suis là');
+    expect(message.photoUrl).toBe(`/api/v1/conversations/${chatId}/messages/${message.id}/photo`);
+    const photo = await ctx.app.inject({ method: 'GET', url: message.photoUrl, headers: bearer(await login('Hugo')) });
+    expect(photo.statusCode).toBe(200);
+    expect(photo.headers['content-type']).toBe('image/jpeg');
+    expect(photo.rawPayload.equals(jpeg)).toBe(true);
+    expect((await ctx.app.inject({ method: 'GET', url: message.photoUrl, headers: bearer(await login('Nathan')) })).statusCode).toBe(404);
+    // Sans légende : permis pour une photo ; un faux JPEG est refusé.
+    expect((await send(jpeg, 'image/jpeg')).json<{ body: string }>().body).toBe('');
+    expect((await send(Buffer.from('pas une image'), 'image/jpeg')).statusCode).toBe(400);
+    expect((await send(Buffer.alloc(700 * 1024, 0xff), 'image/jpeg')).statusCode).toBe(413);
+    // Aperçu de la liste : le dernier message est une photo.
+    const list = (await call('Hugo', 'GET', '/conversations')).json<{ conversations: (Conversation & { lastMessage: { photoUrl: string | null } })[] }>();
+    expect(list.conversations.find((c) => c.id === chatId)!.lastMessage.photoUrl).not.toBeNull();
+  });
+});
+
 describe('messages privés et groupes', () => {
   it('seulement avec des personnes croisées sur un trajet ; une conversation privée par paire', async () => {
     const contacts = (await call('Hugo', 'GET', '/contacts')).json<{ contacts: { firstName: string }[] }>().contacts;

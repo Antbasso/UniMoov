@@ -2222,4 +2222,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String proposalPriceReceive(String price) {
     return 'Tu reçois environ $price au total';
   }
+
+  @override
+  String get chatAttach => 'Joindre une photo ou un trajet';
+
+  @override
+  String get chatPhotoSemantic => 'Photo';
+
+  @override
+  String get chatReact => 'Réagir';
+
+  @override
+  String chatReactWith(String emoji) {
+    return 'Réagir avec $emoji';
+  }
+
+  @override
+  String get chatReactionRemove => 'Retirer ma réaction';
+
+  @override
+  String chatReactionSemantic(String emoji, int count) {
+    return 'Réaction $emoji, $count';
+  }
+
+  @override
+  String chatReactionMineSemantic(String emoji, int count) {
+    return 'Ta réaction $emoji, $count. Touche pour la retirer';
+  }
+
+  @override
+  String get chatLastPhoto => 'Photo';
+
+  @override
+  String get close => 'Fermer';
 }

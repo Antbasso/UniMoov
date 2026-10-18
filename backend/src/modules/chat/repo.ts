@@ -41,12 +41,17 @@ export interface MessageRow {
   body: string;
   createdAt: Date;
   carpool: CarpoolInfo | null;
+  /** Une réaction par personne. */
+  reactions: { userId: string; emoji: string }[];
+  hasPhoto: boolean;
 }
 
 /** Colonnes d'un message, avec sa proposition de covoiturage s'il en porte une. */
 const MESSAGE_COLUMNS = sql`m.*, coalesce(cr.target_time, m.carpool_time) AS carpool_when,
   (SELECT coalesce(json_agg(json_build_object('userId', u.id, 'firstName', u.first_name, 'rideId', j.ride_id) ORDER BY j.created_at), '[]'::json)
-     FROM carpool_joins j JOIN users u ON u.id = j.user_id WHERE j.message_id = m.id) AS carpool_joined`;
+     FROM carpool_joins j JOIN users u ON u.id = j.user_id WHERE j.message_id = m.id) AS carpool_joined,
+  (SELECT coalesce(json_agg(json_build_object('userId', r.user_id, 'emoji', r.emoji) ORDER BY r.created_at, r.user_id), '[]'::json)
+     FROM message_reactions r WHERE r.message_id = m.id) AS reactions`;
 
 const date = (v: unknown) => (v ? new Date(v as string) : null);
 const toConversation = (r: Record<string, unknown>): ConversationRow => ({
@@ -74,6 +79,8 @@ const toMessage = (r: Record<string, unknown>): MessageRow => ({
         joined: (r.carpool_joined as CarpoolInfo['joined'] | undefined) ?? [],
       }
     : null,
+  reactions: (r.reactions as MessageRow['reactions'] | undefined) ?? [],
+  hasPhoto: r.has_photo === true,
 });
 
 /** Conversations, membres et messages (tables de `docs/data-model.sql`). */
@@ -111,7 +118,7 @@ export class ChatRepo {
       SELECT c.*,
         (SELECT count(*) FROM messages x WHERE x.conversation_id = c.id AND x.sender_id <> ${userId}
            AND (m.last_read_at IS NULL OR x.created_at > m.last_read_at)) AS unread,
-        l.id AS l_id, l.sender_id AS l_sender, l.body AS l_body, l.created_at AS l_created
+        l.id AS l_id, l.sender_id AS l_sender, l.body AS l_body, l.created_at AS l_created, l.has_photo AS l_photo
       FROM conversation_members m
       JOIN conversations c ON c.id = m.conversation_id
       LEFT JOIN LATERAL (SELECT * FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) l ON true
@@ -122,7 +129,16 @@ export class ChatRepo {
       ...toConversation(r),
       unread: Number(r.unread),
       lastMessage: r.l_id
-        ? { id: r.l_id as string, conversationId: r.id as string, senderId: r.l_sender as string, body: r.l_body as string, createdAt: new Date(r.l_created as string), carpool: null }
+        ? {
+            id: r.l_id as string,
+            conversationId: r.id as string,
+            senderId: r.l_sender as string,
+            body: r.l_body as string,
+            createdAt: new Date(r.l_created as string),
+            carpool: null,
+            reactions: [],
+            hasPhoto: r.l_photo === true,
+          }
         : null,
     }));
   }
@@ -191,12 +207,17 @@ export class ChatRepo {
     at: Date,
     db: DbOrTx = this.db,
     carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string; time?: Date | null } | null = null,
+    photo: { contentType: string; data: Buffer } | null = null,
   ): Promise<MessageRow> {
     const { rows } = await db.execute<{ id: string }>(sql`
-      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction, carpool_time)
+      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction, carpool_time, has_photo)
       VALUES (${conversationId}, ${senderId}, ${body}, ${at}, ${carpool?.kind ?? null}, ${carpool?.rideId ?? null},
-              ${carpool?.day ?? null}, ${carpool?.direction ?? null}, ${carpool?.time ?? null})
+              ${carpool?.day ?? null}, ${carpool?.direction ?? null}, ${carpool?.time ?? null}, ${photo !== null})
       RETURNING id`);
+    if (photo) {
+      await db.execute(sql`
+        INSERT INTO message_photos (message_id, content_type, data) VALUES (${rows[0]!.id}, ${photo.contentType}, ${photo.data})`);
+    }
     await db.execute(sql`UPDATE conversations SET last_message_at = ${at} WHERE id = ${conversationId}`);
     // Ses propres messages sont lus.
     await this.markRead(conversationId, senderId, at, db);
@@ -208,6 +229,24 @@ export class ChatRepo {
       SELECT ${MESSAGE_COLUMNS} FROM messages m LEFT JOIN rides cr ON cr.id = m.carpool_ride_id
       WHERE m.conversation_id = ${conversationId} AND m.id = ${messageId}`);
     return rows[0] ? toMessage(rows[0]) : undefined;
+  }
+
+  /** Ma réaction à un message : remplacée, ou retirée (`null`). */
+  async setReaction(messageId: string, userId: string, emoji: string | null, at: Date): Promise<void> {
+    await this.db.execute(
+      emoji === null
+        ? sql`DELETE FROM message_reactions WHERE message_id = ${messageId} AND user_id = ${userId}`
+        : sql`INSERT INTO message_reactions (message_id, user_id, emoji, created_at) VALUES (${messageId}, ${userId}, ${emoji}, ${at})
+              ON CONFLICT (message_id, user_id) DO UPDATE SET emoji = excluded.emoji, created_at = excluded.created_at`,
+    );
+  }
+
+  async photo(conversationId: string, messageId: string): Promise<{ contentType: string; data: Buffer } | undefined> {
+    const { rows } = await this.db.execute<{ content_type: string; data: Buffer }>(sql`
+      SELECT p.content_type, p.data FROM message_photos p JOIN messages m ON m.id = p.message_id
+      WHERE m.conversation_id = ${conversationId} AND p.message_id = ${messageId}`);
+    const r = rows[0];
+    return r ? { contentType: r.content_type, data: Buffer.from(r.data) } : undefined;
   }
 
   async addCarpoolJoin(messageId: string, userId: string, rideId: string, db: DbOrTx = this.db): Promise<void> {

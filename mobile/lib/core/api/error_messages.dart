@@ -3,6 +3,7 @@ import '../../l10n/app_localizations.dart';
 /// Traduit un code d'erreur de l'API (docs/api.md) en message pour l'utilisateur.
 String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'network_error' => l10n.errorNetwork,
+  'photo_unavailable' => l10n.photoUnavailable,
   'rate_limited' => l10n.errorRateLimited,
   'validation_error' || 'bad_request' => l10n.errorValidation,
   'unauthorized' || 'invalid_refresh_token' => l10n.errorSessionExpired,

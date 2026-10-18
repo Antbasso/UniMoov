@@ -120,6 +120,13 @@
       "when": 1792335096317,
       "tag": "0016_vehicle_look",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792336204885,
+      "tag": "0017_chat_reactions_photos",
+      "breakpoints": true
     }
   ]
 }

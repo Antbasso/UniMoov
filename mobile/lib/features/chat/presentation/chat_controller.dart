@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 import 'dart:math';
 
@@ -266,6 +267,34 @@ class ConversationController extends AsyncNotifier<ConversationState> {
   Future<void> send(String body) async {
     final message = await _api.send(id, body);
     if (ref.mounted) _append(message);
+  }
+
+  Future<void> sendPhoto(Uint8List bytes, String contentType, {String caption = ''}) async {
+    final message = await _api.sendPhoto(id, bytes, contentType, caption: caption);
+    if (ref.mounted) _append(message);
+  }
+
+  /// Ma réaction (`null` : la retirer) : affichée tout de suite, puis l'état du serveur.
+  Future<void> react(String messageId, String myId, String? emoji) async {
+    final current = state.value?.messages.where((m) => m.id == messageId).firstOrNull;
+    if (current != null) {
+      _append(
+        current.copyWith(
+          reactions: [
+            for (final r in current.reactions)
+              if (r.userId != myId) r,
+            if (emoji != null) (userId: myId, emoji: emoji),
+          ],
+        ),
+      );
+    }
+    try {
+      final message = await _api.react(id, messageId, emoji);
+      if (ref.mounted) _append(message);
+    } on Object {
+      if (current != null && ref.mounted) _append(current);
+      rethrow;
+    }
   }
 
   Future<void> postCarpool({

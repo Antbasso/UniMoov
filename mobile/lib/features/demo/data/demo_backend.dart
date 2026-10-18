@@ -557,6 +557,8 @@ class DemoBackend
 
   @override
   Future<Uint8List> photo(String url) async {
+    final chat = _chatPhotos[url];
+    if (chat != null) return chat;
     final bytes = _me.photo;
     if (bytes == null) throw const ApiException('not_found', '', statusCode: 404);
     return bytes;
@@ -2048,6 +2050,51 @@ class DemoBackend
       (m) => before == null || m.createdAt.isBefore(before),
     );
     return all.toList().reversed.take(50).toList();
+  }
+
+  /// Photos envoyées dans les conversations, par adresse.
+  final Map<String, Uint8List> _chatPhotos = {};
+
+  @override
+  Future<ChatMessage> sendPhoto(
+    String id,
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+  }) async {
+    await _wait();
+    final c = _conversations[id];
+    if (c == null) throw const ApiException('not_found', '', statusCode: 404);
+    final messageId = _id('msg');
+    final url = 'demo://chat/$messageId';
+    _chatPhotos[url] = bytes;
+    final message = ChatMessage(
+      id: messageId,
+      conversationId: id,
+      senderId: demoMeId,
+      body: caption,
+      createdAt: _now.toUtc(),
+      photoUrl: url,
+    );
+    _messages.putIfAbsent(id, () => []).add(message);
+    _conversations[id] = c.copyWith(lastMessage: message);
+    return message;
+  }
+
+  @override
+  Future<ChatMessage> react(String id, String messageId, String? emoji) async {
+    await _wait();
+    final list = _messages[id] ?? [];
+    final i = list.indexWhere((m) => m.id == messageId);
+    if (i < 0) throw const ApiException('not_found', '', statusCode: 404);
+    final m = list[i];
+    return list[i] = m.copyWith(
+      reactions: [
+        for (final r in m.reactions)
+          if (r.userId != demoMeId) r,
+        if (emoji != null) (userId: demoMeId, emoji: emoji),
+      ],
+    );
   }
 
   @override

@@ -116,8 +116,12 @@ void main() {
     expect(find.text('Je monte'), findsNothing);
 
     // Créer mon trajet depuis la conversation : je conduis, aller à 8 h, retour programmé.
-    await tester.tap(find.byTooltip('Proposer un covoiturage'));
+    // Le message de confirmation se retire avant d'ouvrir « + ».
+    await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Joindre une photo ou un trajet'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Proposer un covoiturage');
     await tester.tap(find.bySemanticsLabel('vendredi 16 octobre'));
     await tester.pump();
     await tester.ensureVisible(find.text('Programmer le retour'));
@@ -164,7 +168,10 @@ void main() {
       tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.send_rounded)).onPressed,
       isNull,
     );
-    await tester.enterText(fieldLabeled('Écris un message'), 'Merci, à tout à l’heure.');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Écris un message'),
+      'Merci, à tout à l’heure.',
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('Envoyer'));
     await tester.pumpAndSettle();
@@ -175,6 +182,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Je suis au point de rendez-vous.'), findsOneWidget);
     expect(find.text('Hugo'), findsWidgets);
+  });
+
+  testWidgets('réagir d’un appui long, retirer d’un toucher ; envoyer une photo légendée', (
+    tester,
+  ) async {
+    await open(tester, AppRoutes.conversation('conv-ride'));
+    await tester.longPress(find.text('Je pars à 7 h 40.'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Réagir avec 👍'));
+    await tester.pumpAndSettle();
+    expect(backend.reactionsSent.last.$2, '👍');
+    final pill = find.bySemanticsLabel('Ta réaction 👍, 1. Touche pour la retirer');
+    expect(pill, findsOneWidget);
+    await tester.tap(pill);
+    await tester.pumpAndSettle();
+    expect(backend.reactionsSent.last.$2, isNull);
+    expect(pill, findsNothing);
+
+    // Photo : le texte en cours devient sa légende.
+    await tester.enterText(find.widgetWithText(TextField, 'Écris un message'), 'Je suis là');
+    await tester.tap(find.byTooltip('Joindre une photo ou un trajet'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Choisir une photo');
+    expect(backend.chatPhotos.single.$2, 'Je suis là');
+    expect(find.bySemanticsLabel(RegExp('^Photo')), findsOneWidget);
   });
 
   testWidgets('chat de trajet archivé : lecture seule', (tester) async {

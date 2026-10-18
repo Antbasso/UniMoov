@@ -178,9 +178,8 @@ describe('carte d’un trajet confirmé', () => {
     const shifted = ctx.notifier.sent
       .slice(sentBefore)
       .filter((n) => n.event.type === 'pickup_time_changed' && n.event.rideId === mondayId);
-    expect(shifted).toContainEqual(
-      expect.objectContaining({ userIds: [user('Léa').id], event: expect.objectContaining({ earlier: true, role: 'driver' }) }),
-    );
+    const lea = shifted.find((n) => n.userIds[0] === user('Léa').id)?.event;
+    expect(lea).toMatchObject({ earlier: true, role: 'driver' });
     expect(shifted.some((n) => n.userIds.includes(user('Inès').id))).toBe(false);
     // Le passager reconnaît la voiture : modèle et couleur.
     expect(view.vehicle).toEqual({ model: 'Renault Clio', color: 'grise' });

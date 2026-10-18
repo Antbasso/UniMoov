@@ -59,6 +59,16 @@ abstract final class UmSize {
 
   /// Opacité d'un contrôle désactivé (reste lisible).
   static const double disabledOpacity = 0.45;
+
+  /// Largeur maximale d'une bulle de message, en part de l'écran.
+  static const double bubbleWidthFactor = 0.86;
+
+  /// Hauteur maximale d'une photo dans une conversation.
+  static const double chatPhotoMaxHeight = 280;
+
+  /// Emoji d'une réaction (pastille sous la bulle, et choix).
+  static const double reactionEmoji = 16;
+  static const double reactionChoice = 28;
 }
 
 abstract final class UmMotion {

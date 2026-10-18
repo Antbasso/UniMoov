@@ -1,3 +1,4 @@
+import { imageTypeOf } from '../../shared/images.js';
 import { AppError } from '../../shared/errors.js';
 import type { GeocodingProvider } from '../../shared/geocoding/geocoding-provider.js';
 import { GeocodingUnavailableError } from '../../shared/geocoding/geocoding-provider.js';
@@ -220,9 +221,8 @@ export class ProfileService {
    * en base, servie par `GET /users/{id}/photo` ; l'URL change à chaque photo (cache des apps).
    */
   async setPhoto(userId: string, contentType: string, data: Buffer): Promise<MeResponse> {
-    const jpeg = data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
-    const png = data.length > 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-    if ((contentType === 'image/jpeg' && !jpeg) || (contentType === 'image/png' && !png) || (!jpeg && !png)) {
+    const type = imageTypeOf(data);
+    if (!type || type !== contentType) {
       throw new AppError(400, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
     }
     await this.repo.setPhoto(userId, { contentType, data, url: `/api/v1/users/${userId}/photo?v=${this.clock().getTime()}` });

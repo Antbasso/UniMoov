@@ -1,4 +1,5 @@
 import { AppError } from '../../shared/errors.js';
+import { imageTypeOf } from '../../shared/images.js';
 import type { Notifier } from '../../shared/notifications/notifier.js';
 import type { SettingsService } from '../settings/service.js';
 import type { UserHub } from './hub.js';
@@ -15,6 +16,10 @@ export interface MessageView {
   createdAt: Date;
   /** Proposition de covoiturage (offre d'un conducteur ou demande d'un passager). */
   carpool: CarpoolInfo | null;
+  /** Qui a réagi, et comment (une réaction par personne) : l'app regroupe et repère la sienne. */
+  reactions: { userId: string; emoji: string }[];
+  /** Photo jointe, servie aux seuls membres ; `body` est alors sa légende (peut être vide). */
+  photoUrl: string | null;
 }
 
 /** Rejoindre une voiture par accord (matching) : passager accepté directement. */
@@ -48,6 +53,8 @@ const messageView = (m: MessageRow): MessageView => ({
   body: m.body,
   createdAt: m.createdAt,
   carpool: m.carpool,
+  reactions: m.reactions,
+  photoUrl: m.hasPhoto ? `/api/v1/conversations/${m.conversationId}/messages/${m.id}/photo` : null,
 });
 
 /**
@@ -162,6 +169,39 @@ export class ChatService {
       return this.repo.insertMessage(conversationId, userId, text, this.clock(), tx);
     });
     return this.publish(userId, conversationId, message);
+  }
+
+  /**
+   * Photo dans une conversation (JPEG ou PNG, 600 Ko au plus, réduite par l'app), avec une
+   * légende facultative. Gardée en base et supprimée avec le message (rétention).
+   */
+  async sendPhoto(userId: string, conversationId: string, contentType: string, data: Buffer, caption: string): Promise<MessageView> {
+    const type = imageTypeOf(data);
+    if (!type || type !== contentType) throw new AppError(400, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+    const message = await this.repo.transaction(async (tx) => {
+      const c = await this.repo.conversation(conversationId, tx, true);
+      if (!c || !(await this.repo.isMember(conversationId, userId, tx))) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
+      return this.repo.insertMessage(conversationId, userId, caption.trim(), this.clock(), tx, null, { contentType: type, data });
+    });
+    return this.publish(userId, conversationId, message);
+  }
+
+  /** Photo d'un message, pour les membres seulement (404 sinon). */
+  async photo(userId: string, conversationId: string, messageId: string): Promise<{ contentType: string; data: Buffer }> {
+    await this.member(userId, conversationId);
+    const photo = await this.repo.photo(conversationId, messageId);
+    if (!photo) throw new AppError(404, 'not_found', 'Ressource introuvable');
+    return photo;
+  }
+
+  /** Réagir à un message (une réaction par personne), ou retirer sa réaction ; tous voient la mise à jour. */
+  async react(userId: string, conversationId: string, messageId: string, emoji: string | null): Promise<MessageView> {
+    const c = await this.member(userId, conversationId);
+    if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
+    if (!(await this.repo.message(conversationId, messageId))) throw new AppError(404, 'not_found', 'Ressource introuvable');
+    await this.repo.setReaction(messageId, userId, emoji, this.clock());
+    return this.publish(userId, conversationId, (await this.repo.message(conversationId, messageId))!, false);
   }
 
   /** Envoi en direct aux membres connectés, en push aux autres (préférence « chat »). */

@@ -24,17 +24,18 @@ class PersonAvatar extends ConsumerWidget {
   }
 }
 
-/// Choix d'une photo (galerie ou appareil), réduite à 512 px en JPEG avant l'envoi. Remplaçable
+/// Choix d'une photo (galerie ou appareil), réduite en JPEG avant l'envoi : 512 px pour un
+/// portrait, plus grande pour une photo de conversation (`large`, environ 200 Ko). Remplaçable
 /// dans les tests.
-typedef PhotoPicker = Future<Uint8List?> Function({required bool camera});
+typedef PhotoPicker = Future<Uint8List?> Function({required bool camera, bool large});
 
 final photoPickerProvider = Provider<PhotoPicker>(
-  (ref) => ({required bool camera}) async {
+  (ref) => ({required bool camera, bool large = false}) async {
     final file = await ImagePicker().pickImage(
       source: camera ? ImageSource.camera : ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 80,
+      maxWidth: large ? 1280 : 512,
+      maxHeight: large ? 1280 : 512,
+      imageQuality: large ? 70 : 80,
     );
     return file?.readAsBytes();
   },

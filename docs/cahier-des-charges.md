@@ -47,6 +47,7 @@ Architecture façon Teams, trois niveaux de conversation :
 - Message privé en tête-à-tête entre deux utilisateurs.
 - Groupe personnalisé créé librement par les utilisateurs (trajets récurrents). Dans un groupe ou un message privé, on peut publier une proposition de covoiturage : un conducteur partage un de ses trajets (« Je monte »), ou un passager cherche une voiture pour un jour et un sens (« Je te prends », par quelqu'un qui conduit ce jour-là). Un toucher suffit : les deux ont dit oui, la place est réservée (mêmes contrôles de solde et de places qu'ailleurs). On peut aussi y créer son propre trajet : conducteur ou passager, jour, aller ou retour, heure, avec le retour programmé en même temps ; la carte publiée ouvre ensuite ce trajet d'un toucher.
 - Dans le chat d'un trajet, le trajet est épinglé en haut et s'ouvre d'un toucher.
+- Dans toute conversation : réactions aux messages (une par personne, choix fermé de six) et photos avec légende facultative, supprimées avec la conversation.
 - Chat automatique lié à un trajet confirmé, incluant tous les participants, créé à la confirmation et lié au cycle de vie du trajet.
 - Rétention : le chat de trajet reste accessible un certain temps après la fin du trajet, puis est archivé, puis supprimé (durée exacte à définir — cohérent avec la minimisation des données RGPD).
 

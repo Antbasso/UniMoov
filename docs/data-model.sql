@@ -285,7 +285,8 @@ CREATE TABLE messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id uuid NOT NULL REFERENCES users(id),
-  body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+  body text NOT NULL,                       -- vide seulement pour une photo sans légende
+  has_photo boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   -- proposition de covoiturage (groupe ou privé) : offre d'un trajet, ou demande jour + sens
   carpool_kind text CHECK (carpool_kind IN ('offer', 'request')),
@@ -294,6 +295,22 @@ CREATE TABLE messages (
   carpool_direction text CHECK (carpool_direction IN ('to_campus', 'from_campus'))
 );
 CREATE INDEX messages_conv_idx ON messages (conversation_id, created_at);
+ALTER TABLE messages ADD CONSTRAINT messages_body_length
+  CHECK (char_length(body) <= 2000 AND (char_length(body) >= 1 OR has_photo));
+
+CREATE TABLE message_reactions (        -- une réaction par personne et par message
+  message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  emoji text NOT NULL CHECK (emoji IN ('👍', '❤️', '😂', '😮', '😢', '🙏')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, user_id)
+);
+
+CREATE TABLE message_photos (           -- photo réduite par l'app, supprimée avec son message
+  message_id uuid PRIMARY KEY REFERENCES messages(id) ON DELETE CASCADE,
+  content_type text NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png')),
+  data bytea NOT NULL CHECK (octet_length(data) <= 614400)
+);
 
 CREATE TABLE carpool_joins (            -- qui a accepté quelle proposition, dans quelle voiture
   message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,

@@ -1,3 +1,4 @@
+import { PHOTO_MAX_BYTES } from '../../shared/images.js';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import {
@@ -19,7 +20,6 @@ import {
 import { AppError } from '../../shared/errors.js';
 import type { ProfileService } from './service.js';
 
-const PHOTO_MAX_BYTES = 600 * 1024;
 
 /** Toutes les routes exigent un JWT ; l'utilisateur ne touche qu'à son propre profil. */
 export const profileRoutes: FastifyPluginAsyncZod<{ service: ProfileService }> = (app, { service }) => {

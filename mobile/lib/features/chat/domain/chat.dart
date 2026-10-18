@@ -75,6 +75,8 @@ class ChatMessage {
     required this.body,
     required this.createdAt,
     this.carpool,
+    this.reactions = const [],
+    this.photoUrl,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -86,15 +88,54 @@ class ChatMessage {
     carpool: json['carpool'] == null
         ? null
         : Carpool.fromJson(json['carpool'] as Map<String, dynamic>),
+    reactions: [
+      for (final r in json['reactions'] as List<dynamic>? ?? const [])
+        (userId: (r as Map<String, dynamic>)['userId'] as String, emoji: r['emoji'] as String),
+    ],
+    photoUrl: json['photoUrl'] as String?,
   );
 
   final String id;
   final String conversationId;
   final String senderId;
+
+  /// Texte, ou légende d'une photo (peut alors être vide).
   final String body;
   final DateTime createdAt;
   final Carpool? carpool;
+
+  /// Une réaction par personne.
+  final List<({String userId, String emoji})> reactions;
+
+  /// Photo jointe, chargée avec le jeton (membres seulement).
+  final String? photoUrl;
+
+  /// Réactions regroupées : emoji et nombre, dans l'ordre d'arrivée.
+  List<(String, int)> get reactionCounts {
+    final counts = <String, int>{};
+    for (final r in reactions) {
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+    }
+    return [for (final e in counts.entries) (e.key, e.value)];
+  }
+
+  String? reactionOf(String? userId) =>
+      reactions.where((r) => r.userId == userId).firstOrNull?.emoji;
+
+  ChatMessage copyWith({List<({String userId, String emoji})>? reactions}) => ChatMessage(
+    id: id,
+    conversationId: conversationId,
+    senderId: senderId,
+    body: body,
+    createdAt: createdAt,
+    carpool: carpool,
+    reactions: reactions ?? this.reactions,
+    photoUrl: photoUrl,
+  );
 }
+
+/// Réactions possibles (jeu fermé, comme le serveur).
+const chatReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 class Conversation {
   const Conversation({

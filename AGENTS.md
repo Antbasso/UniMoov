@@ -23,7 +23,7 @@ assets/     logo
 ```
 
 ## Contrainte de coût (prioritaire)
-Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, pièces jointes de chat).
+Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, pièces jointes de chat autres que les photos).
 
 ## Stack imposée
 - Mobile : Flutter stable, Dart null-safe, Riverpod (état), go_router, dio, freezed + json_serializable, flutter_secure_storage, geolocator, url_launcher, firebase_messaging, flutter_map + flutter_map_pmtiles pour la carte (fond OSM en PMTiles statique, voir `docs/couts.md`).

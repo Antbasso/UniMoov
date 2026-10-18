@@ -124,7 +124,7 @@ export class AccountRepo {
       reportsFiled: await all(sql`
         SELECT reason, message, created_at AS "createdAt" FROM reports WHERE reporter_id = ${userId} ORDER BY created_at`),
       messagesSent: await all(sql`
-        SELECT m.conversation_id AS "conversationId", c.kind AS "conversationKind", m.body, m.created_at AS "createdAt"
+        SELECT m.conversation_id AS "conversationId", c.kind AS "conversationKind", m.body, m.has_photo AS "hasPhoto", m.created_at AS "createdAt"
         FROM messages m JOIN conversations c ON c.id = m.conversation_id
         WHERE m.sender_id = ${userId} ORDER BY m.created_at`),
       positionTrace: await all(sql`

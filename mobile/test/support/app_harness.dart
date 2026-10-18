@@ -74,7 +74,9 @@ Future<void> launchApp(
         accountApiProvider.overrideWithValue(backend),
         exportSharerProvider.overrideWithValue(sharer ?? FakeExportSharer()),
         // Sélecteur de photo : une petite image PNG valide, sans galerie.
-        photoPickerProvider.overrideWithValue(({required bool camera}) async => testPng),
+        photoPickerProvider.overrideWithValue(
+          ({required bool camera, bool large = false}) async => testPng,
+        ),
         userSocketConnectorProvider.overrideWithValue(backend.socket),
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),

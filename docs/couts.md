@@ -31,7 +31,7 @@ Total de fonctionnement visé : environ 5 à 7 €/mois, plus les frais uniques 
 ## Ce qui est reporté en v1.1 pour économiser du temps et de l'argent
 - Connexion Google/Apple (l'e-mail universitaire + mot de passe suffit) : évite deux intégrations et la revue des comptes OAuth.
 - Agenda Google Calendar et Microsoft Graph (vérification des applications OAuth, consentement administrateur de l'université) : le pilote utilise le **lien ICS** (les universités publient en général un lien ICS) et la saisie manuelle.
-- Pièces jointes dans le chat : messages texte uniquement.
+- Pièces jointes dans le chat autres que les photos (fichiers, vidéos, audio). Les photos sont en v1 depuis le 18/10/2026 (décision de l'équipe) : réduites par l'app (1280 px, environ 200 Ko), 600 Ko au plus, gardées en base et supprimées avec la conversation, donc sans service de stockage en plus.
 - Messagerie en groupes personnalisés si le temps manque (les messages privés et le chat de trajet restent en v1).
 
 ## Paiement dans l'app : portefeuille prépayé pour réduire les frais

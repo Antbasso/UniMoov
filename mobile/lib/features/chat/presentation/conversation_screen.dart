@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,9 +14,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../proposals/domain/proposal.dart';
 import '../../rides/presentation/trip_widgets.dart';
 import '../../profile/presentation/me_controller.dart';
-import '../../proposals/presentation/formatting.dart';
 import '../domain/chat.dart';
+import '../../profile/presentation/person_avatar.dart';
 import 'carpool_widgets.dart';
+import 'message_bubble.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
 
@@ -93,6 +96,77 @@ class _ConversationState extends ConsumerState<_Conversation> {
     });
     try {
       await ref.read(conversationProvider(_id).notifier).send(body);
+      _text.clear();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _react(String messageId, String me, String? emoji) async {
+    setState(() => _errorCode = null);
+    try {
+      await ref.read(conversationProvider(_id).notifier).react(messageId, me, emoji);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    }
+  }
+
+  /// « + » : photo de la galerie, photo prise sur le moment, ou trajet (groupe et privé).
+  Future<void> _attach(Conversation conversation) async {
+    final l10n = AppLocalizations.of(context);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.photoFromGallery),
+              onTap: () => Navigator.of(sheet).pop('gallery'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l10n.photoFromCamera),
+              onTap: () => Navigator.of(sheet).pop('camera'),
+            ),
+            // Groupe ou privé : proposer un trajet ou en chercher un, accepté d'un toucher.
+            if (conversation.kind != ConversationKind.ride)
+              ListTile(
+                leading: const Icon(Icons.directions_car_outlined),
+                title: Text(l10n.carpoolTitle),
+                onTap: () => Navigator.of(sheet).pop('carpool'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'carpool') {
+      await showCarpoolSheet(context, conversation.id);
+      return;
+    }
+    Uint8List? bytes;
+    try {
+      bytes = await ref.read(photoPickerProvider)(camera: choice == 'camera', large: true);
+    } on Object {
+      if (mounted) setState(() => _errorCode = 'photo_unavailable');
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    // Le texte en cours devient la légende de la photo.
+    final caption = _text.text.trim();
+    setState(() {
+      _sending = true;
+      _errorCode = null;
+    });
+    try {
+      await ref
+          .read(conversationProvider(_id).notifier)
+          .sendPhoto(bytes, imageContentType(bytes), caption: caption);
       _text.clear();
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
@@ -218,7 +292,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                       // Les plus récents en bas, visibles à l'ouverture.
                       reverse: true,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: UmSpace.s6,
+                        horizontal: UmSpace.s3,
                         vertical: UmSpace.s3,
                       ),
                       itemCount: messages.length + (widget.state.hasMore ? 1 : 0),
@@ -238,7 +312,16 @@ class _ConversationState extends ConsumerState<_Conversation> {
                         final sender = showSender && !mine ? nameOf(message.senderId) : null;
                         final Widget bubble = message.carpool != null
                             ? CarpoolCard(message: message, mine: mine, myId: me, sender: sender)
-                            : _Bubble(message: message, mine: mine, sender: sender);
+                            : MessageBubble(
+                                message: message,
+                                mine: mine,
+                                myId: me,
+                                sender: sender,
+                                onReact: conversation.archived || me == null
+                                    ? null
+                                    : (emoji) => _react(message.id, me, emoji),
+                                onOpenPhoto: (url) => showChatPhoto(context, url),
+                              );
                         // Liste inversée : le séparateur de jour vient au-dessus du premier message du jour.
                         final firstOfDay =
                             position == 0 ||
@@ -279,111 +362,79 @@ class _ConversationState extends ConsumerState<_Conversation> {
                 ),
               )
             else
+              // Saisie compacte : « + » (photo, appareil, trajet), champ arrondi, envoi.
               Padding(
-                padding: const EdgeInsets.fromLTRB(UmSpace.s6, UmSpace.s2, UmSpace.s3, UmSpace.s4),
+                padding: const EdgeInsets.fromLTRB(UmSpace.s1, UmSpace.s2, UmSpace.s1, UmSpace.s3),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Groupe ou privé : proposer un trajet ou en chercher un, accepté d'un toucher.
-                    if (conversation.kind != ConversationKind.ride)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: UmSpace.s5),
-                        child: IconButton(
-                          tooltip: l10n.carpoolTitle,
-                          icon: Icon(Icons.directions_car_outlined, color: c.brandStrong),
-                          onPressed: () => showCarpoolSheet(context, conversation.id),
-                        ),
+                    IconButton(
+                      tooltip: l10n.chatAttach,
+                      constraints: const BoxConstraints(
+                        minWidth: UmSize.tapTarget,
+                        minHeight: UmSize.tapTarget,
                       ),
+                      icon: Icon(Icons.add_rounded, color: c.brandStrong),
+                      onPressed: _sending ? null : () => _attach(conversation),
+                    ),
                     Expanded(
-                      child: UmField(
-                        label: l10n.chatMessageLabel,
+                      child: TextField(
                         controller: _text,
-                        maxLines: 4,
+                        minLines: 1,
+                        maxLines: 5,
                         maxLength: 2000,
-                        counterFrom: 1800,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: UmText.body.copyWith(color: c.ink),
+                        decoration: InputDecoration(
+                          hintText: l10n.chatMessageLabel,
+                          hintStyle: UmText.body.copyWith(color: c.inkMuted),
+                          counterText: '',
+                          isDense: true,
+                          filled: true,
+                          fillColor: c.surfaceRaised,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: UmSpace.s4,
+                            vertical: UmSpace.s3,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.focus, width: UmSize.controlBorder),
+                          ),
+                        ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: UmSpace.s5),
-                      child: IconButton(
-                        tooltip: l10n.chatSend,
-                        constraints: const BoxConstraints(
-                          minWidth: UmSize.tapTarget,
-                          minHeight: UmSize.tapTarget,
-                        ),
-                        icon: _sending
-                            ? SizedBox.square(
-                                dimension: UmSize.iconMd,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: UmSize.iconStroke,
-                                  color: c.brandStrong,
-                                ),
-                              )
-                            : Icon(
-                                Icons.send_rounded,
-                                color: _text.text.trim().isEmpty ? c.inkMuted : c.brandStrong,
-                              ),
-                        onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
+                    IconButton(
+                      tooltip: l10n.chatSend,
+                      constraints: const BoxConstraints(
+                        minWidth: UmSize.tapTarget,
+                        minHeight: UmSize.tapTarget,
                       ),
+                      icon: _sending
+                          ? SizedBox.square(
+                              dimension: UmSize.iconMd,
+                              child: CircularProgressIndicator(
+                                strokeWidth: UmSize.iconStroke,
+                                color: c.brandStrong,
+                              ),
+                            )
+                          : Icon(
+                              Icons.send_rounded,
+                              color: _text.text.trim().isEmpty ? c.inkMuted : c.brandStrong,
+                            ),
+                      onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
                     ),
                   ],
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine, this.sender});
-
-  final ChatMessage message;
-  final bool mine;
-  final String? sender;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final c = context.umColors;
-    final time = formatTime(message.createdAt, l10n.localeName);
-    final background = mine ? c.brand : c.surfaceRaised;
-    final foreground = mine ? c.onBrand : c.ink;
-    return Semantics(
-      container: true,
-      label: mine
-          ? l10n.chatMineSemantic(message.body, time)
-          : l10n.chatTheirsSemantic(sender ?? '', message.body, time),
-      excludeSemantics: true,
-      child: Align(
-        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: UmSpace.s2),
-            padding: const EdgeInsets.symmetric(horizontal: UmSpace.s4, vertical: UmSpace.s2),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(UmRadius.md),
-              border: mine ? null : Border.all(color: c.border),
-            ),
-            child: Column(
-              crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                if (sender != null)
-                  Text(
-                    sender!,
-                    style: UmText.caption.copyWith(
-                      color: c.brandStrong,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                Text(message.body, style: UmText.body.copyWith(color: foreground)),
-                Text(time, style: UmText.caption.copyWith(color: mine ? foreground : c.inkMuted)),
-              ],
-            ),
-          ),
         ),
       ),
     );

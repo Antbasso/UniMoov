@@ -1302,5 +1302,41 @@
         "type": "String"
       }
     }
-  }
+  },
+  "chatAttach": "Joindre une photo ou un trajet",
+  "chatPhotoSemantic": "Photo",
+  "chatReact": "Réagir",
+  "chatReactWith": "Réagir avec {emoji}",
+  "@chatReactWith": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReactionRemove": "Retirer ma réaction",
+  "chatReactionSemantic": "Réaction {emoji}, {count}",
+  "@chatReactionSemantic": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReactionMineSemantic": "Ta réaction {emoji}, {count}. Touche pour la retirer",
+  "@chatReactionMineSemantic": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatLastPhoto": "Photo",
+  "close": "Fermer"
 }

@@ -13,8 +13,12 @@ import {
   messageParams,
   messagesResponse,
   carpoolBody,
+  photoQuery,
+  reactionBody,
   sendBody,
 } from './schema.js';
+import { PHOTO_MAX_BYTES } from '../../shared/images.js';
+import { AppError } from '../../shared/errors.js';
 import type { ChatService } from './service.js';
 
 const PING_INTERVAL_MS = 30_000;
@@ -133,6 +137,45 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
       config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     },
     async (request, reply) => reply.code(201).send(await service.send(request.userId, request.params.id, request.body.body)),
+  );
+
+  // Photo : corps brut JPEG ou PNG (réduite par l'app), légende facultative en paramètre.
+  api.addContentTypeParser(['image/jpeg', 'image/png'], { parseAs: 'buffer', bodyLimit: PHOTO_MAX_BYTES }, (_request, body, done) => {
+    done(null, body);
+  });
+
+  api.post(
+    '/conversations/:id/photos',
+    {
+      bodyLimit: PHOTO_MAX_BYTES,
+      schema: { params: conversationParams, querystring: photoQuery, response: { 201: message } },
+      config: { rateLimit: { max: 30, timeWindow: '1 hour' } },
+    },
+    async (request, reply) => {
+      const contentType = request.headers['content-type']?.split(';')[0]?.trim() ?? '';
+      if (!Buffer.isBuffer(request.body)) throw new AppError(415, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+      return reply
+        .code(201)
+        .send(await service.sendPhoto(request.userId, request.params.id, contentType, request.body, request.query.caption));
+    },
+  );
+
+  api.get('/conversations/:id/messages/:messageId/photo', { schema: { params: messageParams } }, async (request, reply) => {
+    const photo = await service.photo(request.userId, request.params.id, request.params.messageId);
+    // Une photo de message ne change jamais : l'app peut la garder.
+    return reply.header('cache-control', 'private, max-age=604800').type(photo.contentType).send(photo.data);
+  });
+
+  api.put(
+    '/conversations/:id/messages/:messageId/reaction',
+    { schema: { params: messageParams, body: reactionBody, response: { 200: message } }, config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    (request) => service.react(request.userId, request.params.id, request.params.messageId, request.body.emoji),
+  );
+
+  api.delete(
+    '/conversations/:id/messages/:messageId/reaction',
+    { schema: { params: messageParams, response: { 200: message } } },
+    (request) => service.react(request.userId, request.params.id, request.params.messageId, null),
   );
 
   api.post('/conversations/:id/read', { schema: { params: conversationParams, response: { 204: z.null() } } }, async (request, reply) => {

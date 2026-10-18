@@ -22,7 +22,12 @@ export const message = z.strictObject({
       joined: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string(), rideId: z.uuid() })),
     })
     .nullable(),
+  reactions: z.array(z.strictObject({ userId: z.uuid(), emoji: z.string() })),
+  photoUrl: z.string().nullable(),
 });
+
+export const reactionBody = z.object({ emoji: z.enum(['👍', '❤️', '😂', '😮', '😢', '🙏']) });
+export const photoQuery = z.object({ caption: z.string().max(1000).default('') });
 
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 

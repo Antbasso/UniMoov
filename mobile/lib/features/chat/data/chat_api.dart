@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +24,12 @@ abstract interface class ChatApi {
   /// Messages du plus récent au plus ancien ; `before` pour remonter.
   Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId});
   Future<ChatMessage> send(String id, String body);
+
+  /// Photo (JPEG ou PNG réduite), avec une légende facultative.
+  Future<ChatMessage> sendPhoto(String id, Uint8List bytes, String contentType, {String caption});
+
+  /// Ma réaction à un message ; `null` la retire.
+  Future<ChatMessage> react(String id, String messageId, String? emoji);
 
   /// Proposition de covoiturage : offre sur un trajet que je conduis (`rideId`), offre sur un
   /// trajet créé pour l'occasion (`create` : jour, sens, heure « HH:MM »), ou demande (jour,
@@ -116,6 +124,34 @@ class DioChatApi implements ChatApi {
       '/api/v1/conversations/$id/messages',
       data: {'body': body},
     );
+    return ChatMessage.fromJson(response.data!);
+  });
+
+  @override
+  Future<ChatMessage> sendPhoto(
+    String id,
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+  }) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/conversations/$id/photos',
+      queryParameters: {if (caption.isNotEmpty) 'caption': caption},
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        contentType: contentType,
+        headers: {Headers.contentLengthHeader: bytes.length},
+      ),
+    );
+    return ChatMessage.fromJson(response.data!);
+  });
+
+  @override
+  Future<ChatMessage> react(String id, String messageId, String? emoji) => guardApi(() async {
+    final url = '/api/v1/conversations/$id/messages/$messageId/reaction';
+    final response = emoji == null
+        ? await _dio.delete<Map<String, dynamic>>(url)
+        : await _dio.put<Map<String, dynamic>>(url, data: {'emoji': emoji});
     return ChatMessage.fromJson(response.data!);
   });
 
