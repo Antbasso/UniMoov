@@ -269,3 +269,22 @@ List<int> demoProRataShares(int costCents, double distanceM, List<double> onboar
   }
   return [for (final v in shares) max(0, (v - 1e-9).ceil())];
 }
+
+/// Portions de route depuis le campus : longueur et indices des passagers à bord (comme le
+/// serveur), pour le détail du calcul.
+List<({double distance, List<int> riders})> demoPortions(double distanceM, List<double> onboardM) {
+  final onboard = [for (final d in onboardM) d.clamp(0, distanceM).toDouble()];
+  final cuts = {0.0, ...onboard}.toList()..sort();
+  final portions = <({double distance, List<int> riders})>[
+    for (var k = 1; k < cuts.length; k++)
+      (
+        distance: cuts[k] - cuts[k - 1],
+        riders: [
+          for (var i = 0; i < onboard.length; i++)
+            if (onboard[i] >= cuts[k]) i,
+        ],
+      ),
+  ];
+  if (distanceM - cuts.last > 0) portions.add((distance: distanceM - cuts.last, riders: const []));
+  return portions;
+}

@@ -1013,13 +1013,39 @@ class DemoBackend
       distanceM: total.round(),
       durationS: (total / speed).round(),
       price: RidePrice(
-        totalCostCents: price.cost,
+        totalCostCents: split.cost,
         persons: price.persons,
         shareCents: r.driverIsMe ? received : myShare,
         commissionCents: demoCommissionCents,
         youPayCents: r.driverIsMe ? null : myShare + demoCommissionCents,
         youReceiveCents: r.driverIsMe ? received : null,
         myDistanceM: r.driverIsMe ? null : split.onboard[demoMeId]?.round(),
+        breakdown: () {
+          final seats = r.activeSeats;
+          final portions = demoPortions(split.distance, [
+            for (final seat in seats) split.onboard[seat.personId] ?? split.distance,
+          ]);
+          final mine = seats.indexWhere((seat) => seat.personId == demoMeId);
+          return PriceBreakdown(
+            consumptionLPer100km: r.consumption,
+            fuelPriceCentsPerLitre: 185,
+            distanceM: split.distance.round(),
+            portions: [
+              for (final portion in portions)
+                if (r.driverIsMe || portion.riders.contains(mine))
+                  (distanceM: portion.distance.round(), persons: portion.riders.length + 1),
+            ],
+            shares: r.driverIsMe
+                ? [
+                    for (final seat in seats)
+                      (
+                        firstName: _firstName(seat.personId),
+                        shareCents: split.shares[seat.personId] ?? 0,
+                      ),
+                  ]
+                : const [],
+          );
+        }(),
       ),
     );
   }

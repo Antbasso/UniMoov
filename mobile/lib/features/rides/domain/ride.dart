@@ -82,6 +82,7 @@ class RidePrice {
     this.youPayCents,
     this.youReceiveCents,
     this.myDistanceM,
+    this.breakdown,
   });
 
   factory RidePrice.fromJson(Map<String, dynamic> json) => RidePrice(
@@ -92,6 +93,9 @@ class RidePrice {
     youPayCents: json['youPayCents'] as int?,
     youReceiveCents: json['youReceiveCents'] as int?,
     myDistanceM: json['myDistanceM'] as int?,
+    breakdown: json['breakdown'] == null
+        ? null
+        : PriceBreakdown.fromJson(json['breakdown'] as Map<String, dynamic>),
   );
 
   final int totalCostCents;
@@ -104,6 +108,49 @@ class RidePrice {
   /// Passager : distance parcourue à bord (de sa prise en charge au campus, ou l'inverse) ;
   /// sa part du carburant est au prorata (cahier §5).
   final int? myDistanceM;
+
+  /// Détail précis du calcul (consommation, prix du litre, portions, parts).
+  final PriceBreakdown? breakdown;
+}
+
+/// Détail du calcul du prix (docs/api.md) : de quoi refaire le calcul à la main.
+class PriceBreakdown {
+  const PriceBreakdown({
+    required this.consumptionLPer100km,
+    required this.fuelPriceCentsPerLitre,
+    required this.distanceM,
+    required this.portions,
+    this.shares = const [],
+  });
+
+  factory PriceBreakdown.fromJson(Map<String, dynamic> json) => PriceBreakdown(
+    consumptionLPer100km: (json['consumptionLPer100km'] as num).toDouble(),
+    fuelPriceCentsPerLitre: (json['fuelPriceCentsPerLitre'] as num).toDouble(),
+    distanceM: json['distanceM'] as int,
+    portions: [
+      for (final p in json['portions'] as List<dynamic>)
+        (distanceM: (p as Map<String, dynamic>)['distanceM'] as int, persons: p['persons'] as int),
+    ],
+    shares: [
+      for (final s in json['shares'] as List<dynamic>)
+        (
+          firstName: (s as Map<String, dynamic>)['firstName'] as String,
+          shareCents: s['shareCents'] as int,
+        ),
+    ],
+  );
+
+  final double consumptionLPer100km;
+  final double fuelPriceCentsPerLitre;
+  final int distanceM;
+
+  /// Passager : ses portions ; conducteur : toutes. `persons` : conducteur compris.
+  final List<({int distanceM, int persons})> portions;
+
+  /// Conducteur : ce que paie chaque passager (sa part, hors frais de service).
+  final List<({String firstName, int shareCents})> shares;
+
+  double get litres => distanceM / 1000 * consumptionLPer100km / 100;
 }
 
 class RideDetails {

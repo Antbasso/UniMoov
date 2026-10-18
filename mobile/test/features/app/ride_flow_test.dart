@@ -35,7 +35,14 @@ void main() {
     expect(find.text("Campus d'Annecy (USMB)"), findsOneWidget);
     expect(find.text('Tu paies'), findsOneWidget);
     expect(find.textContaining('0,76'), findsOneWidget);
-    expect(find.textContaining('entre 3 personnes'), findsOneWidget);
+    // Le prix seul ; le calcul précis se déplie.
+    expect(find.textContaining('L/100 km'), findsNothing);
+    await tester.ensureVisible(find.text('Détail du calcul'));
+    await tapText(tester, 'Détail du calcul');
+    expect(find.text('15,9 km × 5,8 L/100 km = 0,92 L'), findsOneWidget);
+    expect(find.text('9 km à 3 (conducteur compris)'), findsOneWidget);
+    expect(find.text('Ta part du carburant'), findsOneWidget);
+    expect(find.text('Frais de service'), findsOneWidget);
     expect(find.byIcon(Icons.schedule_rounded), findsNWidgets(4));
     // Chat en icône en haut, plus de grand bouton en double.
     expect(find.byTooltip('Chat du trajet'), findsOneWidget);
@@ -80,8 +87,13 @@ void main() {
 
   testWidgets('conducteur : ajouter un passager écarté, avec le prix simulé', (tester) async {
     await openRide(tester, index: 1);
-    expect(find.text('Tu reçois'), findsOneWidget);
+    // Conducteur : la somme de tous les passagers, et la part de chacun dans le détail.
+    expect(find.text('Tu reçois au total'), findsOneWidget);
+    expect(find.text('Somme payée par tes 2 passagers'), findsOneWidget);
     expect(find.textContaining('1,12'), findsOneWidget);
+    await tester.ensureVisible(find.text('Détail du calcul'));
+    await tapText(tester, 'Détail du calcul');
+    expect(find.text('Part de Hugo'), findsOneWidget);
     expect(find.text('Inès Robert'), findsOneWidget);
     await tapText(tester, 'Ajouter des passagers');
 

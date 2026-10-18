@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:unimoov/core/settings/appearance.dart';
 import 'package:unimoov/app.dart';
 import 'package:unimoov/core/clock.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
@@ -81,6 +82,7 @@ Future<void> launchApp(
         navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),
         // Pas de tuiles réseau dans les tests (goldens stables).
         rasterTilesEnabledProvider.overrideWithValue(false),
+        prefsStoreProvider.overrideWithValue(MemoryPrefsStore()),
         // Date figée : goldens et semaines stables quel que soit le jour du test.
         clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
       ],

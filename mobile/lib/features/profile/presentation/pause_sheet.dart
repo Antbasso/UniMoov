@@ -193,9 +193,18 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
               child: SegmentedButton<PauseMode>(
                 showSelectedIcon: false,
                 segments: [
-                  ButtonSegment(value: PauseMode.dates, label: Text(l10n.pauseModeDates)),
-                  ButtonSegment(value: PauseMode.days, label: Text(l10n.pauseModeDays)),
-                  ButtonSegment(value: PauseMode.repeat, label: Text(l10n.pauseModeRepeat)),
+                  ButtonSegment(
+                    value: PauseMode.dates,
+                    label: Text(l10n.pauseModeDates, maxLines: 1, softWrap: false),
+                  ),
+                  ButtonSegment(
+                    value: PauseMode.days,
+                    label: Text(l10n.pauseModeDays, maxLines: 1, softWrap: false),
+                  ),
+                  ButtonSegment(
+                    value: PauseMode.repeat,
+                    label: Text(l10n.pauseModeRepeat, maxLines: 1, softWrap: false),
+                  ),
                 ],
                 selected: {_mode},
                 onSelectionChanged: (value) => setState(() => _mode = value.first),

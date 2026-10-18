@@ -160,7 +160,7 @@ void main() {
     // Comme dans un agenda : tous les lundis, jusqu'à une date.
     await tester.tap(find.byTooltip('Mettre en pause'));
     await tester.pumpAndSettle();
-    await tapText(tester, 'Certains jours');
+    await tapText(tester, 'Jours');
     await tapText(tester, 'lun.');
     await tapText(tester, 'Choisir la date de fin');
     await tapText(tester, 'OK');

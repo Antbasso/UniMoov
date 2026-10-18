@@ -155,8 +155,15 @@ describe('carte d’un trajet confirmé', () => {
     expect(driverView.price).toMatchObject({ totalCostCents: cost, persons: 2, youPayCents: null });
     expect(driverView.price!.youReceiveCents).toBe(driverView.price!.shareCents);
 
+    // Détail précis : consommation, prix du litre, portions ; le conducteur voit la part de chacun.
+    const driverBreakdown = (driverView.price as unknown as { breakdown: { consumptionLPer100km: number; fuelPriceCentsPerLitre: number; portions: { distanceM: number; persons: number }[]; shares: { firstName: string; shareCents: number }[] } }).breakdown;
+    expect(driverBreakdown).toMatchObject({ consumptionLPer100km: 5.8, fuelPriceCentsPerLitre: 180 });
+    expect(driverBreakdown.portions.reduce((a, p) => a + p.distanceM, 0)).toBeCloseTo(driverView.distanceM, -1);
+    expect(driverBreakdown.shares).toEqual([{ userId: user('Hugo').id, firstName: 'Hugo', shareCents: driverView.price!.youReceiveCents }]);
+
     const passengerView = await ride('Hugo', mondayId);
     expect(passengerView.price!.youPayCents).toBe(passengerView.price!.shareCents + 20);
+    expect((passengerView.price as unknown as { breakdown: { shares: unknown[] } }).breakdown.shares).toEqual([]);
     expect(passengerView.price!.youReceiveCents).toBeNull();
     const response = await call('Hugo', 'GET', `/rides/${mondayId}/price`);
     expect(response.json<{ price: unknown }>().price).toEqual(passengerView.price);

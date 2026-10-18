@@ -899,7 +899,7 @@ abstract class AppLocalizations {
   /// No description provided for @pauseSheetBody.
   ///
   /// In fr, this message translates to:
-  /// **'Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n\'est pas touché.'**
+  /// **'Pas de propositions pendant la pause. Ton score n\'est pas touché.'**
   String get pauseSheetBody;
 
   /// No description provided for @pauseChooseDates.
@@ -911,13 +911,13 @@ abstract class AppLocalizations {
   /// No description provided for @pauseModeDates.
   ///
   /// In fr, this message translates to:
-  /// **'Des dates'**
+  /// **'Dates'**
   String get pauseModeDates;
 
   /// No description provided for @pauseModeDays.
   ///
   /// In fr, this message translates to:
-  /// **'Certains jours'**
+  /// **'Jours'**
   String get pauseModeDays;
 
   /// No description provided for @pauseModeRepeat.
@@ -941,7 +941,7 @@ abstract class AppLocalizations {
   /// No description provided for @pauseDaysLabel.
   ///
   /// In fr, this message translates to:
-  /// **'Les jours de pause chaque semaine'**
+  /// **'Chaque semaine, les jours :'**
   String get pauseDaysLabel;
 
   /// No description provided for @pauseFirstLabel.
@@ -3380,30 +3380,6 @@ abstract class AppLocalizations {
   /// **'En attente'**
   String get personPending;
 
-  /// No description provided for @priceBulletFuel.
-  ///
-  /// In fr, this message translates to:
-  /// **'Carburant du trajet : {amount}'**
-  String priceBulletFuel(String amount);
-
-  /// No description provided for @priceBulletShare.
-  ///
-  /// In fr, this message translates to:
-  /// **'Ta part : {mine} km sur {total} km'**
-  String priceBulletShare(String mine, String total);
-
-  /// No description provided for @priceBulletPersons.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =1{Pour 1 personne} other{Partagé au km entre {count} personnes}}'**
-  String priceBulletPersons(int count);
-
-  /// No description provided for @priceBulletCommission.
-  ///
-  /// In fr, this message translates to:
-  /// **'Frais de service : {amount}'**
-  String priceBulletCommission(String amount);
-
   /// No description provided for @priceBulletFinal.
   ///
   /// In fr, this message translates to:
@@ -3691,6 +3667,108 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Propose un trajet dans un groupe ou une conversation privée.'**
   String get errorCarpoolNotHere;
+
+  /// No description provided for @themeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Thème'**
+  String get themeTitle;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In fr, this message translates to:
+  /// **'Automatique (comme le téléphone)'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Clair'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sombre'**
+  String get themeDark;
+
+  /// No description provided for @reduceMotion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réduire les animations'**
+  String get reduceMotion;
+
+  /// No description provided for @ridePriceReceiveTotalLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois au total'**
+  String get ridePriceReceiveTotalLabel;
+
+  /// No description provided for @ridePriceYouReceiveTotal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois {price} au total, de {count, plural, =0{personne} =1{1 passager} other{{count} passagers}}'**
+  String ridePriceYouReceiveTotal(String price, int count);
+
+  /// No description provided for @ridePriceFromPassengers.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Payé par ton passager} other{Somme payée par tes {count} passagers}}'**
+  String ridePriceFromPassengers(int count);
+
+  /// No description provided for @calcTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détail du calcul'**
+  String get calcTitle;
+
+  /// No description provided for @calcLitres.
+  ///
+  /// In fr, this message translates to:
+  /// **'{km} km × {consumption} L/100 km = {litres} L'**
+  String calcLitres(String km, String consumption, String litres);
+
+  /// No description provided for @calcFuel.
+  ///
+  /// In fr, this message translates to:
+  /// **'{litres} L × {price} le litre'**
+  String calcFuel(String litres, String price);
+
+  /// No description provided for @calcPortion.
+  ///
+  /// In fr, this message translates to:
+  /// **'{km} km à {persons} (conducteur compris)'**
+  String calcPortion(String km, int persons);
+
+  /// No description provided for @calcShareOf.
+  ///
+  /// In fr, this message translates to:
+  /// **'Part de {name}'**
+  String calcShareOf(String name);
+
+  /// No description provided for @calcMyShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta part du carburant'**
+  String get calcMyShare;
+
+  /// No description provided for @calcCommission.
+  ///
+  /// In fr, this message translates to:
+  /// **'Frais de service'**
+  String get calcCommission;
+
+  /// No description provided for @calcTotalPaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu paies'**
+  String get calcTotalPaid;
+
+  /// No description provided for @calcTotalReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois'**
+  String get calcTotalReceived;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

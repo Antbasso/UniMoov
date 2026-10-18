@@ -33,6 +33,15 @@ export const price = z.strictObject({
   youPayCents: z.number().int().nullable(),
   youReceiveCents: z.number().int().nullable(),
   myDistanceM: z.number().int().nullable(),
+  breakdown: z
+    .strictObject({
+      consumptionLPer100km: z.number(),
+      fuelPriceCentsPerLitre: z.number(),
+      distanceM: z.number().int(),
+      portions: z.array(z.strictObject({ distanceM: z.number().int(), persons: z.number().int() })),
+      shares: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string(), shareCents: z.number().int() })),
+    })
+    .nullable(),
 });
 
 export const ride = z.strictObject({

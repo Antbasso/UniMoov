@@ -472,17 +472,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseSheetTitle => 'Mettre en pause';
 
   @override
-  String get pauseSheetBody =>
-      'Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n\'est pas touché.';
+  String get pauseSheetBody => 'Pas de propositions pendant la pause. Ton score n\'est pas touché.';
 
   @override
   String get pauseChooseDates => 'Choisir les dates';
 
   @override
-  String get pauseModeDates => 'Des dates';
+  String get pauseModeDates => 'Dates';
 
   @override
-  String get pauseModeDays => 'Certains jours';
+  String get pauseModeDays => 'Jours';
 
   @override
   String get pauseModeRepeat => 'Répéter';
@@ -494,7 +493,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseDatesLabel => 'Période de pause';
 
   @override
-  String get pauseDaysLabel => 'Les jours de pause chaque semaine';
+  String get pauseDaysLabel => 'Chaque semaine, les jours :';
 
   @override
   String get pauseFirstLabel => 'Première pause';
@@ -1910,32 +1909,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get personPending => 'En attente';
 
   @override
-  String priceBulletFuel(String amount) {
-    return 'Carburant du trajet : $amount';
-  }
-
-  @override
-  String priceBulletShare(String mine, String total) {
-    return 'Ta part : $mine km sur $total km';
-  }
-
-  @override
-  String priceBulletPersons(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Partagé au km entre $count personnes',
-      one: 'Pour 1 personne',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String priceBulletCommission(String amount) {
-    return 'Frais de service : $amount';
-  }
-
-  @override
   String get priceBulletFinal => 'Prix final calculé à l\'arrivée';
 
   @override
@@ -2117,4 +2090,80 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorCarpoolNotHere => 'Propose un trajet dans un groupe ou une conversation privée.';
+
+  @override
+  String get themeTitle => 'Thème';
+
+  @override
+  String get themeSystem => 'Automatique (comme le téléphone)';
+
+  @override
+  String get themeLight => 'Clair';
+
+  @override
+  String get themeDark => 'Sombre';
+
+  @override
+  String get reduceMotion => 'Réduire les animations';
+
+  @override
+  String get ridePriceReceiveTotalLabel => 'Tu reçois au total';
+
+  @override
+  String ridePriceYouReceiveTotal(String price, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count passagers',
+      one: '1 passager',
+      zero: 'personne',
+    );
+    return 'Tu reçois $price au total, de $_temp0';
+  }
+
+  @override
+  String ridePriceFromPassengers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Somme payée par tes $count passagers',
+      one: 'Payé par ton passager',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get calcTitle => 'Détail du calcul';
+
+  @override
+  String calcLitres(String km, String consumption, String litres) {
+    return '$km km × $consumption L/100 km = $litres L';
+  }
+
+  @override
+  String calcFuel(String litres, String price) {
+    return '$litres L × $price le litre';
+  }
+
+  @override
+  String calcPortion(String km, int persons) {
+    return '$km km à $persons (conducteur compris)';
+  }
+
+  @override
+  String calcShareOf(String name) {
+    return 'Part de $name';
+  }
+
+  @override
+  String get calcMyShare => 'Ta part du carburant';
+
+  @override
+  String get calcCommission => 'Frais de service';
+
+  @override
+  String get calcTotalPaid => 'Tu paies';
+
+  @override
+  String get calcTotalReceived => 'Tu reçois';
 }

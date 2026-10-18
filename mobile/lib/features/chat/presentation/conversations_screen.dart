@@ -167,6 +167,8 @@ class _ConversationRow extends ConsumerWidget {
                 type: MaterialType.transparency,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(UmRadius.lg),
+                  // Chargement lancé dès que le doigt se pose, avant l'ouverture.
+                  onTapDown: (_) => ref.read(conversationProvider(conversation.id)),
                   onTap: () => context.push(AppRoutes.conversation(conversation.id)),
                 ),
               ),

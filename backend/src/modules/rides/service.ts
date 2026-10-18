@@ -44,6 +44,16 @@ export interface PriceView extends PriceEstimate {
   youReceiveCents: number | null;
   /** Passager : distance à bord ; sa part du carburant est au prorata (cahier §5). */
   myDistanceM: number | null;
+  /** Détail du calcul : consommation, prix du litre, portions (à bord : passagers + conducteur). */
+  breakdown: {
+    consumptionLPer100km: number;
+    fuelPriceCentsPerLitre: number;
+    distanceM: number;
+    /** Passager : ses portions ; conducteur : toutes. `persons` : conducteur compris. */
+    portions: { distanceM: number; persons: number }[];
+    /** Conducteur : part de chaque passager. */
+    shares: { userId: string; firstName: string; shareCents: number }[];
+  } | null;
 }
 
 /** Aperçu d'un trajet pas encore confirmé : tracé sans les abords des domiciles des autres. */
@@ -196,11 +206,12 @@ export class RidesService {
     ride: RideInfo,
     distanceM: number | null,
     passengers: readonly Pick<Member, 'userId' | 'onboardM'>[],
-  ): Promise<{ totalCostCents: number; commissionCents: number; byUser: Map<string, number>; driverReceivesCents: number } | null> {
+  ): Promise<Shares | null> {
     if (distanceM === null || ride.consumptionLPer100km === null) return null;
+    const fuel = await this.settings.get('pricing.fuelPriceCentsPerLitre');
     const price = proRataPrice({
       consumptionLPer100km: ride.consumptionLPer100km,
-      fuelPriceCentsPerLitre: await this.settings.get('pricing.fuelPriceCentsPerLitre'),
+      fuelPriceCentsPerLitre: fuel,
       commissionCentsPerPassenger: await this.settings.get('pricing.commissionCentsPerPassenger'),
       distanceM,
       onboardM: passengers.map((p) => p.onboardM),
@@ -210,6 +221,13 @@ export class RidesService {
       commissionCents: price.commissionCents,
       byUser: new Map(passengers.map((p, i) => [p.userId, price.sharesCents[i]!])),
       driverReceivesCents: price.driverReceivesCents,
+      consumptionLPer100km: ride.consumptionLPer100km,
+      fuelPriceCentsPerLitre: fuel,
+      distanceM,
+      portions: price.portions.map((portion) => ({
+        distanceM: portion.distanceM,
+        riders: portion.riders.map((i) => passengers[i]!.userId),
+      })),
     };
   }
 
@@ -370,7 +388,7 @@ export class RidesService {
         ([lat, lon]) => hidden.every((h) => distanceMeters(h, { lat, lon }) > SECTOR_SIZE_M),
       ),
       stops,
-      price: shares ? priceView(shares, passengers.length + 1, me) : null,
+      price: shares ? priceView(shares, passengers.length + 1, me, passengers) : null,
     };
   }
 
@@ -468,11 +486,20 @@ export class RidesService {
   }
 }
 
-function priceView(
-  shares: { totalCostCents: number; commissionCents: number; byUser: Map<string, number>; driverReceivesCents: number },
-  persons: number,
-  me: Member,
-): PriceView {
+interface Shares {
+  totalCostCents: number;
+  commissionCents: number;
+  byUser: Map<string, number>;
+  driverReceivesCents: number;
+  consumptionLPer100km: number;
+  fuelPriceCentsPerLitre: number;
+  distanceM: number;
+  portions: { distanceM: number; riders: string[] }[];
+}
+
+function priceView(shares: Shares, persons: number, me: Member, members: readonly Member[] = []): PriceView {
+  const driver = me.role === 'driver';
+  const names = new Map(members.map((m) => [m.userId, m.firstName]));
   // Passager : sa part ; conducteur : ce qu'il reçoit (somme des parts).
   const mine = me.role === 'passenger' ? (shares.byUser.get(me.userId) ?? 0) : shares.driverReceivesCents;
   return {
@@ -486,6 +513,17 @@ function priceView(
     youPayCents: me.role === 'passenger' ? mine + shares.commissionCents : null,
     youReceiveCents: me.role === 'driver' ? shares.driverReceivesCents : null,
     myDistanceM: me.role === 'passenger' ? me.onboardM : null,
+    breakdown: {
+      consumptionLPer100km: shares.consumptionLPer100km,
+      fuelPriceCentsPerLitre: shares.fuelPriceCentsPerLitre,
+      distanceM: shares.distanceM,
+      portions: shares.portions
+        .filter((p) => driver || p.riders.includes(me.userId))
+        .map((p) => ({ distanceM: p.distanceM, persons: p.riders.length + 1 })),
+      shares: driver
+        ? [...shares.byUser].map(([userId, shareCents]) => ({ userId, firstName: names.get(userId) ?? '', shareCents }))
+        : [],
+    },
   };
 }
 

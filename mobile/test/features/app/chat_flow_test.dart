@@ -69,7 +69,11 @@ void main() {
       title: 'Covoit Seynod',
       archived: false,
       unread: 0,
-      members: [ChatMember(userId: me, firstName: 'Léa'), nathan, hugo],
+      members: [
+        ChatMember(userId: me, firstName: 'Léa'),
+        nathan,
+        hugo,
+      ],
     );
     backend.messagesById['conv-group'] = [
       ChatMessage(
@@ -107,7 +111,9 @@ void main() {
     // Proposer mon trajet du soir (je conduis) : la carte s'affiche dans le fil.
     await tester.tap(find.byTooltip('Proposer un covoiturage'));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byType(BottomSheet), matching: find.byType(ListTile)));
+    await tester.tap(
+      find.descendant(of: find.byType(BottomSheet), matching: find.byType(ListTile)),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Trajet proposé'), findsOneWidget);
   });
@@ -119,11 +125,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Messages, 1 non lu'), findsOneWidget);
 
+    final before = backend.conversationCalls;
     await tester.tap(find.byTooltip('Messages, 1 non lu'));
     await tester.pumpAndSettle();
     expect(find.text('Chat du trajet'), findsOneWidget);
     expect(find.text('1 non lu'), findsOneWidget);
     expect(find.text('Petit retard, 5 min.'), findsOneWidget);
+    // Ouverture : la conversation vient de la liste, seuls les messages sont chargés.
+    await tapText(tester, 'Petit retard, 5 min.');
+    expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
+    expect(backend.conversationCalls, before);
   });
 
   testWidgets('conversation : envoi, réception en direct avec le prénom, lecture', (tester) async {

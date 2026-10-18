@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:unimoov/core/settings/appearance.dart';
 import 'package:unimoov/app.dart';
 import 'package:unimoov/core/clock.dart';
 import 'package:unimoov/core/location/location_service.dart';
@@ -41,6 +42,7 @@ void main() {
           exportSharerProvider.overrideWithValue(FakeExportSharer()),
           clockProvider.overrideWithValue(() => testNow),
           rasterTilesEnabledProvider.overrideWithValue(false),
+          prefsStoreProvider.overrideWithValue(MemoryPrefsStore()),
         ],
         child: const UniMoovApp(themeMode: ThemeMode.light),
       ),

@@ -5,6 +5,7 @@ import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/core/router/redirect.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
+import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
 import 'package:unimoov/features/rides/domain/ride.dart';
 
@@ -95,7 +96,37 @@ void main() {
     expect(find.textContaining('BUT Informatique · '), findsOneWidget);
   });
 
-  testWidgets('trajet : toucher le conducteur ouvre son profil, sans nom ni adresse', (tester) async {
+  testWidgets('profil : thème et animations réduites ; mon nom ouvre mon profil public', (
+    tester,
+  ) async {
+    await open(tester, AppRoutes.profile);
+    expect(find.text('Voir mon profil comme les autres'), findsNothing);
+    await tapText(tester, 'Thème');
+    await tapText(tester, 'Sombre');
+    expect(find.text('Sombre'), findsOneWidget);
+    await tester.ensureVisible(find.text('Réduire les animations'));
+    await tapText(tester, 'Réduire les animations');
+    final reduce = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
+    expect(reduce.value, isTrue);
+    final app = tester.element(find.byType(Scaffold).first);
+    expect(MediaQuery.disableAnimationsOf(app), isTrue);
+
+    backend.profiles['id-lea@etu.univ-smb.fr'] = const PublicProfile(
+      id: 'id-lea@etu.univ-smb.fr',
+      firstName: 'Léa',
+      reliabilityScore: 0.8,
+      ridesCompleted: 3,
+    );
+    await tester.scrollUntilVisible(find.textContaining('Léa'), -200);
+    await tester.tap(find.textContaining('Léa').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Léa'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+  });
+
+  testWidgets('trajet : toucher le conducteur ouvre son profil, sans nom ni adresse', (
+    tester,
+  ) async {
     await launchApp(tester, backend: backend, storage: storage);
     await openTrip(tester, index: 0);
     await tester.tap(find.text('Nathan Petit'));

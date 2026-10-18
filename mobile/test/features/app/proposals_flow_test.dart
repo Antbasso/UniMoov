@@ -1,8 +1,11 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
+import 'package:unimoov/core/widgets/widgets.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
@@ -186,6 +189,14 @@ void main() {
     await tester.tap(find.byTooltip('Chercher un trajet'));
     await tester.pumpAndSettle();
     expect(find.text('Choisis un jour et un sens, puis lance la recherche.'), findsOneWidget);
+    // Un calendrier des deux semaines à venir ; les jours passés ne se choisissent pas.
+    expect(find.byType(UmCalendar), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('vendredi 16 octobre'));
+    await tester.pump();
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('vendredi 16 octobre')).flagsCollection.isSelected,
+      Tristate.isTrue,
+    );
     // Le titre et le bouton portent le même libellé : on vise le bouton.
     backend.failNext = const ApiException('search_quota_exceeded', '', statusCode: 429);
     await tapText(tester, 'Chercher un trajet', index: 1);

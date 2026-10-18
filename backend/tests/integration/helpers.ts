@@ -58,7 +58,7 @@ export async function setupTestContext(
     },
   };
   const app = await buildApp({
-    config: { LOG_LEVEL: process.env.TEST_LOG ?? 'silent' },
+    config: { LOG_LEVEL: 'silent' },
     pingDb: async () => {
       await database.pool.query('SELECT 1');
     },

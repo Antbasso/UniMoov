@@ -15,6 +15,7 @@ import '../domain/vehicle_input.dart';
 import 'me_controller.dart';
 import 'pause_format.dart';
 import 'pause_sheet.dart';
+import '../../../core/settings/appearance.dart';
 import 'person_avatar.dart';
 import 'photo_sheet.dart';
 import '../../wallet/presentation/wallet_screen.dart';
@@ -79,18 +80,37 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(width: UmSpace.s4),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      '${me.firstName} ${me.lastName}',
-                      style: UmText.h2.copyWith(color: c.ink),
-                    ),
+              // Toucher son nom : son profil tel que les autres le voient.
+              child: InkWell(
+                borderRadius: BorderRadius.circular(UmRadius.sm),
+                onTap: () => context.push(AppRoutes.person(me.id)),
+                child: Semantics(
+                  button: true,
+                  hint: l10n.profileSeeMine,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                '${me.firstName} ${me.lastName}',
+                                style: UmText.h2.copyWith(color: c.ink),
+                              ),
+                            ),
+                            Text(
+                              me.universityEmail,
+                              style: UmText.bodySm.copyWith(color: c.inkMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: c.inkMuted),
+                    ],
                   ),
-                  Text(me.universityEmail, style: UmText.bodySm.copyWith(color: c.inkMuted)),
-                ],
+                ),
               ),
             ),
           ],
@@ -103,11 +123,6 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.aboutTitle,
               value: aboutSummary(l10n, me) ?? l10n.aboutEmpty,
               onTap: () => context.push(AppRoutes.profileAbout),
-            ),
-            _Row(
-              icon: Icons.visibility_outlined,
-              title: l10n.profileSeeMine,
-              onTap: () => context.push(AppRoutes.person(me.id)),
             ),
           ],
         ),
@@ -169,6 +184,8 @@ class ProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: UmSpace.s4),
         const _PausesSection(),
+        const SizedBox(height: UmSpace.s4),
+        const _AppearanceGroup(),
         const SizedBox(height: UmSpace.s4),
         _Group(
           children: [
@@ -428,4 +445,61 @@ String? aboutSummary(AppLocalizations l10n, Me me) {
     if (me.interests.isNotEmpty) me.interests.join(', '),
   ];
   return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// Apparence : thème (automatique, clair, sombre) et animations réduites, gardés sur le
+/// téléphone.
+class _AppearanceGroup extends ConsumerWidget {
+  const _AppearanceGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    final appearance = ref.watch(appearanceProvider);
+    final controller = ref.read(appearanceProvider.notifier);
+    String label(ThemeMode mode) => switch (mode) {
+      ThemeMode.system => l10n.themeSystem,
+      ThemeMode.light => l10n.themeLight,
+      ThemeMode.dark => l10n.themeDark,
+    };
+    return _Group(
+      children: [
+        _Row(
+          icon: Icons.dark_mode_outlined,
+          title: l10n.themeTitle,
+          value: label(appearance.themeMode),
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            showDragHandle: true,
+            builder: (sheet) => SafeArea(
+              child: RadioGroup<ThemeMode>(
+                groupValue: appearance.themeMode,
+                onChanged: (mode) {
+                  if (mode != null) controller.setThemeMode(mode);
+                  Navigator.of(sheet).pop();
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final mode in ThemeMode.values)
+                      RadioListTile<ThemeMode>(value: mode, title: Text(label(mode))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        SwitchListTile(
+          secondary: Icon(Icons.motion_photos_off_outlined, color: c.brandStrong),
+          title: Text(
+            l10n.reduceMotion,
+            style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
+          ),
+          value: appearance.reduceMotion,
+          onChanged: controller.setReduceMotion,
+        ),
+      ],
+    );
+  }
 }

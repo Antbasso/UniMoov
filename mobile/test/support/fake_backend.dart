@@ -168,7 +168,8 @@ class FakeBackend
 
   /// Photos servies par l'API simulée (une image PNG valide d'un pixel).
   @override
-  Future<Uint8List> photo(String url) async => _me.photo ?? (throw const ApiException('not_found', ''));
+  Future<Uint8List> photo(String url) async =>
+      _me.photo ?? (throw const ApiException('not_found', ''));
 
   /// Profils des personnes croisées, par identifiant.
   final Map<String, PublicProfile> profiles = {
@@ -820,6 +821,7 @@ class FakeBackend
   @override
   Future<Conversation> conversation(String id) async {
     _maybeFail();
+    conversationCalls++;
     final c = conversationsById[id];
     if (c == null) throw const ApiException('not_found', '', statusCode: 404);
     return c;
@@ -894,6 +896,9 @@ class FakeBackend
     return message;
   }
 
+  /// Lectures d'une conversation seule (la liste la donne déjà en général).
+  int conversationCalls = 0;
+
   /// Propositions de covoiturage acceptées : (conversation, message).
   final List<(String, String)> carpoolAccepted = [];
 
@@ -945,7 +950,10 @@ class FakeBackend
         day: c.day,
         toCampus: c.toCampus,
         time: c.time,
-        joined: [...c.joined, ChatMember(userId: idOf(_me.email), firstName: _me.firstName)],
+        joined: [
+          ...c.joined,
+          ChatMember(userId: idOf(_me.email), firstName: _me.firstName),
+        ],
       ),
     );
     list[i] = updated;
@@ -1247,6 +1255,17 @@ RideDetails rideFixture({
       commissionCents: 20,
       youPayCents: isDriver ? null : 76,
       youReceiveCents: isDriver ? 112 : null,
+      breakdown: PriceBreakdown(
+        consumptionLPer100km: 5.8,
+        fuelPriceCentsPerLitre: 180,
+        distanceM: 15900,
+        portions: isDriver
+            ? const [(distanceM: 9000, persons: 3), (distanceM: 6900, persons: 2)]
+            : const [(distanceM: 9000, persons: 3)],
+        shares: isDriver
+            ? const [(firstName: 'Inès', shareCents: 56), (firstName: 'Hugo', shareCents: 56)]
+            : const [],
+      ),
     ),
   );
 }

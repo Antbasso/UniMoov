@@ -89,6 +89,19 @@ describe('proRataPrice', () => {
     expect(price.totalCostCents - price.driverReceivesCents).toBeLessThanOrEqual(108);
   });
 
+  it('portions détaillées : longueurs qui couvrent le trajet, et qui est à bord', () => {
+    const price = proRataPrice({ ...base, onboardM: [10_000, 5_000] });
+    expect(price.portions).toEqual([
+      { distanceM: 5_000, riders: [0, 1] },
+      { distanceM: 5_000, riders: [0] },
+    ]);
+    const partial = proRataPrice({ ...base, onboardM: [4_000] });
+    expect(partial.portions).toEqual([
+      { distanceM: 4_000, riders: [0] },
+      { distanceM: 6_000, riders: [] },
+    ]);
+  });
+
   it('même point de montée : même part ; distances bornées au trajet', () => {
     const price = proRataPrice({ ...base, onboardM: [4_000, 4_000, 99_000, -5] });
     expect(price.sharesCents[0]).toBe(price.sharesCents[1]);

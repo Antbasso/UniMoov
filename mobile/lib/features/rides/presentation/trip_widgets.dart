@@ -147,14 +147,13 @@ Widget? personStatusChip(AppLocalizations l10n, String status) => switch (status
 /// Les personnes qui ont refusé ou annulé disparaissent de la liste et de la carte.
 bool personVisible(PublicPerson p) => p.status != 'declined' && p.status != 'cancelled';
 
-/// Prix en quelques puces : montant en grand, puis le détail en une ligne par élément.
+/// Prix du trajet : le montant seul, et le calcul précis replié dessous (« Détail du
+/// calcul ») : kilomètres × consommation × prix du litre, puis les portions partagées.
 class PriceBullets extends StatelessWidget {
   const PriceBullets({super.key, required this.price, required this.isDriver, this.distanceM});
 
   final RidePrice? price;
   final bool isDriver;
-
-  /// Longueur du trajet entier (pour « ta part : 7,5 km sur 12 km »).
   final int? distanceM;
 
   @override
@@ -165,52 +164,110 @@ class PriceBullets extends StatelessWidget {
     if (p == null) {
       return Text(l10n.ridePriceUnknown, style: UmText.bodySm.copyWith(color: c.inkMuted));
     }
-    String euros(int cents) => UmRideCard.formatPrice(cents, l10n.localeName);
-    String km(int meters) => NumberFormat('0.#', l10n.localeName).format(meters / 1000);
+    String euros(num cents) => UmRideCard.formatPrice(cents.round(), l10n.localeName);
     final amount = euros((isDriver ? p.youReceiveCents : p.youPayCents) ?? 0);
-    final bullets = [
-      l10n.priceBulletFuel(euros(p.totalCostCents)),
-      if (!isDriver && p.myDistanceM != null && distanceM != null)
-        l10n.priceBulletShare(km(p.myDistanceM!), km(distanceM!))
-      else
-        l10n.priceBulletPersons(p.persons),
-      if (!isDriver) l10n.priceBulletCommission(euros(p.commissionCents)),
-      l10n.priceBulletFinal,
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(
-          label: isDriver ? l10n.ridePriceYouReceive(amount) : l10n.ridePriceYouPay(amount),
-          excludeSemantics: true,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+    final b = p.breakdown;
+    final passengers = b?.shares.length ?? 0;
+    final header = Semantics(
+      label: isDriver
+          ? l10n.ridePriceYouReceiveTotal(amount, passengers)
+          : l10n.ridePriceYouPay(amount),
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Texte agrandi : le montant passe sous le libellé plutôt que de déborder.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: UmSpace.s2,
             children: [
               Text(
-                isDriver ? l10n.ridePriceReceiveLabel : l10n.ridePricePayLabel,
+                isDriver ? l10n.ridePriceReceiveTotalLabel : l10n.ridePricePayLabel,
                 style: UmText.label.copyWith(color: c.inkMuted),
               ),
-              const SizedBox(width: UmSpace.s2),
               Text(amount, style: UmText.h2.copyWith(color: c.brandStrong)),
             ],
           ),
-        ),
-        const SizedBox(height: UmSpace.s1),
-        for (final b in bullets)
-          Padding(
-            padding: const EdgeInsets.only(top: UmSpace.s1),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('•  ', style: UmText.bodySm.copyWith(color: c.inkMuted)),
-                Expanded(
-                  child: Text(b, style: UmText.bodySm.copyWith(color: c.inkMuted)),
-                ),
-              ],
+          if (isDriver && passengers > 0)
+            Text(
+              l10n.ridePriceFromPassengers(passengers),
+              style: UmText.bodySm.copyWith(color: c.inkMuted),
             ),
-          ),
+        ],
+      ),
+    );
+    if (b == null) return header;
+
+    final number = NumberFormat('0.##', l10n.localeName);
+    String km(int meters) => number.format(meters / 1000);
+    final perMeter = b.distanceM == 0 ? 0.0 : p.totalCostCents / b.distanceM;
+    final lines = <(String, String?)>[
+      (
+        l10n.calcLitres(
+          km(b.distanceM),
+          number.format(b.consumptionLPer100km),
+          number.format(b.litres),
+        ),
+        null,
+      ),
+      (
+        l10n.calcFuel(number.format(b.litres), euros(b.fuelPriceCentsPerLitre)),
+        euros(p.totalCostCents),
+      ),
+      for (final portion in b.portions)
+        (
+          l10n.calcPortion(km(portion.distanceM), portion.persons),
+          euros(portion.distanceM * perMeter / portion.persons),
+        ),
+      if (isDriver)
+        for (final share in b.shares) (l10n.calcShareOf(share.firstName), euros(share.shareCents))
+      else ...[
+        (l10n.calcMyShare, euros(p.shareCents)),
+        (l10n.calcCommission, euros(p.commissionCents)),
       ],
+      (isDriver ? l10n.calcTotalReceived : l10n.calcTotalPaid, amount),
+    ];
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: UmSpace.s2),
+        expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+        title: header,
+        subtitle: Text(l10n.calcTitle, style: UmText.caption.copyWith(color: c.brandStrong)),
+        children: [
+          for (final (i, (label, value)) in lines.indexed)
+            Padding(
+              padding: const EdgeInsets.only(top: UmSpace.s1),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: UmText.bodySm.copyWith(
+                        color: i == lines.length - 1 ? c.ink : c.inkMuted,
+                        fontWeight: i == lines.length - 1 ? FontWeight.w600 : null,
+                      ),
+                    ),
+                  ),
+                  if (value != null) ...[
+                    const SizedBox(width: UmSpace.s3),
+                    Text(
+                      value,
+                      style: UmText.bodySm.copyWith(
+                        color: c.ink,
+                        fontWeight: i == lines.length - 1 ? FontWeight.w600 : null,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: UmSpace.s2),
+          Text(l10n.priceBulletFinal, style: UmText.caption.copyWith(color: c.inkMuted)),
+        ],
+      ),
     );
   }
 }

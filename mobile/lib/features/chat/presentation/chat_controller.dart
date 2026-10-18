@@ -203,13 +203,32 @@ class ConversationController extends AsyncNotifier<ConversationState> {
         .where((m) => m.conversationId == id)
         .listen(_received);
     ref.onDispose(sub.cancel);
-    final conversation = await api.conversation(id);
-    final page = await api.messages(id);
+    // Gardée 5 minutes après avoir quitté l'écran : la rouvrir est immédiat.
+    final link = ref.keepAlive();
+    Timer? release;
+    ref
+      ..onCancel(() {
+        _onScreen = false;
+        release = Timer(const Duration(minutes: 5), link.close);
+      })
+      ..onResume(() {
+        _onScreen = true;
+        release?.cancel();
+        // De retour sur la conversation : ce qui est arrivé entre-temps est lu.
+        unawaited(_read());
+      })
+      ..onDispose(() => release?.cancel());
+    // La conversation est déjà connue par la liste : seuls les messages sont chargés ; sinon
+    // les deux appels partent ensemble.
+    final known = ref.read(conversationsProvider).value?.where((c) => c.id == id).firstOrNull;
+    final page = api.messages(id);
+    final conversation = known ?? await api.conversation(id);
+    final messages = await page;
     unawaited(_read());
     return ConversationState(
       conversation: conversation,
-      messages: page.reversed.toList(),
-      hasMore: page.length >= _pageSize,
+      messages: messages.reversed.toList(),
+      hasMore: messages.length >= _pageSize,
     );
   }
 
@@ -236,9 +255,12 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     );
   }
 
+  /// Écran ouvert : un message reçu est lu tout de suite ; sinon il reste « non lu ».
+  bool _onScreen = true;
+
   void _received(ChatMessage message) {
     _append(message);
-    unawaited(_read());
+    if (_onScreen) unawaited(_read());
   }
 
   Future<void> send(String body) async {

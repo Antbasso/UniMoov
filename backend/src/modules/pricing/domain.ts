@@ -60,7 +60,15 @@ export interface ProRataInput {
   commissionCentsPerPassenger: number;
 }
 
+/** Portion de route (depuis le campus) : sa longueur et qui est à bord (indices des passagers). */
+export interface Portion {
+  distanceM: number;
+  riders: number[];
+}
+
 export interface ProRataPrice {
+  /** Portions dans l'ordre depuis le campus, pour détailler le calcul. */
+  portions: Portion[];
   totalCostCents: number;
   /** Part du carburant de chaque passager, dans l'ordre d'entrée, arrondie au centime supérieur. */
   sharesCents: number[];
@@ -89,17 +97,23 @@ export function proRataPrice(input: ProRataInput): ProRataPrice {
   // Portions entre deux points de montée (ou de descente), depuis le campus.
   const cuts = [0, ...new Set(onboard)].sort((a, b) => a - b);
   const shares = onboard.map(() => 0);
+  const portions: Portion[] = [];
   for (let k = 1; k < cuts.length; k++) {
     const from = cuts[k - 1]!;
     const to = cuts[k]!;
     const aboard = onboard.map((d, i) => (d >= to ? i : -1)).filter((i) => i >= 0);
+    portions.push({ distanceM: Math.round(to - from), riders: aboard });
     const each = ((to - from) * perMeter) / (aboard.length + 1);
     for (const i of aboard) shares[i]! += each;
   }
   // Arrondi au centime supérieur (le conducteur n'est jamais perdant), sans dépasser le coût
   // pour un passager seul sur tout le trajet. Petite tolérance pour les erreurs de flottant.
   const sharesCents = shares.map((v) => Math.max(0, Math.ceil(v - 1e-9)));
+  // Reste du trajet sans passager (conducteur seul), au bout.
+  const last = cuts.at(-1)!;
+  if (distanceM - last > 0) portions.push({ distanceM: Math.round(distanceM - last), riders: [] });
   return {
+    portions,
     totalCostCents,
     sharesCents,
     commissionCents: commissionCentsPerPassenger,
