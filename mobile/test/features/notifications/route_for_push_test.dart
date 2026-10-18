@@ -14,6 +14,9 @@ void main() {
     expect(routeForPush({'type': 'ride_requested', 'rideId': id}), AppRoutes.home);
     expect(routeForPush({'type': 'passenger_left', 'rideId': id}), AppRoutes.ride(id));
     expect(routeForPush({'type': 'payment_required', 'rideId': id}), AppRoutes.wallet);
+    // Trajet terminé : la notation est en tête de l'écran du trajet.
+    expect(routeForPush({'type': 'rating_requested', 'rideId': id}), AppRoutes.ride(id));
+    expect(routeForPush({'type': 'carpool_joined', 'rideId': id}), AppRoutes.ride(id));
   });
 
   test('identifiant forgé (chemin, remontée) : notification ignorée', () {

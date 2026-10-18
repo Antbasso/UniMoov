@@ -12,11 +12,13 @@ const events: NotificationEvent[] = [
   { type: 'proposals_ready', week: '2026-W43' },
   { type: 'ride_reminder', rideId: 'r1', minutes: 58 },
   { type: 'chat_message', conversationId: 'c1', senderFirstName: 'Léa' },
+  { type: 'rating_requested', rideId: 'r1' },
+  { type: 'carpool_joined', rideId: 'r1' },
 ];
 
 describe('catégories de préférence (cahier §11)', () => {
   it('chaque événement a sa catégorie ; le chat se coupe sans toucher aux rappels', () => {
-    expect(events.map(categoryOf)).toEqual(['ride_update', 'ride_update', 'match', 'match', 'ride_reminder', 'chat']);
+    expect(events.map(categoryOf)).toEqual(['ride_update', 'ride_update', 'match', 'match', 'ride_reminder', 'chat', 'ride_update', 'match']);
   });
 });
 

@@ -265,6 +265,8 @@ describe('clôture', () => {
     // Léa est passée au campus avant l'heure prévue chez Inès : pas une absence, Inès est prévenue.
     expect(Object.fromEntries(statuses.map((r) => [r.first_name, r.status]))).toMatchObject({ Hugo: 'picked_up', Inès: 'cancelled' });
     expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Inès').id], event: { type: 'ride_cancelled', rideId, by: 'driver' } });
+    // Trajet terminé : conducteur et passager présent sont invités à se noter.
+    expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id, user('Hugo').id], event: { type: 'rating_requested', rideId } });
 
     // Prix final : coût ÷ personnes présentes (Hugo et Léa), payé par Hugo seul.
     const { rows: payments } = await ctx.database.pool.query<{ payer_id: string; status: string; share_cents: number; commission_cents: number }>(

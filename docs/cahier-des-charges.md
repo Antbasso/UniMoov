@@ -52,7 +52,7 @@ Architecture façon Teams, trois niveaux de conversation :
 
 ## 7. Confiance et fiabilité
 
-- Notation croisée optionnelle après chaque trajet : le conducteur note ses passagers, les passagers notent le conducteur.
+- Notation croisée optionnelle après chaque trajet : le conducteur note ses passagers, les passagers notent le conducteur. À la clôture, une notification invite chacun à noter ; elle ouvre le trajet, où la notation est en tête (le reste replié).
 - Score de fiabilité agrégeant les notations et des données comportementales objectives (taux d'annulation, etc.), visible publiquement sur le profil avant tout engagement sur un trajet.
 - Le score est utilisé comme critère dans le matching automatique (priorité aux utilisateurs bien notés) — pas de sanction brutale ni de bannissement automatique.
 

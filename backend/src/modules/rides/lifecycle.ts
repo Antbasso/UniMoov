@@ -381,9 +381,13 @@ export class RideLifecycle {
         },
         tx,
       );
-      return { skipped: notReached.map((m) => m.userId) };
+      return { skipped: notReached.map((m) => m.userId), toRate: present.length > 0 ? [ride.driverId, ...present.map((m) => m.userId)] : [] };
     });
     if (!closed) return;
+    // Notation (cahier §7) : conducteur et passagers présents sont invités à se noter.
+    if (closed.toRate.length > 0) {
+      await this.notifier?.notify(closed.toRate, { type: 'rating_requested', rideId }).catch(() => undefined);
+    }
     if (closed.skipped.length > 0) {
       await this.notifier?.notify(closed.skipped, { type: 'ride_cancelled', rideId, by: 'driver' }).catch(() => undefined);
     }
