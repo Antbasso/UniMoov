@@ -14,6 +14,7 @@ import 'package:unimoov/core/location/location_service.dart';
 import 'package:unimoov/features/rides/data/live_channel.dart';
 import 'package:unimoov/features/rides/data/nav_launcher.dart';
 import 'package:unimoov/features/rides/data/rides_api.dart';
+import 'package:unimoov/features/rides/presentation/ride_map.dart';
 import 'package:unimoov/features/chat/data/chat_api.dart';
 import 'package:unimoov/features/chat/data/user_socket.dart';
 import 'package:unimoov/features/notifications/data/notifications_api.dart';
@@ -72,6 +73,8 @@ Future<void> launchApp(
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),
         locationServiceProvider.overrideWithValue(location ?? FakeLocationService()),
         navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),
+        // Pas de tuiles réseau dans les tests (goldens stables).
+        rasterTilesEnabledProvider.overrideWithValue(false),
         // Date figée : goldens et semaines stables quel que soit le jour du test.
         clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
       ],

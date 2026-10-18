@@ -169,3 +169,43 @@ int demoCostCents(double meters, double consumption) =>
     (meters * 1.3 / 1000 * consumption / 100 * 185).round();
 
 const demoCommissionCents = 20;
+
+/// Lieux des tracés précalculés (`demo_routes.g.dart`) : domicile de chaque personne, Camille
+/// à Seynod, le campus. Un nouveau compte de démo habite au centre d'Annecy (même point qu'Inès).
+const demoPlaces = <String, (double, double)>{
+  'campus': (45.9195, 6.158),
+  'camille': (45.8865, 6.089),
+  'nathan': (45.864, 6.141),
+  'ines': (45.8992, 6.1294),
+  'hugo': (45.905, 6.103),
+  'lea': (45.918, 6.096),
+  'manon': (45.942, 6.142),
+  'lucas': (45.8667, 5.944),
+  'theo': (45.948, 6.123),
+};
+
+/// Décode une polyligne encodée (algorithme de Google, précision 1e-5).
+List<(double, double)> decodePolyline(String encoded) {
+  final points = <(double, double)>[];
+  var index = 0;
+  var lat = 0;
+  var lon = 0;
+  int next() {
+    var shift = 0;
+    var result = 0;
+    int byte;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return (result & 1) != 0 ? ~(result >> 1) : result >> 1;
+  }
+
+  while (index < encoded.length) {
+    lat += next();
+    lon += next();
+    points.add((lat / 1e5, lon / 1e5));
+  }
+  return points;
+}

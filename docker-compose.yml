@@ -30,6 +30,7 @@ services:
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-ban}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-estimate}
       ORS_API_KEY: ${ORS_API_KEY:-}
+      OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}
       ROUTING_DAILY_QUOTA: ${ROUTING_DAILY_QUOTA:-2000}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
       PUSH_PROVIDER: ${PUSH_PROVIDER:-log}

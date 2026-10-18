@@ -3,6 +3,7 @@ import { distanceMeters } from '../../src/shared/geo.js';
 import { estimateRoute } from '../../src/shared/routing/estimate.js';
 import { GuardedRoutingProvider } from '../../src/shared/routing/guarded-routing-provider.js';
 import { OrsRoutingProvider } from '../../src/shared/routing/ors-routing-provider.js';
+import { OsrmRoutingProvider } from '../../src/shared/routing/osrm-routing-provider.js';
 import { type RouteResult, type RoutingProvider, RoutingUnavailableError } from '../../src/shared/routing/routing-provider.js';
 
 const a = { lat: 45.8865, lon: 6.089 };
@@ -79,6 +80,48 @@ describe('OrsRoutingProvider', () => {
     for (const impl of cases) {
       const provider = new OrsRoutingProvider('k', 'https://ors.test', vi.fn(impl));
       await expect(provider.route([a, b, c])).rejects.toBeInstanceOf(RoutingUnavailableError);
+    }
+  });
+});
+
+describe('OsrmRoutingProvider', () => {
+  it('demande lon,lat dans l’ordre et lit tronçons et tracé', async () => {
+    const fetchImpl = vi.fn((url: string) => {
+      expect(url).toBe(
+        'https://osrm.test/route/v1/driving/6.141000,45.864000;6.158000,45.919500?overview=simplified&geometries=geojson',
+      );
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            code: 'Ok',
+            routes: [
+              {
+                distance: 9866.9,
+                duration: 998.7,
+                geometry: { coordinates: [[6.141, 45.864], [6.15, 45.89], [6.158, 45.9195]] },
+                legs: [{ distance: 9866.9, duration: 998.7 }],
+              },
+            ],
+          }),
+        ),
+      );
+    });
+    const result = await new OsrmRoutingProvider('https://osrm.test', fetchImpl as unknown as typeof fetch).route([
+      { lat: 45.864, lon: 6.141 },
+      { lat: 45.9195, lon: 6.158 },
+    ]);
+    expect(result).toMatchObject({ distanceM: 9867, durationS: 999, estimated: false, legs: [{ distanceM: 9867 }] });
+    expect(result.geometry[1]).toEqual({ lat: 45.89, lon: 6.15 });
+  });
+
+  it('erreur HTTP, code OSRM ou réseau : RoutingUnavailableError', async () => {
+    for (const impl of [
+      () => Promise.resolve(new Response('', { status: 429 })),
+      () => Promise.resolve(new Response(JSON.stringify({ code: 'NoRoute', routes: [] }))),
+      () => Promise.reject(new Error('réseau')),
+    ]) {
+      const provider = new OsrmRoutingProvider('https://osrm.test', vi.fn(impl));
+      await expect(provider.route([{ lat: 1, lon: 1 }, { lat: 2, lon: 2 }])).rejects.toBeInstanceOf(RoutingUnavailableError);
     }
   });
 });

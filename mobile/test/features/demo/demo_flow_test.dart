@@ -8,6 +8,7 @@ import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/account/data/export_sharer.dart';
 import 'package:unimoov/features/demo/demo_mode.dart';
 import 'package:unimoov/features/rides/data/nav_launcher.dart';
+import 'package:unimoov/features/rides/presentation/ride_map.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/chat_fakes.dart';
@@ -39,6 +40,7 @@ void main() {
           navLauncherProvider.overrideWithValue(FakeNavLauncher()),
           exportSharerProvider.overrideWithValue(FakeExportSharer()),
           clockProvider.overrideWithValue(() => testNow),
+          rasterTilesEnabledProvider.overrideWithValue(false),
         ],
         child: const UniMoovApp(themeMode: ThemeMode.light),
       ),

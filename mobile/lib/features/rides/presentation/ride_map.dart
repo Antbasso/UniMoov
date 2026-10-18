@@ -10,9 +10,16 @@ import '../../../core/theme/um_theme.dart';
 import '../domain/ride.dart';
 
 /// Fond de carte OpenStreetMap : extrait PMTiles vectoriel (schéma OpenMapTiles) servi en
-/// statique (docs/couts.md). Sans URL (développement, tests), la carte montre tracé et
-/// arrêts sur un fond uni.
+/// statique (docs/couts.md). Sans PMTiles, tuiles raster OpenStreetMap (`RASTER_TILES_URL`,
+/// serveur public d'OSM par défaut : usage modéré, attribution affichée).
 const pmtilesUrl = String.fromEnvironment('PMTILES_URL');
+const rasterTilesUrl = String.fromEnvironment(
+  'RASTER_TILES_URL',
+  defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+);
+
+/// Tuiles raster de secours (désactivées dans les tests : pas de réseau).
+final rasterTilesEnabledProvider = Provider<bool>((ref) => true);
 
 /// Source des tuiles dans le style OpenMapTiles.
 const _source = 'openmaptiles';
@@ -71,6 +78,8 @@ class RideMap extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.umColors;
     final background = ref.watch(mapBackgroundProvider).value;
+    // Sans PMTiles (ou en attendant son chargement) : tuiles raster d'OpenStreetMap.
+    final raster = background == null && ref.watch(rasterTilesEnabledProvider);
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
     final points = [...line, for (final s in stops) LatLng(s.lat, s.lon), ?pin];
 
@@ -96,6 +105,13 @@ class RideMap extends ConsumerWidget {
           onTap: onTap == null ? null : (_, point) => onTap!(point),
         ),
         children: [
+          if (raster)
+            TileLayer(
+              urlTemplate: rasterTilesUrl,
+              // Exigé par la politique d'usage des tuiles OSM.
+              userAgentPackageName: 'fr.unimoov.unimoov',
+              maxNativeZoom: 19,
+            ),
           if (background != null)
             VectorTileLayer(
               tileProviders: TileProviders({_source: background.tiles}),
@@ -157,7 +173,7 @@ class RideMap extends ConsumerWidget {
                 ),
             ],
           ),
-          if (background != null) const _Attribution(),
+          if (background != null || raster) const _Attribution(),
         ],
       ),
     );

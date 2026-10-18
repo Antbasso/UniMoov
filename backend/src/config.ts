@@ -32,7 +32,9 @@ const envSchema = z
     .base64()
     .refine((value) => Buffer.from(value, 'base64').length === 32, '32 octets attendus'),
   /** `ors` : OpenRouteService (clé requise) ; `estimate` : lignes droites, sans appel externe. */
-  ROUTING_PROVIDER: z.enum(['ors', 'estimate']).default('estimate'),
+  ROUTING_PROVIDER: z.enum(['osrm', 'ors', 'estimate']).default('estimate'),
+  /** OSRM : instance auto-hébergée en production ; le serveur de démonstration public sinon. */
+  OSRM_URL: z.url().default('https://router.project-osrm.org'),
   ORS_API_KEY: z.string().optional(),
   /** Appels quotidiens autorisés (palier gratuit d'OpenRouteService), alerte à 80 %. */
   ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),

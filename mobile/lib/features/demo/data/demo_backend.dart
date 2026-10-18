@@ -24,6 +24,7 @@ import '../../trust/data/trust_api.dart';
 import '../../trust/domain/trust.dart';
 import '../../wallet/data/wallet_api.dart';
 import '../../wallet/domain/wallet.dart';
+import 'demo_routes.g.dart';
 import 'demo_world.dart';
 
 /// Serveur fictif du mode démo, entièrement dans l'app : mêmes règles que l'API (docs/api.md)
@@ -330,6 +331,38 @@ class DemoBackend
     return r.direction == Direction.toCampus
         ? [start, ...passengers, campus]
         : [campus, ...passengers.reversed, start];
+  }
+
+  /// Lieu précalculé correspondant à un arrêt (à 50 m près) ; aucun pour un point de rendez-vous.
+  String? _placeOf(_Point p) {
+    if (p.meeting) return null;
+    for (final MapEntry(:key, value: (lat, lon)) in demoPlaces.entries) {
+      if (demoDistance(p.lat, p.lon, lat, lon) < 50) return key;
+    }
+    return null;
+  }
+
+  /// Tronçon routier réel entre deux arrêts (tracé OSRM précalculé), sinon ligne droite.
+  List<(double, double)> _leg(_Point a, _Point b) {
+    final from = _placeOf(a);
+    final to = _placeOf(b);
+    final route = from == null || to == null ? null : demoRoutes['$from|$to'];
+    if (route == null) return [(a.lat, a.lon), (b.lat, b.lon)];
+    return decodePolyline(route.$1);
+  }
+
+  /// Tracé routier complet d'un trajet, arrêt par arrêt.
+  List<(double, double)> _road(List<_Point> path) => [
+    for (var i = 1; i < path.length; i++)
+      ...(i == 1 ? _leg(path[0], path[1]) : _leg(path[i - 1], path[i]).skip(1)),
+  ];
+
+  static double _lineLength(List<(double, double)> line) {
+    var total = 0.0;
+    for (var i = 1; i < line.length; i++) {
+      total += demoDistance(line[i - 1].$1, line[i - 1].$2, line[i].$1, line[i].$2);
+    }
+    return total;
   }
 
   double _length(List<_Point> path) {
@@ -789,15 +822,14 @@ class DemoBackend
 
   RideDetails _details(DemoRide r) {
     final path = _path(r);
-    final total = _length(path);
-    // 40 km/h de moyenne, facteur routier 1,3 : heures de passage.
-    const speed = 40 * 1000 / 3600 / 1.3;
+    final road = _road(path);
+    final total = _lineLength(road);
+    // 35 km/h de moyenne sur la route réelle : heures de passage.
+    const speed = 35 * 1000 / 3600;
     var travelled = 0.0;
     final stops = <RideStop>[];
     for (final (i, p) in path.indexed) {
-      if (i > 0) {
-        travelled += demoDistance(path[i - 1].lat, path[i - 1].lon, p.lat, p.lon);
-      }
+      if (i > 0) travelled += _lineLength(_leg(path[i - 1], p));
       final eta = r.direction == Direction.toCampus
           ? r.time.subtract(Duration(seconds: (total - travelled) ~/ speed))
           : r.time.add(Duration(seconds: travelled ~/ speed));
@@ -838,9 +870,22 @@ class DemoBackend
       isDriver: r.driverIsMe,
       myStatus: r.driverIsMe ? 'accepted' : (mine?.status ?? 'accepted'),
       routeEstimated: false,
-      route: [for (final s in stops) (s.lat, s.lon)],
+      // Passagère : le tracé ne trahit pas le domicile d'un autre passager (cahier §4).
+      route: [
+        for (final point in road)
+          if (r.driverIsMe ||
+              path.every(
+                (p) =>
+                    p.userId == null ||
+                    p.userId == demoMeId ||
+                    p.userId == r.driverId ||
+                    p.meeting ||
+                    demoDistance(p.lat, p.lon, point.$1, point.$2) > 500,
+              ))
+            point,
+      ],
       stops: stops,
-      distanceM: (total * 1.3).round(),
+      distanceM: total.round(),
       durationS: (total / speed).round(),
       price: RidePrice(
         totalCostCents: price.cost,
@@ -1090,7 +1135,7 @@ class DemoBackend
       // Le conducteur part 1,6 km avant l'arrêt de Camille.
       final path = _path(r);
       final index = path.indexWhere((p) => p.userId == demoMeId);
-      sim.pickupAt = _length(path.sublist(0, index + 1));
+      sim.pickupAt = _lineLength(_road(path.sublist(0, index + 1)));
       sim.travelled = max(0, sim.pickupAt - 1600);
     }
     scheduleMicrotask(() {
@@ -1137,10 +1182,10 @@ class DemoBackend
     final sim = _sims[r.id]!;
     final now = _now;
     if (!r.driverIsMe) {
-      final path = _path(r);
-      final total = _length(path);
+      final road = _road(_path(r));
+      final total = _lineLength(road);
       if (advance) sim.travelled = min(total, sim.travelled + 280);
-      final (lat, lon) = _along(path, sim.travelled);
+      final (lat, lon) = _along(road, sim.travelled);
       _emit(r.id, LivePosition(userId: r.driverId, lat: lat, lon: lon, at: now));
       final me = r.seatOf(demoMeId)!;
       if (sim.travelled < sim.pickupAt) {
@@ -1183,19 +1228,20 @@ class DemoBackend
     }
   }
 
-  (double, double) _along(List<_Point> path, double meters) {
+  /// Point à `meters` du départ, le long du tracé routier.
+  (double, double) _along(List<(double, double)> line, double meters) {
     var left = meters;
-    for (var i = 1; i < path.length; i++) {
-      final a = path[i - 1];
-      final b = path[i];
-      final d = demoDistance(a.lat, a.lon, b.lat, b.lon);
+    for (var i = 1; i < line.length; i++) {
+      final (aLat, aLon) = line[i - 1];
+      final (bLat, bLon) = line[i];
+      final d = demoDistance(aLat, aLon, bLat, bLon);
       if (left <= d && d > 0) {
         final f = left / d;
-        return (a.lat + (b.lat - a.lat) * f, a.lon + (b.lon - a.lon) * f);
+        return (aLat + (bLat - aLat) * f, aLon + (bLon - aLon) * f);
       }
       left -= d;
     }
-    return (path.last.lat, path.last.lon);
+    return line.last;
   }
 
   // --- Portefeuille ---
