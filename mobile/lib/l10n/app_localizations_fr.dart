@@ -781,7 +781,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get sectorShow => 'Voir son secteur';
+  String get sectorEnlarge => 'Touche pour agrandir';
 
   @override
   String sectorTitle(String name) {

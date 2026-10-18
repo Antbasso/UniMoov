@@ -271,20 +271,22 @@ class PersonCard extends StatelessWidget {
     final details = isDriver
         ? l10n.personDetailsDriver(person.scoreOutOfFive, person.detourMinutes)
         : l10n.personDetails(person.scoreOutOfFive, person.detourMinutes);
-    final all = [
-      ...actions,
-      if (person.sector != null)
-        UmButton(
-          label: l10n.sectorShow,
-          icon: Icons.map_outlined,
-          variant: UmButtonVariant.ghost,
-          onPressed: () => showSectorSheet(context, person),
-        ),
-    ];
+    final sector = person.sector == null ? null : SectorMap(person: person);
     return UmCard(
       title: person.firstName,
       body: person.isRequest ? '${l10n.requestFrom}\n$details' : details,
-      child: all.isEmpty ? null : Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: all),
+      child: sector == null && actions.isEmpty
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Secteur approximatif directement visible, sous les informations.
+                ?sector,
+                if (sector != null && actions.isNotEmpty) const SizedBox(height: UmSpace.s3),
+                if (actions.isNotEmpty)
+                  Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: actions),
+              ],
+            ),
     );
   }
 }

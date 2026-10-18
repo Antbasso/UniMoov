@@ -6,6 +6,7 @@ import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
+import 'package:unimoov/features/proposals/presentation/sector_sheet.dart';
 import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 import '../../support/app_harness.dart';
@@ -64,9 +65,12 @@ void main() {
     expect(find.textContaining('Nom et adresse exacte'), findsOneWidget);
     // Le détour est celui que fait le conducteur ; son secteur, un cercle sur une carte.
     expect(find.textContaining('min de détour pour toi'), findsOneWidget);
-    await tapText(tester, 'Voir son secteur');
-    expect(find.text('Secteur de Nathan'), findsOneWidget);
+    // Secteur visible tout de suite en mini-carte ; un toucher l'agrandit.
     expect(find.byType(CircleLayer), findsOneWidget);
+    await tester.tap(find.byType(SectorMap));
+    await tester.pumpAndSettle();
+    expect(find.text('Secteur de Nathan'), findsOneWidget);
+    expect(find.byType(CircleLayer), findsNWidgets(2));
     Navigator.of(tester.element(find.text('Secteur de Nathan'))).pop();
     await tester.pumpAndSettle();
 

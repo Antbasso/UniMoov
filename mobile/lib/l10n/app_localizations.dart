@@ -1412,11 +1412,11 @@ abstract class AppLocalizations {
   /// **'Fiabilité {score} sur 5 · fait {minutes} min de détour pour toi'**
   String personDetailsDriver(String score, int minutes);
 
-  /// No description provided for @sectorShow.
+  /// No description provided for @sectorEnlarge.
   ///
   /// In fr, this message translates to:
-  /// **'Voir son secteur'**
-  String get sectorShow;
+  /// **'Touche pour agrandir'**
+  String get sectorEnlarge;
 
   /// No description provided for @sectorTitle.
   ///

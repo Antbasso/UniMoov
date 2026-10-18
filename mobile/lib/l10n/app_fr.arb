@@ -450,7 +450,7 @@
       }
     }
   },
-  "sectorShow": "Voir son secteur",
+  "sectorEnlarge": "Touche pour agrandir",
   "sectorTitle": "Secteur de {name}",
   "@sectorTitle": {
     "placeholders": {

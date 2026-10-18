@@ -31,6 +31,9 @@ abstract final class UmSize {
   static const double routeStroke = 5;
   static const double mapMaxZoom = 16;
 
+  /// Mini-carte du secteur d'une personne, dans sa fiche.
+  static const double sectorMiniMap = 160;
+
   /// Pastille numérotée d'un arrêt dans la liste.
   static const double stopBadge = 32;
 
