@@ -98,6 +98,16 @@ describe('semaine générée sur le jeu de seed', () => {
     expect(hugo.priceCents).toBeGreaterThan(0);
   });
 
+  it('même rôle à l’aller et au retour, pour chacun et chaque jour', async () => {
+    for (const u of seedUsers) {
+      const list = await proposals(u.firstName);
+      for (const day of new Set(list.map((p) => p.day))) {
+        const roles = new Set(list.filter((p) => p.day === day && p.myStatus !== 'declined').map((p) => p.role));
+        expect({ who: u.firstName, day, roles: [...roles] }).toEqual({ who: u.firstName, day, roles: [...roles].slice(0, 1) });
+      }
+    }
+  });
+
   it('Inès (absente le vendredi) n’a pas de proposition ce jour-là', async () => {
     const list = await proposals('Inès');
     expect(list.filter((p) => p.day === FRIDAY)).toEqual([]);

@@ -22,6 +22,7 @@
 ## 3. Emploi du temps et génération des trajets
 
 - Synchronisation d'agenda via lien ICS/CalDAV en v1 (Google Calendar et Microsoft Graph reportés en v1.1 pour limiter les coûts, voir `docs/couts.md`) ; alternative si refus : saisie manuelle des heures de début/fin de journée.
+- Même rôle à l'aller et au retour d'une journée : venu en voiture, on repart conducteur ; venu en passager, on repart passager (on n'a pas sa voiture).
 - Chaque semaine, l'appli propose automatiquement un trajet par créneau à partir de l'emploi du temps synchronisé ; l'utilisateur accepte ou refuse, avec un bouton pour voir d'autres propositions compatibles.
 - Si l'agenda synchronisé modifie l'heure de début/fin d'une journée, le système relance automatiquement une nouvelle recherche de matching pour ce créneau.
 

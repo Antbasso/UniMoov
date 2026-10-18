@@ -41,20 +41,34 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: UmSpace.s3),
+        // Lien aligné sur « Salut … » (pas la marge intérieure d'un bouton), zone tactile de 48 px.
         Align(
           alignment: Alignment.centerLeft,
-          child: me.pausedToday
-              ? ActionChip(
-                  avatar: Icon(Icons.pause_circle_outline_rounded, color: c.brandStrong),
-                  label: Text(l10n.pausedToday),
-                  onPressed: () => context.go(AppRoutes.profile),
-                )
-              : UmButton(
-                  label: l10n.pauseAction,
-                  icon: Icons.pause_circle_outline_rounded,
-                  variant: UmButtonVariant.ghost,
-                  onPressed: () => showPauseSheet(context),
+          child: Semantics(
+            button: true,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(UmRadius.sm),
+              onTap: me.pausedToday
+                  ? () => context.go(AppRoutes.profile)
+                  : () => showPauseSheet(context),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: UmSize.tapTarget),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.pause_circle_outline_rounded, color: c.brandStrong),
+                    const SizedBox(width: UmSpace.s2),
+                    Flexible(
+                      child: Text(
+                        me.pausedToday ? l10n.pausedToday : l10n.pauseAction,
+                        style: UmText.button.copyWith(color: c.brandStrong),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
+          ),
         ),
         if (me.discoveryMode) ...[
           const SizedBox(height: UmSpace.s4),

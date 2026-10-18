@@ -296,11 +296,9 @@
   "pauseModeLabel": "Type de pause",
   "pauseDatesLabel": "Période de pause",
   "pauseDaysLabel": "Chaque semaine, les jours :",
-  "pauseFirstLabel": "Première pause",
-  "pauseFrequencyLabel": "Fréquence",
+  "pauseFrequencyLabel": "Revient",
   "pauseUntilLabel": "Jusqu'au",
   "pauseChooseUntil": "Choisir la date de fin",
-  "pauseChooseFirst": "Choisir la première pause",
   "pauseTooLongForPeriod": "La pause est plus longue que sa fréquence : raccourcis-la.",
   "pauseSave": "Enregistrer la pause",
   "rideStatusWaiting": "En attente",
@@ -1622,5 +1620,27 @@
   "charter9Body": "Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.",
   "icsPaste": "Coller le lien copié",
   "icsClipboardEmpty": "Rien à coller : copie d'abord le lien de ton agenda.",
-  "icsWhere": "Où le trouver : dans ADE, « Exporter l'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi."
+  "icsWhere": "Où le trouver : dans ADE, « Exporter l'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.",
+  "errorDrivesOtherWay": "Tu conduis l'autre trajet ce jour-là : tu repars avec ta voiture.",
+  "errorPassengerOtherWay": "Tu es passager sur l'autre trajet ce jour-là : tu n'as pas ta voiture.",
+  "pauseStartLabel": "Premier jour de pause",
+  "pauseChooseStart": "Choisir le premier jour",
+  "pauseDurationLabel": "Durée de chaque pause",
+  "pauseDurationDays": "{count, plural, =1{1 jour} other{{count} jours}}",
+  "@pauseDurationDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pauseRepeatUntilLabel": "Se répète jusqu'au",
+  "pauseDurationWeeks": "{count, plural, =1{1 semaine} other{{count} semaines}}",
+  "@pauseDurationWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

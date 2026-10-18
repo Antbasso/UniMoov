@@ -148,6 +148,29 @@ export class MatchingRepo {
     return new Set(rows.map((r) => r.user_id));
   }
 
+  /**
+   * Rôle de chacun ce jour-là sur les trajets où il est engagé (accepté ou en demande),
+   * quel que soit le sens : le même rôle s'impose pour l'autre trajet.
+   */
+  async dayRoles(day: string, db: DbOrTx = this.db): Promise<Map<string, 'driver' | 'passenger'>> {
+    const { rows } = await db.execute<{ user_id: string; role: 'driver' | 'passenger' }>(sql`
+      SELECT DISTINCT ON (p.user_id) p.user_id, p.role FROM ride_participants p JOIN rides r ON r.id = p.ride_id
+      WHERE r.day = ${day} AND r.status <> 'cancelled' AND p.status IN ('accepted', 'requested', 'picked_up')
+      ORDER BY p.user_id, r.direction`);
+    return new Map(rows.map((r) => [r.user_id, r.role]));
+  }
+
+  /** Rôle de la personne sur l'autre trajet du jour (sens opposé), s'il est engagé. */
+  async roleOtherWay(userId: string, day: string, direction: Direction, db: DbOrTx = this.db): Promise<'driver' | 'passenger' | null> {
+    const other = direction === 'to_campus' ? 'from_campus' : 'to_campus';
+    const { rows } = await db.execute<{ role: 'driver' | 'passenger' }>(sql`
+      SELECT p.role FROM ride_participants p JOIN rides r ON r.id = p.ride_id
+      WHERE p.user_id = ${userId} AND r.day = ${day} AND r.direction = ${other} AND r.status <> 'cancelled'
+        AND p.status IN ('accepted', 'requested', 'picked_up')
+      LIMIT 1`);
+    return rows[0]?.role ?? null;
+  }
+
   /** Supprime les propositions encore ouvertes (personne n'a accepté ni demandé) du jour et du sens. */
   async deleteOpenRides(day: string, direction: Direction, db: DbOrTx = this.db): Promise<void> {
     await db.execute(sql`

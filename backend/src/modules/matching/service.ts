@@ -176,6 +176,9 @@ export class MatchingService {
       const available = rows.filter((r) => !isPausedOn(pauses.get(r.userId) ?? [], day));
       const campuses = [...new Set(available.map((r) => r.campusId))];
 
+      // Même rôle à l'aller et au retour (on ne repart pas en passager quand on est venu en
+      // voiture) : rôles des trajets déjà engagés, puis ceux décidés pour l'aller.
+      const dayRoles = await this.repo.dayRoles(day, tx);
       for (const direction of DIRECTIONS) {
         await this.repo.deleteOpenRides(day, direction, tx);
         const locked = await this.repo.lockedUsers(day, direction, tx);
@@ -196,7 +199,8 @@ export class MatchingService {
               drivenRecently: r.drivenRecently,
             }));
           const params = await this.params(await this.repo.campusLocation(campusId, tx));
-          const { rides } = matchSlot(needs, direction, params, (d, p) => declines.has(`${d}|${p}`));
+          const { rides, roles } = matchSlot(needs, direction, params, (d, p) => declines.has(`${d}|${p}`), dayRoles);
+          for (const [userId, role] of roles) if (!dayRoles.has(userId)) dayRoles.set(userId, role);
           for (const planned of rides) await this.repo.insertRide(planned, { day, direction, campusId }, tx);
         }
       }
@@ -312,6 +316,7 @@ export class MatchingService {
       const me = parts.find((p) => p.userId === userId);
 
       let requested = false;
+      await this.assertSameRoleOtherWay(userId, ride.day, ride.direction, me?.role ?? 'passenger', tx);
       if (me) {
         if (!ACTIVE(me)) throw new AppError(409, 'proposal_declined', 'Tu as refusé cette proposition');
         // Demande déjà envoyée : c'est au conducteur de répondre.
@@ -550,12 +555,14 @@ export class MatchingService {
     const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
     if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (me.role !== 'passenger') return [];
+    await this.assertSameRoleOtherWay(userId, ride.day, ride.direction, 'passenger');
     return this.pricedRides(userId, await this.joinable(userId, ride.day, ride.direction, rideId));
   }
 
   /** Recherche manuelle (cahier §4), limitée par un quota quotidien. */
   async search(userId: string, query: { day: string; direction: Direction; time?: string | undefined }) {
     if (query.day < this.today()) throw new AppError(400, 'day_in_past', 'Choisis une date à venir');
+    await this.assertSameRoleOtherWay(userId, query.day, query.direction, 'passenger');
     const quota = await this.settings.get('search.dailyQuota');
     if ((await this.repo.incrementSearch(userId, this.today())) > quota) {
       throw new AppError(429, 'search_quota_exceeded', 'Tu as atteint le nombre de recherches du jour');
@@ -585,6 +592,7 @@ export class MatchingService {
     const setup = await this.repo.driverSetup(userId);
     if (setup.seats === null) throw new AppError(409, 'vehicle_required', 'Déclare ton véhicule pour conduire');
     if (!setup.hasHome || !setup.campusId) throw new AppError(409, 'profile_incomplete', 'Ajoute ton adresse pour trouver un trajet');
+    await this.assertSameRoleOtherWay(userId, input.day, input.direction, 'driver');
     for (const mine of await this.repo.mySlot(userId, input.day, input.direction)) {
       if (mine.status === 'accepted' || mine.status === 'picked_up' || mine.status === 'requested') {
         throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
@@ -624,6 +632,7 @@ export class MatchingService {
       }
       const me = parts.find((p) => p.userId === passengerId);
       if (me?.status === 'accepted') return null; // déjà à bord : rien à refaire
+      await this.assertSameRoleOtherWay(passengerId, ride.day, ride.direction, 'passenger', tx);
       const taken = parts.filter((p) => p.role === 'passenger' && ACTIVE(p) && p.userId !== passengerId).length;
       if (taken >= ride.seatsTotal) throw new AppError(409, 'ride_full', 'Cette voiture est complète');
       for (const other of await this.repo.otherActiveRides(passengerId, ride.day, ride.direction, rideId, tx)) {
@@ -670,9 +679,30 @@ export class MatchingService {
       if (view.seatsLeft <= 0) throw new AppError(409, 'ride_full', 'Ta voiture est complète');
       const pick = view.suggestions.find((s) => s.person.userId === passengerId);
       if (!pick) throw new AppError(409, 'suggestion_unavailable', 'Cette personne ne peut plus être proposée');
+      await this.assertSameRoleOtherWay(passengerId, ride.day, ride.direction, 'passenger', tx);
       await this.repo.addPassenger(rideId, passengerId, pick.person.detourMinutes * 60, tx, 'proposed');
       return this.viewFor(userId, rideId, tx);
     });
+  }
+
+  /**
+   * Même rôle à l'aller et au retour : venu en voiture, on repart en voiture ; venu en
+   * passager, on n'a pas sa voiture pour repartir conducteur.
+   */
+  private async assertSameRoleOtherWay(
+    userId: string,
+    day: string,
+    direction: Direction,
+    role: 'driver' | 'passenger',
+    db?: DbOrTx,
+  ): Promise<void> {
+    const other = await this.repo.roleOtherWay(userId, day, direction, db);
+    if (other === 'driver' && role === 'passenger') {
+      throw new AppError(409, 'drives_other_way', "Tu conduis l'autre trajet ce jour-là : tu repars avec ta voiture");
+    }
+    if (other === 'passenger' && role === 'driver') {
+      throw new AppError(409, 'passenger_other_way', "Tu es passager sur l'autre trajet ce jour-là : tu n'as pas ta voiture");
+    }
   }
 
   private async assertAcceptedDriver(userId: string, rideId: string, db?: DbOrTx): Promise<void> {

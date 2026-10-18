@@ -181,6 +181,26 @@ void main() {
     expect(find.textContaining('Tous les lundis jusqu'), findsOneWidget);
     expect((backend.lastPause!.repeat! as RepeatDays).weekdays, {1});
 
+    // Répéter : un premier jour, une durée, une fréquence, et une seule date de fin.
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Répéter');
+    expect(find.text('Choisir les dates'), findsNothing);
+    await tapText(tester, 'Choisir le premier jour');
+    await tapText(tester, 'OK');
+    await tapText(tester, '2 jours');
+    await tester.ensureVisible(find.text('Choisir la date de fin'));
+    await tapText(tester, 'Choisir la date de fin');
+    await tapText(tester, 'OK');
+    expect(find.text('Se répète jusqu\'au'), findsOneWidget);
+    await tester.ensureVisible(find.text('Enregistrer la pause'));
+    await tapText(tester, 'Enregistrer la pause');
+    final repeated = backend.lastPause!;
+    expect(repeated.endsOn.difference(repeated.startsOn).inDays, 1);
+    expect(repeated.repeat, isA<RepeatWeekly>());
+
     await tapText(tester, 'Me déconnecter');
     expect(find.text('Créer mon compte'), findsOneWidget);
     expect(storage.tokens, isNull);

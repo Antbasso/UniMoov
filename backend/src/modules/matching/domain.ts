@@ -56,16 +56,23 @@ const byId = (a: { userId: string }, b: { userId: string }) => a.userId.localeCo
  * Sans véhicule : passager. Mode forcé : respecté. Mode automatique : on fait conduire tant
  * que l'offre de places ne dépasse pas la demande (une marge est nécessaire, car le détour
  * limite qui peut monter avec qui). On alterne : celui qui a le moins conduit ces dernières
- * semaines passe d'abord ; à égalité, la plus grande voiture.
+ * semaines passe d'abord ; à égalité, la plus grande voiture. `fixed` : rôles déjà décidés
+ * pour ce jour (même rôle à l'aller et au retour).
  */
-export function assignRoles(needs: readonly Need[]): Map<string, Role> {
+export function assignRoles(needs: readonly Need[], fixed: ReadonlyMap<string, Role> = new Map()): Map<string, Role> {
   const roles = new Map<string, Role>();
   let seatsOffered = 0;
   let passengers = 0;
   const autos: Need[] = [];
 
   for (const need of needs) {
-    if (!need.vehicle || need.roleMode === 'always_passenger') {
+    // Rôle déjà fixé pour la journée (l'autre trajet) : venu en voiture, on repart en voiture ;
+    // venu en passager, on repart en passager. Sans voiture déclarée, passager quoi qu'il arrive.
+    const imposed = fixed.get(need.userId);
+    if (imposed === 'driver' && need.vehicle) {
+      roles.set(need.userId, 'driver');
+      seatsOffered += need.vehicle.seats;
+    } else if (imposed === 'passenger' || !need.vehicle || need.roleMode === 'always_passenger') {
       roles.set(need.userId, 'passenger');
       passengers++;
     } else if (need.roleMode === 'always_driver') {
@@ -175,8 +182,9 @@ export function matchSlot(
   direction: Direction,
   params: MatchParams,
   excluded: (driverId: string, passengerId: string) => boolean = () => false,
-): { rides: PlannedRide[]; unmatched: string[] } {
-  const roles = assignRoles(needs);
+  fixedRoles: ReadonlyMap<string, Role> = new Map(),
+): { rides: PlannedRide[]; unmatched: string[]; roles: Map<string, Role> } {
+  const roles = assignRoles(needs, fixedRoles);
   const drivers = needs.filter((n) => roles.get(n.userId) === 'driver');
   const passengers = needs.filter((n) => roles.get(n.userId) === 'passenger');
 
@@ -235,5 +243,6 @@ export function matchSlot(
   return {
     rides: rides.sort((a, b) => a.driverId.localeCompare(b.driverId)),
     unmatched: passengers.filter((p) => !placed.has(p.userId)).map((p) => p.userId).sort(),
+    roles,
   };
 }

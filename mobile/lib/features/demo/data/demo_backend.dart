@@ -118,12 +118,6 @@ class DemoBackend
   DateTime _at(DateTime day, int hour, [int minute = 0]) =>
       DateTime(day.year, day.month, day.day, hour, minute);
 
-  /// Heure ronde au quart d'heure suivant, au moins `minutes` plus tard.
-  DateTime _soon(int minutes) {
-    final t = _now.add(Duration(minutes: minutes));
-    return DateTime(t.year, t.month, t.day, t.hour, (t.minute ~/ 15 + 1) * 15);
-  }
-
   /// Semaine de Camille : un trajet en cours (passagère), un trajet à conduire bientôt, des
   /// propositions à accepter, une demande de place, des trajets terminés à noter.
   void _seedScenario() {
@@ -147,13 +141,28 @@ class DemoBackend
         seats: [DemoSeat(demoMeId, 'accepted', detourMinutes: 4)],
       ),
     );
-    // Retour à conduire : Camille ramène Inès et Hugo ; démarrable tout de suite.
+    // Même rôle à l'aller et au retour : venue en passagère, Camille rentre avec Nathan.
+    _add(
+      DemoRide(
+        id: 'demo-back',
+        day: today,
+        direction: Direction.fromCampus,
+        time: _at(today, 17, 45),
+        driverId: 'nathan',
+        driverStatus: 'accepted',
+        status: 'confirmed',
+        consumption: 6.5,
+        seats: [DemoSeat(demoMeId, 'accepted', detourMinutes: 4)],
+      ),
+    );
+    // Demain, Camille conduit à l'aller et au retour. Aller : elle prend Inès et Hugo ;
+    // démarrable tout de suite (démo).
     _add(
       DemoRide(
         id: 'demo-drive',
-        day: today,
-        direction: Direction.fromCampus,
-        time: _soon(20),
+        day: tomorrow,
+        direction: Direction.toCampus,
+        time: _at(tomorrow, 8),
         driverId: demoMeId,
         driverStatus: 'accepted',
         status: 'confirmed',
@@ -164,13 +173,14 @@ class DemoBackend
         ],
       ),
     );
-    // Demain : Léa propose de prendre Camille (Léa a déjà accepté).
+    // Après-demain, Camille est passagère à l'aller et au retour. Aller : Léa propose de la
+    // prendre (Léa a déjà accepté).
     _add(
       DemoRide(
         id: 'demo-offer',
-        day: tomorrow,
+        day: later,
         direction: Direction.toCampus,
-        time: _at(tomorrow, 8),
+        time: _at(later, 8),
         driverId: 'lea',
         driverStatus: 'accepted',
         seats: [DemoSeat(demoMeId, 'proposed', detourMinutes: 3)],
@@ -193,13 +203,13 @@ class DemoBackend
         ],
       ),
     );
-    // Après-demain : Lucas vient de Rumilly, trajet long : prix maximal au-dessus du solde.
+    // Retour : Lucas rentre vers Rumilly, trajet long : prix maximal au-dessus du solde.
     _add(
       DemoRide(
         id: 'demo-expensive',
         day: later,
-        direction: Direction.toCampus,
-        time: _at(later, 8, 30),
+        direction: Direction.fromCampus,
+        time: _at(later, 17, 30),
         driverId: 'lucas',
         driverStatus: 'accepted',
         consumption: 9.5,
@@ -230,9 +240,9 @@ class DemoBackend
     _add(
       DemoRide(
         id: 'demo-done-driver',
-        day: past,
+        day: lastWeek,
         direction: Direction.fromCampus,
-        time: _at(past, 17),
+        time: _at(lastWeek, 17),
         driverId: demoMeId,
         driverStatus: 'accepted',
         status: 'completed',
@@ -253,7 +263,7 @@ class DemoBackend
     balanceCents = 300;
     _entry('topup', 1000, _at(lastWeek, 9, 12));
     _entry('ride_charge', -_priceOf(_rides['demo-done-passenger']!).youPay, _at(past, 8, 10));
-    _entry('ride_credit', _priceOf(_rides['demo-done-driver']!).youReceive, _at(past, 17, 40));
+    _entry('ride_credit', _priceOf(_rides['demo-done-driver']!).youReceive, _at(lastWeek, 17, 40));
     final live = _rides['demo-live']!;
     _hold(live);
 
@@ -408,6 +418,22 @@ class DemoBackend
       youPay: share + demoCommissionCents,
       youReceive: share * passengers,
     );
+  }
+
+  /// Prix de la carte d'accueil : le même calcul que le détail du trajet (au prorata) dès que
+  /// des passagers sont acceptés ; avant, une estimation au partage égal (comme le serveur).
+  int? _cardPrice(DemoRide r) {
+    final mine = r.seatOf(demoMeId);
+    if (r.activeSeats.isNotEmpty && (r.driverIsMe || (mine?.active ?? false))) {
+      final split = _proRata(r, r.activeSeats);
+      if (r.driverIsMe) return split.shares.values.fold<int>(0, (a, b) => a + b);
+      return (split.shares[demoMeId] ?? 0) + demoCommissionCents;
+    }
+    final planned = r.seats.where((s) => s.status != 'declined' && s.status != 'cancelled').length;
+    if (r.driverIsMe) {
+      return planned == 0 ? null : _priceOf(r, persons: planned + 1).youReceive;
+    }
+    return _priceOf(r, persons: planned + (mine == null ? 2 : 1)).youPay;
   }
 
   /// Parts au prorata pour les passagers donnés (distance à bord le long de la route réelle).
@@ -887,10 +913,7 @@ class DemoBackend
           ? [for (final s in r.seats.where((s) => s.status != 'declined')) person(s)]
           : const [],
       // Prix indicatif, comme le serveur : ma part (passagère) ou le total reçu (conductrice).
-      priceCents: switch (_priceOf(r)) {
-        final p when r.driverIsMe => p.youReceive > 0 ? p.youReceive : null,
-        final p => p.youPay,
-      },
+      priceCents: _cardPrice(r),
     );
   }
 
@@ -1831,7 +1854,7 @@ class DemoBackend
       ['ines', 'hugo'],
       ride: drive,
       messages: [
-        ('ines', 'Je finis à 17 h, je te retrouve au parking ?', 90),
+        ('ines', 'Je suis prête à 7 h 45, tu passes devant chez moi ?', 90),
         ('hugo', 'Moi aussi, merci pour le retour !', 80),
       ],
       unread: 2,

@@ -513,19 +513,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseDaysLabel => 'Chaque semaine, les jours :';
 
   @override
-  String get pauseFirstLabel => 'Première pause';
-
-  @override
-  String get pauseFrequencyLabel => 'Fréquence';
+  String get pauseFrequencyLabel => 'Revient';
 
   @override
   String get pauseUntilLabel => 'Jusqu\'au';
 
   @override
   String get pauseChooseUntil => 'Choisir la date de fin';
-
-  @override
-  String get pauseChooseFirst => 'Choisir la première pause';
 
   @override
   String get pauseTooLongForPeriod =>
@@ -2750,4 +2744,46 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get icsWhere =>
       'Où le trouver : dans ADE, « Exporter l\'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.';
+
+  @override
+  String get errorDrivesOtherWay =>
+      'Tu conduis l\'autre trajet ce jour-là : tu repars avec ta voiture.';
+
+  @override
+  String get errorPassengerOtherWay =>
+      'Tu es passager sur l\'autre trajet ce jour-là : tu n\'as pas ta voiture.';
+
+  @override
+  String get pauseStartLabel => 'Premier jour de pause';
+
+  @override
+  String get pauseChooseStart => 'Choisir le premier jour';
+
+  @override
+  String get pauseDurationLabel => 'Durée de chaque pause';
+
+  @override
+  String pauseDurationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours',
+      one: '1 jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pauseRepeatUntilLabel => 'Se répète jusqu\'au';
+
+  @override
+  String pauseDurationWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count semaines',
+      one: '1 semaine',
+    );
+    return '$_temp0';
+  }
 }

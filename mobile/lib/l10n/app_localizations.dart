@@ -946,16 +946,10 @@ abstract class AppLocalizations {
   /// **'Chaque semaine, les jours :'**
   String get pauseDaysLabel;
 
-  /// No description provided for @pauseFirstLabel.
-  ///
-  /// In fr, this message translates to:
-  /// **'Première pause'**
-  String get pauseFirstLabel;
-
   /// No description provided for @pauseFrequencyLabel.
   ///
   /// In fr, this message translates to:
-  /// **'Fréquence'**
+  /// **'Revient'**
   String get pauseFrequencyLabel;
 
   /// No description provided for @pauseUntilLabel.
@@ -969,12 +963,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Choisir la date de fin'**
   String get pauseChooseUntil;
-
-  /// No description provided for @pauseChooseFirst.
-  ///
-  /// In fr, this message translates to:
-  /// **'Choisir la première pause'**
-  String get pauseChooseFirst;
 
   /// No description provided for @pauseTooLongForPeriod.
   ///
@@ -4617,6 +4605,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Où le trouver : dans ADE, « Exporter l\'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.'**
   String get icsWhere;
+
+  /// No description provided for @errorDrivesOtherWay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu conduis l\'autre trajet ce jour-là : tu repars avec ta voiture.'**
+  String get errorDrivesOtherWay;
+
+  /// No description provided for @errorPassengerOtherWay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu es passager sur l\'autre trajet ce jour-là : tu n\'as pas ta voiture.'**
+  String get errorPassengerOtherWay;
+
+  /// No description provided for @pauseStartLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier jour de pause'**
+  String get pauseStartLabel;
+
+  /// No description provided for @pauseChooseStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir le premier jour'**
+  String get pauseChooseStart;
+
+  /// No description provided for @pauseDurationLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée de chaque pause'**
+  String get pauseDurationLabel;
+
+  /// No description provided for @pauseDurationDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 jour} other{{count} jours}}'**
+  String pauseDurationDays(int count);
+
+  /// No description provided for @pauseRepeatUntilLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se répète jusqu\'au'**
+  String get pauseRepeatUntilLabel;
+
+  /// No description provided for @pauseDurationWeeks.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 semaine} other{{count} semaines}}'**
+  String pauseDurationWeeks(int count);
 }
 
 class _AppLocalizationsDelegate

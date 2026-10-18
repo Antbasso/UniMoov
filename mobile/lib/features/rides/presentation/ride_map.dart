@@ -354,8 +354,9 @@ class StopBadge extends StatelessWidget {
           boxShadow: context.umShadowSoft,
         ),
         child: switch (stop.kind) {
+          // Au retour, l'arrêt du conducteur est l'arrivée (dernier arrêt) : un drapeau.
           StopKind.driver => Icon(
-            Icons.directions_car_rounded,
+            stop.order > 0 ? Icons.sports_score_rounded : Icons.directions_car_rounded,
             size: UmSize.iconSm,
             color: foreground,
           ),

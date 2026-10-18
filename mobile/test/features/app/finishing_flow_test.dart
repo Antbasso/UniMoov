@@ -8,6 +8,7 @@ import 'package:unimoov/core/router/redirect.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/core/theme/um_theme.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
+import 'package:unimoov/features/rides/domain/ride.dart';
 import 'package:unimoov/features/rides/presentation/ride_map.dart';
 import 'package:unimoov/l10n/app_localizations.dart';
 
@@ -90,5 +91,33 @@ void main() {
     expect(find.byTooltip('Voir le véhicule'), findsOneWidget);
     await tester.tap(find.byTooltip('Voir le véhicule'));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('retour : l’arrivée du conducteur est un drapeau, son départ à l’aller une voiture', (
+    tester,
+  ) async {
+    RideStop stop(int order) => RideStop(
+      order: order,
+      kind: StopKind.driver,
+      label: '',
+      lat: 45.9,
+      lon: 6.1,
+      isMeetingPoint: false,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildUmTheme(Brightness.light),
+        home: Scaffold(
+          body: Row(
+            children: [
+              StopBadge(stop: stop(0)),
+              StopBadge(stop: stop(3)),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(find.byIcon(Icons.directions_car_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.sports_score_rounded), findsOneWidget);
   });
 }

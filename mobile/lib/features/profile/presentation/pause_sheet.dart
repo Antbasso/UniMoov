@@ -48,6 +48,11 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
   DateTimeRange? _range;
   final Set<int> _weekdays = {};
   PauseRepeat _frequency = pauseFrequencies[1];
+
+  /// « Répéter » : premier jour de pause et durée de chaque pause (une seule date de fin :
+  /// celle de la répétition).
+  DateTime? _start;
+  int _durationDays = 1;
   DateTime? _until;
   bool _busy = false;
   String? _errorCode;
@@ -67,8 +72,20 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
     if (range != null) setState(() => _range = range);
   }
 
+  Future<void> _pickStart() async {
+    final start = await showDatePicker(
+      context: context,
+      firstDate: _today,
+      lastDate: _today.add(const Duration(days: 365)),
+      initialDate: _start ?? _today,
+    );
+    if (start != null) setState(() => _start = start);
+  }
+
+  DateTime? get _repeatEnd => _start?.add(Duration(days: _durationDays - 1));
+
   Future<void> _pickUntil() async {
-    final first = _mode == PauseMode.repeat ? (_range?.end ?? _today) : _today;
+    final first = _mode == PauseMode.repeat ? (_repeatEnd ?? _today) : _today;
     final until = await showDatePicker(
       context: context,
       firstDate: first,
@@ -96,12 +113,12 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
           repeatUntil: until,
         );
       case PauseMode.repeat:
-        final range = _range;
+        final start = _start;
         final until = _until;
-        if (range == null || until == null) return null;
+        if (start == null || until == null) return null;
         return PauseDraft(
-          startsOn: range.start,
-          endsOn: range.end,
+          startsOn: start,
+          endsOn: _repeatEnd!,
           repeat: _frequency,
           repeatUntil: until,
         );
@@ -151,7 +168,7 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
 
     final rangeButton = UmButton(
       label: range == null
-          ? (_mode == PauseMode.repeat ? l10n.pauseChooseFirst : l10n.pauseChooseDates)
+          ? l10n.pauseChooseDates
           : l10n.pauseRange(
               formatPauseDate(range.start, locale),
               formatPauseDate(range.end, locale),
@@ -231,8 +248,31 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
               untilButton,
             ],
             if (_mode == PauseMode.repeat) ...[
-              label(l10n.pauseFirstLabel),
-              rangeButton,
+              label(l10n.pauseStartLabel),
+              UmButton(
+                label: _start == null ? l10n.pauseChooseStart : formatPauseDate(_start!, locale),
+                icon: Icons.event_rounded,
+                variant: UmButtonVariant.secondary,
+                expand: true,
+                onPressed: _pickStart,
+              ),
+              label(l10n.pauseDurationLabel),
+              Wrap(
+                spacing: UmSpace.s2,
+                runSpacing: UmSpace.s2,
+                children: [
+                  for (final days in const [1, 2, 3, 7, 14])
+                    ChoiceChip(
+                      label: Text(
+                        days % 7 == 0
+                            ? l10n.pauseDurationWeeks(days ~/ 7)
+                            : l10n.pauseDurationDays(days),
+                      ),
+                      selected: _durationDays == days,
+                      onSelected: (_) => setState(() => _durationDays = days),
+                    ),
+                ],
+              ),
               label(l10n.pauseFrequencyLabel),
               DropdownButtonFormField<PauseRepeat>(
                 initialValue: _frequency,
@@ -243,7 +283,7 @@ class _PauseSheetState extends ConsumerState<PauseSheet> {
                 ],
                 onChanged: (value) => setState(() => _frequency = value ?? _frequency),
               ),
-              label(l10n.pauseUntilLabel),
+              label(l10n.pauseRepeatUntilLabel),
               untilButton,
             ],
             if (draft != null) ...[
