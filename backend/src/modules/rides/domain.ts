@@ -77,6 +77,21 @@ export function passageTimes(direction: Direction, targetTime: Date, legs: reado
 }
 
 /**
+ * Distance à bord de chaque arrêt intermédiaire (passagers dans l'ordre), mesurée depuis le
+ * campus : à l'aller, de l'arrêt au campus (tronçons suivants) ; au retour, du campus à l'arrêt
+ * (tronçons précédents). Sert au partage du prix au prorata (cahier §5).
+ */
+export function onboardDistances(direction: Direction, legs: readonly RouteLeg[]): number[] {
+  const stops = Math.max(legs.length - 1, 0);
+  const result: number[] = [];
+  for (let i = 0; i < stops; i++) {
+    const range = direction === 'to_campus' ? legs.slice(i + 1) : legs.slice(0, i + 1);
+    result.push(Math.round(range.reduce((sum, leg) => sum + leg.distanceM, 0)));
+  }
+  return result;
+}
+
+/**
  * Clé des entrées d'un plan (départ, arrivée, passagers acceptés et leurs points) : un plan
  * calculé n'est enregistré que si ces entrées n'ont pas changé entre-temps.
  */

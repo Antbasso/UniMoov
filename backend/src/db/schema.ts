@@ -197,6 +197,7 @@ export const rideParticipants = pgTable(
     role: participantRole('role').notNull(),
     status: participantStatus('status').notNull().default('proposed'),
     detourS: integer('detour_s'),
+    onboardM: integer('onboard_m'),
     pickupLabel: text('pickup_label'),
     useMeetingPoint: boolean('use_meeting_point').notNull().default(false),
     stopOrder: smallint('stop_order'),

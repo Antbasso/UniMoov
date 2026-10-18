@@ -325,8 +325,9 @@ export class RideLifecycle {
   }
 
   /**
-   * Clôture (conducteur, arrivée, tous terminés, ou trajet oublié) : prix final = coût ÷
-   * personnes présentes (conducteur compris), payé par chaque passager présent (pris en charge,
+   * Clôture (conducteur, arrivée, tous terminés, ou trajet oublié) : prix final au prorata de
+   * la distance à bord (chaque portion partagée entre les présents, conducteur compris), payé
+   * par chaque passager présent (pris en charge,
    * arrivé ou descendu avant) ; les autres retenues sont libérées ; absences constatées ; suivi
    * fermé. La part du conducteur attend le délai de signalement. Idempotente.
    */
@@ -346,7 +347,8 @@ export class RideLifecycle {
         (m) => m.status === 'accepted' && !m.endedAt && (pickupTime(m)?.getTime() ?? 0) > now.getTime(),
       );
       const noShow = missing.filter((m) => !notReached.includes(m));
-      const price = await this.rides.estimate(ride, await this.rides.billingDistance(rideId), present.length + 1);
+      // Prix final : chaque portion de route partagée entre les présents à bord (prorata).
+      const price = await this.rides.shares(ride, await this.rides.billingDistance(rideId), present);
       await this.repo.setRideStatus(rideId, 'completed', { endedAt: now, finalTotalCostCents: price?.totalCostCents ?? null }, tx);
       // Paiement de chaque passager pris en charge, au prix final partagé entre les présents.
       for (const p of present) {
@@ -355,7 +357,7 @@ export class RideLifecycle {
             rideId,
             passengerId: p.userId,
             driverId: ride.driverId,
-            shareCents: price?.shareCents ?? 0,
+            shareCents: price?.byUser.get(p.userId) ?? 0,
             commissionCents: price?.commissionCents ?? 0,
             now,
           },

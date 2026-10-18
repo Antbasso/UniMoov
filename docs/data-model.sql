@@ -154,6 +154,7 @@ CREATE TABLE ride_participants (
   stop_order smallint,
   eta timestamptz,
   detour_s integer,
+  onboard_m integer CHECK (onboard_m >= 0),  -- distance à bord depuis le campus (plan) : prix au prorata
   presence_validated_at timestamptz,
   amount_cents integer,
   cancelled_at timestamptz,

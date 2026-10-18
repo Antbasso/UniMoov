@@ -400,6 +400,34 @@ class DemoBackend
     );
   }
 
+  /// Parts au prorata pour les passagers donnés (distance à bord le long de la route réelle).
+  ({int cost, double distance, Map<String, int> shares, Map<String, double> onboard}) _proRata(
+    DemoRide r,
+    List<DemoSeat> seats,
+  ) {
+    final path = _path(r);
+    final legs = [for (var i = 1; i < path.length; i++) _lineLength(_leg(path[i - 1], path[i]))];
+    final total = legs.fold(0.0, (a, b) => a + b);
+    final onboard = <String, double>{};
+    for (var i = 1; i < path.length - 1; i++) {
+      final id = path[i].userId;
+      if (id == null) continue;
+      onboard[id] = r.direction == Direction.toCampus
+          ? legs.skip(i).fold(0.0, (a, b) => a + b)
+          : legs.take(i).fold(0.0, (a, b) => a + b);
+    }
+    // Carburant sur la route réelle (prix moyen fictif 1,85 €/L, comme demoCostCents).
+    final cost = (total / 1000 * r.consumption / 100 * 185).round();
+    final ids = [for (final s in seats) s.personId];
+    final shares = demoProRataShares(cost, total, [for (final id in ids) onboard[id] ?? total]);
+    return (
+      cost: cost,
+      distance: total,
+      shares: {for (final (i, id) in ids.indexed) id: shares[i]},
+      onboard: onboard,
+    );
+  }
+
   /// Prix maximal pour Camille passagère : celui d'un trajet à deux (cahier §5).
   int _maxPrice(DemoRide r) {
     final driver = _pointOf(r.driverId);
@@ -889,6 +917,9 @@ class DemoBackend
       );
     }
     final price = _priceOf(r);
+    final split = _proRata(r, r.activeSeats);
+    final myShare = split.shares[demoMeId] ?? 0;
+    final received = split.shares.values.fold<int>(0, (a, b) => a + b);
     final mine = r.seatOf(demoMeId);
     return RideDetails(
       id: r.id,
@@ -918,10 +949,11 @@ class DemoBackend
       price: RidePrice(
         totalCostCents: price.cost,
         persons: price.persons,
-        shareCents: price.share,
+        shareCents: r.driverIsMe ? received : myShare,
         commissionCents: demoCommissionCents,
-        youPayCents: r.driverIsMe ? null : price.youPay,
-        youReceiveCents: r.driverIsMe ? price.youReceive : null,
+        youPayCents: r.driverIsMe ? null : myShare + demoCommissionCents,
+        youReceiveCents: r.driverIsMe ? received : null,
+        myDistanceM: r.driverIsMe ? null : split.onboard[demoMeId]?.round(),
       ),
     );
   }
@@ -1146,7 +1178,7 @@ class DemoBackend
           final present = r.activeSeats.where((s) => s.presenceValidated).toList();
           final mine = r.seatOf(demoMeId);
           final absent = !r.driverIsMe && !(mine?.presenceValidated ?? false);
-          final price = _priceOf(r, persons: present.length + 1);
+          final split = _proRata(r, present);
           return HistoryEntry(
             id: r.id,
             day: r.day,
@@ -1156,7 +1188,9 @@ class DemoBackend
             myStatus: absent ? 'absent' : 'accepted',
             amountCents: absent
                 ? null
-                : (r.driverIsMe ? price.share * present.length : price.youPay),
+                : (r.driverIsMe
+                      ? split.shares.values.fold<int>(0, (a, b) => a + b)
+                      : (split.shares[demoMeId] ?? 0) + demoCommissionCents),
             withNames: r.driverIsMe
                 ? [for (final s in present) _firstName(s.personId)]
                 : [_firstName(r.driverId)],
@@ -1171,17 +1205,19 @@ class DemoBackend
     if (r.status == 'completed') return;
     r.status = 'completed';
     final present = r.activeSeats.where((s) => s.presenceValidated).toList();
-    final price = _priceOf(r, persons: present.length + 1);
+    // Prix final au prorata de la distance, entre les seuls présents.
+    final split = _proRata(r, present);
     final at = _now;
     if (r.driverIsMe) {
-      if (present.isNotEmpty) pendingCents += price.share * present.length;
+      pendingCents += split.shares.values.fold<int>(0, (a, b) => a + b);
     } else {
       final held = _held.remove(r.id) ?? 0;
       heldCents -= held;
       balanceCents += held;
       final me = r.seatOf(demoMeId)!;
       if (me.presenceValidated) {
-        final paid = min(price.youPay, held == 0 ? price.youPay : held);
+        final due = (split.shares[demoMeId] ?? 0) + demoCommissionCents;
+        final paid = min(due, held == 0 ? due : held);
         balanceCents -= paid;
         _entry('ride_charge', -paid, at);
       }

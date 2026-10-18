@@ -2,10 +2,10 @@ import { AppError } from '../../shared/errors.js';
 import { distanceMeters, type LatLon, SECTOR_SIZE_M, sectorOf } from '../../shared/geo.js';
 import { publicSector } from '../matching/service.js';
 import type { RouteResult, RoutingProvider } from '../../shared/routing/routing-provider.js';
-import { estimatePrice, type PriceEstimate } from '../pricing/domain.js';
+import { estimatePrice, type PriceEstimate, proRataPrice } from '../pricing/domain.js';
 import { parisDateOf } from '../../shared/time.js';
 import type { SettingsService } from '../settings/service.js';
-import { type Direction, orderStops, passageTimes, planKey } from './domain.js';
+import { type Direction, onboardDistances, orderStops, passageTimes, planKey } from './domain.js';
 import { type HistoryRow, isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 
 const VISIBLE_STATUSES = new Set(['confirmed', 'in_progress', 'completed']);
@@ -42,6 +42,8 @@ export interface PriceView extends PriceEstimate {
   estimated: true;
   youPayCents: number | null;
   youReceiveCents: number | null;
+  /** Passager : distance à bord ; sa part du carburant est au prorata (cahier §5). */
+  myDistanceM: number | null;
 }
 
 /** Aperçu d'un trajet pas encore confirmé : tracé sans les abords des domiciles des autres. */
@@ -113,6 +115,7 @@ export class RidesService {
     const ordered = orderStops(inputs.start, inputs.end, inputs.stops);
     const route = await this.routing.route([inputs.start, ...ordered.map((s) => s.point), inputs.end]);
     const times = passageTimes(ride.direction, ride.targetTime, route.legs);
+    const onboard = onboardDistances(ride.direction, route.legs);
     const price = await this.estimate(ride, route.distanceM, inputs.stops.length + 1);
 
     await this.repo.transaction(async (tx) => {
@@ -130,7 +133,7 @@ export class RidesService {
           totalCostCents: price?.totalCostCents ?? null,
           stops: [
             { userId: ride.driverId, order: 0, eta: ride.direction === 'to_campus' ? times[0]! : times.at(-1)! },
-            ...ordered.map((s, i) => ({ userId: s.userId, order: i + 1, eta: times[i + 1]! })),
+            ...ordered.map((s, i) => ({ userId: s.userId, order: i + 1, eta: times[i + 1]!, onboardM: onboard[i] ?? null })),
           ],
           // Tracé estimé alors qu'un fournisseur existe : on retentera à la prochaine lecture.
           now: route.estimated && this.retryEstimated ? null : this.clock(),
@@ -138,6 +141,31 @@ export class RidesService {
         tx,
       );
     });
+  }
+
+  /**
+   * Parts au prorata de la distance à bord (cahier §5) pour les passagers donnés ; sans plan
+   * (distance à bord inconnue), chacun compte pour tout le trajet.
+   */
+  async shares(
+    ride: RideInfo,
+    distanceM: number | null,
+    passengers: readonly Pick<Member, 'userId' | 'onboardM'>[],
+  ): Promise<{ totalCostCents: number; commissionCents: number; byUser: Map<string, number>; driverReceivesCents: number } | null> {
+    if (distanceM === null || ride.consumptionLPer100km === null) return null;
+    const price = proRataPrice({
+      consumptionLPer100km: ride.consumptionLPer100km,
+      fuelPriceCentsPerLitre: await this.settings.get('pricing.fuelPriceCentsPerLitre'),
+      commissionCentsPerPassenger: await this.settings.get('pricing.commissionCentsPerPassenger'),
+      distanceM,
+      onboardM: passengers.map((p) => p.onboardM),
+    });
+    return {
+      totalCostCents: price.totalCostCents,
+      commissionCents: price.commissionCents,
+      byUser: new Map(passengers.map((p, i) => [p.userId, price.sharesCents[i]!])),
+      driverReceivesCents: price.driverReceivesCents,
+    };
   }
 
   async estimate(ride: RideInfo, distanceM: number | null, persons: number): Promise<PriceEstimate | null> {
@@ -279,7 +307,7 @@ export class RidesService {
       .filter((s): s is Omit<StopView, 'order'> => s !== null)
       .map((s, order) => ({ ...s, order }));
 
-    const estimate = await this.estimate(ride, ride.distanceM, passengers.length + 1);
+    const shares = await this.shares(ride, ride.distanceM, passengers);
     return {
       id: ride.id,
       day: ride.day,
@@ -297,7 +325,7 @@ export class RidesService {
         ([lat, lon]) => hidden.every((h) => distanceMeters(h, { lat, lon }) > SECTOR_SIZE_M),
       ),
       stops,
-      price: estimate ? priceView(estimate, me.role) : null,
+      price: shares ? priceView(shares, passengers.length + 1, me) : null,
     };
   }
 
@@ -395,12 +423,24 @@ export class RidesService {
   }
 }
 
-function priceView(estimate: PriceEstimate, role: 'driver' | 'passenger'): PriceView {
+function priceView(
+  shares: { totalCostCents: number; commissionCents: number; byUser: Map<string, number>; driverReceivesCents: number },
+  persons: number,
+  me: Member,
+): PriceView {
+  // Passager : sa part ; conducteur : ce qu'il reçoit (somme des parts).
+  const mine = me.role === 'passenger' ? (shares.byUser.get(me.userId) ?? 0) : shares.driverReceivesCents;
   return {
-    ...estimate,
+    totalCostCents: shares.totalCostCents,
+    persons,
+    shareCents: mine,
+    commissionCents: shares.commissionCents,
+    passengerPaysCents: me.role === 'passenger' ? mine + shares.commissionCents : 0,
+    driverReceivesCents: shares.driverReceivesCents,
     estimated: true,
-    youPayCents: role === 'passenger' ? estimate.passengerPaysCents : null,
-    youReceiveCents: role === 'driver' ? estimate.driverReceivesCents : null,
+    youPayCents: me.role === 'passenger' ? mine + shares.commissionCents : null,
+    youReceiveCents: me.role === 'driver' ? shares.driverReceivesCents : null,
+    myDistanceM: me.role === 'passenger' ? me.onboardM : null,
   };
 }
 

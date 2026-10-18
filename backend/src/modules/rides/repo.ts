@@ -45,6 +45,8 @@ export interface Member {
   /** Trajet terminé de son côté (arrivé, ou sorti avant l'arrivée). */
   endedAt: Date | null;
   detourS: number | null;
+  /** Distance à bord, depuis le campus (calculée avec le plan) ; null avant le plan. */
+  onboardM: number | null;
 }
 
 export const isAccepted = (m: Member) => m.status === 'accepted' || m.status === 'picked_up';
@@ -132,12 +134,13 @@ export class RidesRepo {
       arrived_at: Date | null;
       ended_at: Date | null;
       detour_s: number | null;
+      onboard_m: number | null;
     }>(sql`
       SELECT p.user_id, p.role, p.status, u.first_name, u.last_name, u.photo_url,
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s
+             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s, p.onboard_m
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -159,6 +162,7 @@ export class RidesRepo {
       arrivedAt: r.arrived_at ? new Date(r.arrived_at) : null,
       endedAt: r.ended_at ? new Date(r.ended_at) : null,
       detourS: r.detour_s,
+      onboardM: r.onboard_m,
     }));
   }
 
@@ -180,7 +184,7 @@ export class RidesRepo {
       durationS: number;
       estimated: boolean;
       totalCostCents: number | null;
-      stops: { userId: string; order: number; eta: Date }[];
+      stops: { userId: string; order: number; eta: Date; onboardM?: number | null }[];
       /** Null : plan provisoire (estimé), à recalculer. */
       now: Date | null;
     },
@@ -195,12 +199,12 @@ export class RidesRepo {
       WHERE id = ${rideId}`);
     await tx
       .update(rideParticipants)
-      .set({ stopOrder: null, eta: null })
+      .set({ stopOrder: null, eta: null, onboardM: null })
       .where(eq(rideParticipants.rideId, rideId));
     for (const stop of plan.stops) {
       await tx
         .update(rideParticipants)
-        .set({ stopOrder: stop.order, eta: stop.eta })
+        .set({ stopOrder: stop.order, eta: stop.eta, onboardM: stop.onboardM ?? null })
         .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, stop.userId)));
     }
   }

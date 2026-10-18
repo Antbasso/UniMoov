@@ -273,11 +273,17 @@ describe('clôture', () => {
     );
     const hugoPayment = payments.find((p) => p.payer_id === user('Hugo').id)!;
     expect(hugoPayment.status).toBe('paid');
-    const { rows: ride } = await ctx.database.pool.query<{ final_total_cost_cents: number }>(
-      `SELECT final_total_cost_cents FROM rides WHERE id = $1`,
-      [rideId],
+    const { rows: ride } = await ctx.database.pool.query<{ final_total_cost_cents: number; distance_m: number; onboard_m: number }>(
+      `SELECT r.final_total_cost_cents, r.distance_m, p.onboard_m FROM rides r
+       JOIN ride_participants p ON p.ride_id = r.id AND p.user_id = $2 WHERE r.id = $1`,
+      [rideId, user('Hugo').id],
     );
-    expect(hugoPayment.share_cents).toBe(Math.ceil(ride[0]!.final_total_cost_cents / 2));
+    // Prorata (cahier §5) : Hugo paie la moitié de la portion qu'il fait, de chez lui au campus.
+    const { final_total_cost_cents: total, distance_m: distance, onboard_m: onboard } = ride[0]!;
+    expect(onboard).toBeGreaterThan(0);
+    expect(onboard).toBeLessThan(distance);
+    expect(hugoPayment.share_cents).toBe(Math.ceil(((total / distance) * onboard) / 2 - 1e-9));
+    expect(hugoPayment.share_cents).toBeLessThan(Math.ceil(total / 2));
     const paid = hugoPayment.share_cents + hugoPayment.commission_cents;
     expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: SEED + 1000 - paid });
     // Part de Léa en attente 24 h (délai de signalement), puis versée sur son solde.
@@ -384,6 +390,7 @@ describe('clôture', () => {
     expect(await ctx.app.services!.lifecycle.validatePresence(friday, user('Hugo').id)).toBe('validated');
     expect((await call('Hugo', 'POST', `/rides/${friday}/cancel`)).json<{ error: { code: string } }>().error.code).toBe('ride_unavailable');
     await ctx.database.pool.query(`UPDATE rides SET distance_m = distance_m * 5 WHERE id = $1`, [friday]);
+    await ctx.database.pool.query(`UPDATE ride_participants SET onboard_m = onboard_m * 5 WHERE ride_id = $1`, [friday]);
     // Seul passager restant, arrivé : le trajet se clôt de lui-même.
     await ctx.app.services!.lifecycle.arrive(friday, user('Hugo').id);
     expect((await call('Léa', 'GET', `/rides/${friday}`)).json<{ status: string }>().status).toBe('completed');

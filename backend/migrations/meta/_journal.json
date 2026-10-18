@@ -78,6 +78,13 @@
       "when": 1792303464855,
       "tag": "0010_earnings_release",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792318946977,
+      "tag": "0011_onboard_distance",
+      "breakpoints": true
     }
   ]
 }

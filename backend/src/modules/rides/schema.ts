@@ -32,6 +32,7 @@ export const price = z.strictObject({
   driverReceivesCents: z.number().int(),
   youPayCents: z.number().int().nullable(),
   youReceiveCents: z.number().int().nullable(),
+  myDistanceM: z.number().int().nullable(),
 });
 
 export const ride = z.strictObject({

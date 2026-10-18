@@ -236,3 +236,25 @@ String demoNormalize(String text) {
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 }
+
+/// Partage au prorata de la distance, comme le serveur (cahier §5) : chaque portion de route est
+/// partagée entre les personnes à bord, conducteur compris. `onboardM` : distance à bord de
+/// chaque passager, mesurée depuis le campus. Parts en centimes, arrondies au centime supérieur.
+List<int> demoProRataShares(int costCents, double distanceM, List<double> onboardM) {
+  if (distanceM <= 0) return [for (final _ in onboardM) 0];
+  final perMeter = costCents / distanceM;
+  final onboard = [for (final d in onboardM) d.clamp(0, distanceM).toDouble()];
+  final cuts = {0.0, ...onboard}.toList()..sort();
+  final shares = List<double>.filled(onboard.length, 0);
+  for (var k = 1; k < cuts.length; k++) {
+    final aboard = [
+      for (var i = 0; i < onboard.length; i++)
+        if (onboard[i] >= cuts[k]) i,
+    ];
+    final each = (cuts[k] - cuts[k - 1]) * perMeter / (aboard.length + 1);
+    for (final i in aboard) {
+      shares[i] += each;
+    }
+  }
+  return [for (final v in shares) max(0, (v - 1e-9).ceil())];
+}

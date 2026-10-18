@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderStops, passageTimes, planKey } from '../../src/modules/rides/domain.js';
+import { onboardDistances, orderStops, passageTimes, planKey } from '../../src/modules/rides/domain.js';
 
 const campus = { lat: 45.9195, lon: 6.158 };
 const seynod = { lat: 45.8865, lon: 6.089 };
@@ -85,5 +85,28 @@ describe('planKey', () => {
 
   it('change si le conducteur déménage (départ ou arrivée)', () => {
     expect(key([stop('a', annecy)], meythet)).not.toBe(key([stop('a', annecy)]));
+  });
+});
+
+describe('onboardDistances', () => {
+  const legs = [
+    { distanceM: 3000, durationS: 300 },
+    { distanceM: 2000, durationS: 200 },
+    { distanceM: 5000, durationS: 500 },
+  ];
+
+  it('aller : de chaque arrêt au campus', () => {
+    // Conducteur → A (3 km) → B (2 km) → campus (5 km).
+    expect(onboardDistances('to_campus', legs)).toEqual([7000, 5000]);
+  });
+
+  it('retour : du campus à chaque arrêt', () => {
+    // Campus → A (3 km) → B (2 km) → domicile du conducteur (5 km).
+    expect(onboardDistances('from_campus', legs)).toEqual([3000, 5000]);
+  });
+
+  it('sans passager : aucun arrêt', () => {
+    expect(onboardDistances('to_campus', [{ distanceM: 9000, durationS: 900 }])).toEqual([]);
+    expect(onboardDistances('to_campus', [])).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimatePrice } from '../../src/modules/pricing/domain.js';
+import { estimatePrice, proRataPrice } from '../../src/modules/pricing/domain.js';
 
 const base = {
   consumptionLPer100km: 6,
@@ -60,5 +60,50 @@ describe('estimatePrice', () => {
     expect(() => estimatePrice({ ...base, distanceM: -1, persons: 2 })).toThrow(RangeError);
     expect(() => estimatePrice({ ...base, fuelPriceCentsPerLitre: Number.NaN, persons: 2 })).toThrow(RangeError);
     expect(() => estimatePrice({ ...base, commissionCentsPerPassenger: 0.5, persons: 2 })).toThrow(RangeError);
+  });
+});
+
+describe('proRataPrice', () => {
+  // 10 km à 6 L/100 km et 1,80 €/L : 108 centimes de carburant.
+  const base = { consumptionLPer100km: 6, fuelPriceCentsPerLitre: 180, distanceM: 10_000, commissionCentsPerPassenger: 20 };
+
+  it('seul passager sur tout le trajet : la moitié du coût, comme le partage simple', () => {
+    const price = proRataPrice({ ...base, onboardM: [10_000] });
+    expect(price.totalCostCents).toBe(108);
+    expect(price.sharesCents).toEqual([54]);
+    expect(price.driverReceivesCents).toBe(54);
+    expect(proRataPrice({ ...base, onboardM: [null] }).sharesCents).toEqual([54]);
+  });
+
+  it('pris à mi-chemin : ne paie que la moitié qu’il fait, partagée en deux', () => {
+    expect(proRataPrice({ ...base, onboardM: [5_000] }).sharesCents).toEqual([27]);
+  });
+
+  it('deux passagers : la portion commune est partagée à trois', () => {
+    // A monte au départ (10 km), B à mi-chemin (5 km).
+    // 0–5 km depuis le campus : 54 c à trois (18 chacun) ; 5–10 km : 54 c à deux (27 pour A).
+    const price = proRataPrice({ ...base, onboardM: [10_000, 5_000] });
+    expect(price.sharesCents).toEqual([45, 18]);
+    expect(price.driverReceivesCents).toBe(63);
+    // Le conducteur paie le reste : jamais plus que s'il était seul.
+    expect(price.totalCostCents - price.driverReceivesCents).toBeLessThanOrEqual(108);
+  });
+
+  it('même point de montée : même part ; distances bornées au trajet', () => {
+    const price = proRataPrice({ ...base, onboardM: [4_000, 4_000, 99_000, -5] });
+    expect(price.sharesCents[0]).toBe(price.sharesCents[1]);
+    expect(price.sharesCents[3]).toBe(0);
+    expect(price.sharesCents[2]).toBeGreaterThan(price.sharesCents[0]!);
+  });
+
+  it('arrondi au centime supérieur, jamais de flottant', () => {
+    const price = proRataPrice({ ...base, distanceM: 7_777, onboardM: [3_333, 7_777] });
+    for (const c of price.sharesCents) expect(Number.isInteger(c)).toBe(true);
+    expect(price.driverReceivesCents).toBeGreaterThanOrEqual(0);
+  });
+
+  it('refuse les valeurs invalides', () => {
+    expect(() => proRataPrice({ ...base, distanceM: -1, onboardM: [] })).toThrow(RangeError);
+    expect(() => proRataPrice({ ...base, commissionCentsPerPassenger: 1.5, onboardM: [] })).toThrow(RangeError);
   });
 });
