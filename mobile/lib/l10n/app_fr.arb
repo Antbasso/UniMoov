@@ -191,6 +191,23 @@
     }
   },
   "homeProfileTooltip": "Mon profil",
+  "navMessages": "Messages",
+  "navHome": "Accueil",
+  "navProfile": "Profil",
+  "badgeDriver": "Tu conduis",
+  "badgePassenger": "Passager",
+  "liveBannerTitle": "Trajet en cours · {role} · {time}",
+  "@liveBannerTitle": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "liveBannerAction": "Voir",
   "discoveryTitle": "Mode découverte",
   "discoveryBody": "Ajoute ton adresse pour recevoir des propositions de trajets.",
   "discoveryAction": "Compléter mon profil",
@@ -317,6 +334,22 @@
   "searchAction": "Chercher un trajet",
   "directionTo": "Aller",
   "directionFrom": "Retour",
+  "rideWith": "Avec {driver}",
+  "@rideWith": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "rideMetaDriverShort": "{count, plural, =0{Aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
+  "@rideMetaDriverShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "rideMetaDriver": "{time} · tu conduis · {count, plural, =0{aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
   "@rideMetaDriver": {
     "placeholders": {

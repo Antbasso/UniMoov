@@ -7,7 +7,11 @@ import 'um_button.dart';
 import 'um_chip.dart';
 
 /// `waiting` : tu as accepté, l'autre partie pas encore (confirmation à deux).
-enum UmRideStatus { proposed, waiting, confirmed, cancelled }
+enum UmRideStatus { proposed, waiting, confirmed, inProgress, completed, cancelled }
+
+/// Rôle de la personne sur le trajet, affiché en tête de carte (icône et texte, jamais la
+/// couleur seule).
+enum UmRideRole { driver, passenger }
 
 /// Carte de trajet (docs/design-system/components/RideCard.md). Une seule action.
 class UmRideCard extends StatelessWidget {
@@ -24,7 +28,15 @@ class UmRideCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.actionVariant = UmButtonVariant.primary,
+    this.role,
+    this.live = false,
   });
+
+  /// Rôle mis en avant avec l'heure en grand (liste de la semaine).
+  final UmRideRole? role;
+
+  /// Trajet en cours : contour qui pulse (fixe si les animations sont réduites).
+  final bool live;
 
   final String from;
   final String to;
@@ -63,6 +75,12 @@ class UmRideCard extends StatelessWidget {
         icon: Icons.check_circle_outline_rounded,
         tone: UmChipTone.success,
       ),
+      UmRideStatus.inProgress => UmChip(
+        label: l10n.rideInProgress,
+        icon: Icons.near_me_outlined,
+        tone: UmChipTone.success,
+      ),
+      UmRideStatus.completed => UmChip(label: l10n.rideCompleted, icon: Icons.flag_outlined),
       UmRideStatus.cancelled => UmChip(
         label: l10n.rideStatusCancelled,
         icon: Icons.cancel_outlined,
@@ -70,7 +88,8 @@ class UmRideCard extends StatelessWidget {
       ),
     };
 
-    return Container(
+    final role = this.role;
+    final card = Container(
       constraints: const BoxConstraints(maxWidth: UmSize.rideCardMaxWidth),
       padding: const EdgeInsets.all(UmSpace.s4),
       decoration: BoxDecoration(
@@ -81,6 +100,20 @@ class UmRideCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (role != null) ...[
+            // Texte agrandi : l'heure passe sous le rôle plutôt que de déborder.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: UmSpace.s3,
+              runSpacing: UmSpace.s2,
+              children: [
+                _RoleBadge(role: role),
+                Text(time, style: UmText.h2.copyWith(color: c.ink)),
+              ],
+            ),
+            const SizedBox(height: UmSpace.s3),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -94,7 +127,10 @@ class UmRideCard extends StatelessWidget {
                     const SizedBox(height: UmSpace.s1),
                     Text(
                       metaText ??
-                          '${l10n.rideMeta(time, driverFirstName)} · ${l10n.rideSeats(seatsLeft)}',
+                          (role != null
+                              ? '${l10n.rideWith(driverFirstName)} · ${l10n.rideSeats(seatsLeft)}'
+                              : '${l10n.rideMeta(time, driverFirstName)} · '
+                                    '${l10n.rideSeats(seatsLeft)}'),
                       style: UmText.bodySm.copyWith(color: c.inkMuted),
                     ),
                   ],
@@ -121,6 +157,100 @@ class UmRideCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+    return live ? _LivePulse(child: card) : card;
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role});
+
+  final UmRideRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    final l10n = AppLocalizations.of(context);
+    final driver = role == UmRideRole.driver;
+    final fg = driver ? c.onBrand : c.brandStrong;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: UmSpace.s3, vertical: UmSpace.s1),
+      decoration: BoxDecoration(
+        color: driver ? c.brandStrong : c.lavender,
+        borderRadius: BorderRadius.circular(UmRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            driver ? Icons.directions_car_rounded : Icons.airline_seat_recline_normal_rounded,
+            size: UmSize.iconMd,
+            color: fg,
+          ),
+          const SizedBox(width: UmSpace.s2),
+          Flexible(
+            child: Text(
+              driver ? l10n.badgeDriver : l10n.badgePassenger,
+              style: UmText.button.copyWith(color: fg),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Contour pulsé du trajet en cours.
+class _LivePulse extends StatefulWidget {
+  const _LivePulse({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_LivePulse> createState() => _LivePulseState();
+}
+
+class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller
+        ..stop()
+        ..value = 1;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(UmRadius.md),
+          border: Border.all(
+            color: Color.lerp(c.lavender, c.brand, _controller.value)!,
+            width: UmSize.routeRing,
+          ),
+        ),
+        child: child,
+      ),
+      child: widget.child,
     );
   }
 }

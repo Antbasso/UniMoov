@@ -365,6 +365,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeProfileTooltip => 'Mon profil';
 
   @override
+  String get navMessages => 'Messages';
+
+  @override
+  String get navHome => 'Accueil';
+
+  @override
+  String get navProfile => 'Profil';
+
+  @override
+  String get badgeDriver => 'Tu conduis';
+
+  @override
+  String get badgePassenger => 'Passager';
+
+  @override
+  String liveBannerTitle(String role, String time) {
+    return 'Trajet en cours · $role · $time';
+  }
+
+  @override
+  String get liveBannerAction => 'Voir';
+
+  @override
   String get discoveryTitle => 'Mode découverte';
 
   @override
@@ -609,6 +632,23 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get directionFrom => 'Retour';
+
+  @override
+  String rideWith(String driver) {
+    return 'Avec $driver';
+  }
+
+  @override
+  String rideMetaDriverShort(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count passagers',
+      one: '1 passager',
+      zero: 'Aucun passager pour l\'instant',
+    );
+    return '$_temp0';
+  }
 
   @override
   String rideMetaDriver(String time, int count) {

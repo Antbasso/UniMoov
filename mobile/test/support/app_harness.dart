@@ -45,6 +45,11 @@ Future<void> launchApp(
     ..physicalSize = const Size(1080, 2340)
     ..devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
+  // Animations en boucle (trajet en cours) coupées, comme avec le réglage d'accessibilité.
+  tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+    disableAnimations: true,
+  );
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
     ProviderScope(

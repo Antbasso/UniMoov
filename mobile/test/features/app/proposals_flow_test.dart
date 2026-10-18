@@ -50,8 +50,11 @@ void main() {
   testWidgets('ma semaine : voir, accepter (en attente de l’autre)', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     expect(find.text('Ta semaine'), findsOneWidget);
-    expect(find.textContaining('avec Nathan'), findsOneWidget);
-    expect(find.textContaining('tu conduis · 1 passager'), findsOneWidget);
+    expect(find.textContaining('Avec Nathan'), findsOneWidget);
+    // Rôle visible d'un coup d'œil : passagère lundi matin, conductrice lundi soir.
+    expect(find.text('Passager'), findsOneWidget);
+    expect(find.text('Tu conduis'), findsOneWidget);
+    expect(find.text('1 passager'), findsOneWidget);
 
     await tapText(tester, 'Voir', index: 0);
     expect(find.text('Tu montes avec'), findsOneWidget);
@@ -125,14 +128,14 @@ void main() {
     expect(find.textContaining('Nathan doit accepter ta demande'), findsOneWidget);
     expect(find.text('Accepter'), findsNothing);
     await tapText(tester, 'Retirer ma demande');
-    expect(find.textContaining('avec Nathan'), findsNothing);
+    expect(find.textContaining('Avec Nathan'), findsNothing);
   });
 
   testWidgets('refuser retire la proposition', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     await tapText(tester, 'Voir', index: 0);
     await tapText(tester, 'Refuser');
-    expect(find.textContaining('avec Nathan'), findsNothing);
+    expect(find.textContaining('Avec Nathan'), findsNothing);
   });
 
   testWidgets('voir d’autres voitures puis en choisir une', (tester) async {

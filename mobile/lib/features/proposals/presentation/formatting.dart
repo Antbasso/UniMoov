@@ -18,7 +18,13 @@ String formatDay(DateTime day, String locale) {
 String formatTime(DateTime time, String locale) =>
     DateFormat("H 'h' mm", locale).format(time.toLocal());
 
-UmRideStatus rideStatusOf(Proposal p) => switch (p.state) {
+UmRideStatus rideStatusOf(Proposal p) => switch (p.rideStatus) {
+  'in_progress' when p.state == ProposalState.confirmed => UmRideStatus.inProgress,
+  'completed' when p.state == ProposalState.confirmed => UmRideStatus.completed,
+  _ => _byState(p),
+};
+
+UmRideStatus _byState(Proposal p) => switch (p.state) {
   ProposalState.proposed => UmRideStatus.proposed,
   ProposalState.waiting || ProposalState.requested => UmRideStatus.waiting,
   ProposalState.confirmed => UmRideStatus.confirmed,

@@ -722,6 +722,48 @@ abstract class AppLocalizations {
   /// **'Mon profil'**
   String get homeProfileTooltip;
 
+  /// No description provided for @navMessages.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages'**
+  String get navMessages;
+
+  /// No description provided for @navHome.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accueil'**
+  String get navHome;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Profil'**
+  String get navProfile;
+
+  /// No description provided for @badgeDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu conduis'**
+  String get badgeDriver;
+
+  /// No description provided for @badgePassenger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passager'**
+  String get badgePassenger;
+
+  /// No description provided for @liveBannerTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet en cours · {role} · {time}'**
+  String liveBannerTitle(String role, String time);
+
+  /// No description provided for @liveBannerAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get liveBannerAction;
+
   /// No description provided for @discoveryTitle.
   ///
   /// In fr, this message translates to:
@@ -1177,6 +1219,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Retour'**
   String get directionFrom;
+
+  /// No description provided for @rideWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec {driver}'**
+  String rideWith(String driver);
+
+  /// No description provided for @rideMetaDriverShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun passager pour l\'instant} =1{1 passager} other{{count} passagers}}'**
+  String rideMetaDriverShort(int count);
 
   /// No description provided for @rideMetaDriver.
   ///

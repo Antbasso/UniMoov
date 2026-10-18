@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +8,7 @@ import '../../features/auth/presentation/session_controller.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/chat/presentation/conversations_screen.dart';
+import '../../features/home/presentation/app_shell.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/splash_screen.dart';
 import '../../features/home/presentation/welcome_screen.dart';
@@ -34,6 +35,8 @@ import 'redirect.dart';
 
 export 'redirect.dart' show AppRoutes;
 
+final _rootKey = GlobalKey<NavigatorState>();
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Réévalue la redirection seulement quand ce qui la décide change : statut de session,
   // profil chargé ou non, onboarding terminé. Une simple modification du profil ne doit pas
@@ -47,6 +50,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     );
 
   final router = GoRouter(
+    navigatorKey: _rootKey,
     initialLocation: AppRoutes.splash,
     refreshListenable: refresh,
     redirect: (context, state) => resolveRedirect(
@@ -60,23 +64,77 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: AppRoutes.signup, builder: (_, _) => const SignupScreen()),
       GoRoute(path: AppRoutes.onboarding, builder: (_, _) => const OnboardingScreen()),
-      GoRoute(path: AppRoutes.home, builder: (_, _) => const HomeScreen()),
-      GoRoute(
-        path: AppRoutes.profile,
-        builder: (_, _) => const ProfileScreen(),
-        routes: [
-          GoRoute(path: 'address', builder: (_, _) => const EditAddressScreen()),
-          GoRoute(path: 'vehicle', builder: (_, _) => const EditVehicleScreen()),
-          GoRoute(path: 'role', builder: (_, _) => const EditRoleScreen()),
-          GoRoute(path: 'reliability', builder: (_, _) => const ReliabilityScreen()),
-          GoRoute(path: 'notifications', builder: (_, _) => const NotificationSettingsScreen()),
-          GoRoute(path: 'delete', builder: (_, _) => const DeleteAccountScreen()),
-          GoRoute(
-            path: 'schedule',
-            builder: (_, _) => const ScheduleScreen(),
+      // Onglets : messages, accueil, profil (barre du bas, trajet en cours visible partout).
+      StatefulShellRoute.indexedStack(
+        builder: (_, _, shell) => AppShell(shell: shell),
+        branches: [
+          StatefulShellBranch(
             routes: [
-              GoRoute(path: 'ics', builder: (_, _) => const EditIcsScreen()),
-              GoRoute(path: 'manual', builder: (_, _) => const EditManualScheduleScreen()),
+              GoRoute(
+                path: AppRoutes.messages,
+                builder: (_, _) => const ConversationsScreen(),
+                routes: [
+                  // Conversation en plein écran, sans la barre (place pour le clavier).
+                  GoRoute(
+                    path: ':id',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, state) => ConversationScreen(id: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.home, builder: (_, _) => const HomeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (_, _) => const ProfileScreen(),
+                // Sous-pages en plein écran, sans la barre d'onglets.
+                routes: [
+                  GoRoute(
+                    path: 'address',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const EditAddressScreen(),
+                  ),
+                  GoRoute(
+                    path: 'vehicle',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const EditVehicleScreen(),
+                  ),
+                  GoRoute(
+                    path: 'role',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const EditRoleScreen(),
+                  ),
+                  GoRoute(
+                    path: 'reliability',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const ReliabilityScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const NotificationSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'delete',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const DeleteAccountScreen(),
+                  ),
+                  GoRoute(
+                    path: 'schedule',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const ScheduleScreen(),
+                    routes: [
+                      GoRoute(path: 'ics', builder: (_, _) => const EditIcsScreen()),
+                      GoRoute(path: 'manual', builder: (_, _) => const EditManualScheduleScreen()),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
         ],
@@ -86,16 +144,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.wallet,
         builder: (_, _) => const WalletScreen(),
         routes: [GoRoute(path: 'payout', builder: (_, _) => const PayoutScreen())],
-      ),
-      GoRoute(
-        path: AppRoutes.messages,
-        builder: (_, _) => const ConversationsScreen(),
-        routes: [
-          GoRoute(
-            path: ':id',
-            builder: (_, state) => ConversationScreen(id: state.pathParameters['id']!),
-          ),
-        ],
       ),
       GoRoute(
         path: '/disputes/:rideId',

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -57,7 +55,7 @@ void main() {
   }) async {
     await launchApp(tester, backend: backend, storage: storage, themeMode: mode, push: push);
     if (location != AppRoutes.home) {
-      unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push(location));
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
       await tester.pumpAndSettle();
     }
   }
@@ -178,7 +176,7 @@ void main() {
       expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
 
       // Déconnexion depuis le profil.
-      unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push(AppRoutes.profile));
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go(AppRoutes.profile);
       await tester.pumpAndSettle();
       await tapText(tester, 'Me déconnecter');
       expect(backend.devices, isEmpty);

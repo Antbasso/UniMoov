@@ -6,8 +6,6 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../chat/presentation/chat_controller.dart';
-import '../../notifications/presentation/push_controller.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../profile/presentation/pause_sheet.dart';
 import '../../proposals/presentation/week_section.dart';
@@ -19,32 +17,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final c = context.umColors;
     final me = ref.watch(meProvider).value;
-    // Push enregistré et messages en direct pendant la session.
-    ref.watch(pushRegistrationProvider);
-    final unread = ref.watch(unreadCountProvider);
     if (me == null) return const SizedBox.shrink();
 
     return UmPage(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            tooltip: unread > 0 ? l10n.chatMessagesUnreadTooltip(unread) : l10n.chatMessagesTooltip,
-            icon: Badge(
-              isLabelVisible: unread > 0,
-              label: Text('$unread'),
-              child: Icon(Icons.chat_bubble_outline_rounded, color: c.brandStrong),
-            ),
-            onPressed: () => context.push(AppRoutes.messages),
-          ),
-          IconButton(
-            tooltip: l10n.homeProfileTooltip,
-            icon: Icon(Icons.account_circle_outlined, color: c.brandStrong),
-            onPressed: () => context.push(AppRoutes.profile),
-          ),
-        ],
-      ),
       title: l10n.homeGreeting(me.firstName),
       children: [
         Wrap(
@@ -59,7 +35,7 @@ class HomeScreen extends ConsumerWidget {
               icon: Icons.pause_circle_outline_rounded,
               variant: UmButtonVariant.secondary,
               onPressed: () =>
-                  me.pausedToday ? context.push(AppRoutes.profile) : showPauseSheet(context),
+                  me.pausedToday ? context.go(AppRoutes.profile) : showPauseSheet(context),
             ),
           ],
         ),

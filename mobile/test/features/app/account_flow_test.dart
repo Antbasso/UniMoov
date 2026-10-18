@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -39,7 +37,7 @@ void main() {
       push: push,
       sharer: sharer,
     );
-    unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push(location));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
     await tester.pumpAndSettle();
   }
 
@@ -95,9 +93,7 @@ void main() {
     final launcher = FakeNavLauncher();
     backend.balanceCents = 1240;
     await launchApp(tester, backend: backend, storage: storage, launcher: launcher);
-    unawaited(
-      GoRouter.of(tester.element(find.byType(Scaffold).first)).push(AppRoutes.deleteAccount),
-    );
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go(AppRoutes.deleteAccount);
     await tester.pumpAndSettle();
     expect(find.text('Portefeuille à vider d\'abord'), findsOneWidget);
     expect(find.textContaining('12,40'), findsOneWidget);

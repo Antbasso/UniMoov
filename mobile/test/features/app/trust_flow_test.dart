@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -35,7 +33,7 @@ void main() {
 
   Future<void> go(WidgetTester tester, String location, {ThemeMode mode = ThemeMode.light}) async {
     await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
-    unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push(location));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
     await tester.pumpAndSettle();
   }
 
