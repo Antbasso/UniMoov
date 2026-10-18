@@ -85,6 +85,13 @@
       "when": 1792318946977,
       "tag": "0011_onboard_distance",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792319355754,
+      "tag": "0012_profile_about_photo",
+      "breakpoints": true
     }
   ]
 }

@@ -64,6 +64,9 @@ class FakeBackend
     return AuthTokens(accessToken: 'access-$_tokenCounter', refreshToken: refresh);
   }
 
+  /// Compte connecté (vérifications des tests).
+  _Account get me => _me;
+
   _Account get _me {
     final account = _accounts[_currentEmail];
     if (account == null) throw const ApiException('unauthorized', '', statusCode: 401);
@@ -137,6 +140,53 @@ class FakeBackend
       ..firstName = firstName ?? _me.firstName
       ..lastName = lastName ?? _me.lastName;
     return _me.toMe();
+  }
+
+  @override
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+  }) async {
+    _maybeFail();
+    _me
+      ..studyProgram = studyProgram
+      ..birthYear = birthYear
+      ..interests = interests;
+    return _me.toMe();
+  }
+
+  @override
+  Future<Me> setPhoto(Uint8List bytes, String contentType) async {
+    _maybeFail();
+    _me.photo = bytes;
+    return _me.toMe();
+  }
+
+  @override
+  Future<void> removePhoto() async => _me.photo = null;
+
+  /// Photos servies par l'API simulée (une image PNG valide d'un pixel).
+  @override
+  Future<Uint8List> photo(String url) async => _me.photo ?? (throw const ApiException('not_found', ''));
+
+  /// Profils des personnes croisées, par identifiant.
+  final Map<String, PublicProfile> profiles = {
+    'driver-1': const PublicProfile(
+      id: 'driver-1',
+      firstName: 'Nathan',
+      reliabilityScore: 0.9,
+      ridesCompleted: 14,
+      age: 20,
+      studyProgram: 'BUT Génie mécanique',
+      interests: ['Ski', 'Rock'],
+    ),
+  };
+
+  @override
+  Future<PublicProfile> publicProfile(String userId) async {
+    _maybeFail();
+    return profiles[userId] ?? (throw const ApiException('not_found', '', statusCode: 404));
   }
 
   @override
@@ -961,6 +1011,10 @@ class _Account {
   String? defaultNavApp;
   final Map<OnboardingStep, StepStatus> steps = {};
   final List<Pause> pauses = [];
+  String? studyProgram;
+  int? birthYear;
+  List<String> interests = const [];
+  Uint8List? photo;
 
   Me toMe() {
     final next = OnboardingStep.values.where((s) => !steps.containsKey(s)).firstOrNull;
@@ -979,6 +1033,10 @@ class _Account {
       discoveryMode: home == null,
       pausedToday: pauses.any((p) => !today.isBefore(p.startsOn) && !today.isAfter(p.endsOn)),
       defaultNavApp: defaultNavApp,
+      photoUrl: photo == null ? null : '/api/v1/users/id-$email/photo?v=1',
+      studyProgram: studyProgram,
+      birthYear: birthYear,
+      interests: interests,
     );
   }
 }

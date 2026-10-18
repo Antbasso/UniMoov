@@ -13,6 +13,7 @@ import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
+import '../../profile/presentation/person_avatar.dart';
 import '../../proposals/domain/proposal.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../../proposals/presentation/proposals_controller.dart';
@@ -228,6 +229,9 @@ class _RideContentState extends ConsumerState<_RideContent> {
         _StopRow(
           stop: stop,
           isMe: stop.userId == myId,
+          onTap: stop.userId == null || stop.userId == myId
+              ? null
+              : () => context.push(AppRoutes.person(stop.userId!)),
           actions: [
             if (stop.userId == myId && ride.editable && !ride.isDriver)
               UmButton(
@@ -243,6 +247,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
       for (final person in pending)
         PersonRow(
           name: person.firstName,
+          leading: PersonAvatar(name: person.firstName, photoUrl: person.photoUrl),
+          onTap: () => context.push(AppRoutes.person(person.userId)),
           stats: personStats(l10n, person, isDriver: false),
           status: personStatusChip(l10n, person.status),
           actions: person.isRequest
@@ -529,11 +535,14 @@ class _LiveBannerState extends ConsumerState<_LiveBanner> {
 
 /// Un arrêt sur une ligne : pastille (la même que sur la carte), qui, où, ⏱ heure, statut.
 class _StopRow extends StatelessWidget {
-  const _StopRow({required this.stop, required this.isMe, this.actions = const []});
+  const _StopRow({required this.stop, required this.isMe, this.actions = const [], this.onTap});
 
   final RideStop stop;
   final bool isMe;
   final List<Widget> actions;
+
+  /// Profil de la personne (sauf soi-même et le campus).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -569,6 +578,7 @@ class _StopRow extends StatelessWidget {
         l10n.rideStopSemantic(stop.order + 1, name, place ?? '', time ?? ''),
         if (status case UmChip(:final label)) label,
       ].join(', '),
+      button: onTap != null,
       excludeSemantics: actions.isEmpty,
       child: PersonRow(
         name: name,
@@ -585,6 +595,7 @@ class _StopRow extends StatelessWidget {
         ],
         status: status,
         actions: actions,
+        onTap: onTap,
       ),
     );
   }

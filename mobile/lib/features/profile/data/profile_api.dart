@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,19 @@ import '../../demo/demo_mode.dart';
 abstract interface class ProfileApi {
   Future<Me> getMe();
   Future<Me> updateNames({String? firstName, String? lastName});
+
+  /// Formation, année de naissance, centres d'intérêt (null efface).
+  Future<Me> updateAbout({String? studyProgram, int? birthYear, required List<String> interests});
+
+  /// Photo de profil (JPEG ou PNG déjà réduite par l'app).
+  Future<Me> setPhoto(Uint8List bytes, String contentType);
+  Future<void> removePhoto();
+
+  /// Octets d'une photo de profil (`photoUrl`), avec le jeton.
+  Future<Uint8List> photo(String url);
+
+  /// Profil d'une personne croisée ; 404 sinon.
+  Future<PublicProfile> publicProfile(String userId);
   Future<Me> setAddress(String address);
 
   /// Adresses existantes proposées pendant la saisie (Base Adresse Nationale).
@@ -39,6 +54,45 @@ class DioProfileApi implements ProfileApi {
   @override
   Future<Me> updateNames({String? firstName, String? lastName}) =>
       _me$(() => _dio.patch(_me, data: {'firstName': ?firstName, 'lastName': ?lastName}));
+
+  @override
+  Future<Me> updateAbout({String? studyProgram, int? birthYear, required List<String> interests}) =>
+      _me$(
+        () => _dio.patch(
+          _me,
+          data: {'studyProgram': studyProgram, 'birthYear': birthYear, 'interests': interests},
+        ),
+      );
+
+  @override
+  Future<Me> setPhoto(Uint8List bytes, String contentType) => _me$(
+    () => _dio.put(
+      '$_me/photo',
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        contentType: contentType,
+        headers: {Headers.contentLengthHeader: bytes.length},
+      ),
+    ),
+  );
+
+  @override
+  Future<void> removePhoto() => guardApi(() => _dio.delete<void>('$_me/photo'));
+
+  @override
+  Future<Uint8List> photo(String url) => guardApi(() async {
+    final response = await _dio.get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(response.data!);
+  });
+
+  @override
+  Future<PublicProfile> publicProfile(String userId) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/users/$userId/public');
+    return PublicProfile.fromJson(response.data!);
+  });
 
   @override
   Future<Me> setAddress(String address) =>

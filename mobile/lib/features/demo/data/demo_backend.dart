@@ -521,6 +521,72 @@ class DemoBackend
   }
 
   @override
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+  }) async {
+    await _wait();
+    _me
+      ..studyProgram = studyProgram
+      ..birthYear = birthYear
+      ..interests = interests;
+    return _me.toMe(_today);
+  }
+
+  @override
+  Future<Me> setPhoto(Uint8List bytes, String contentType) async {
+    await _wait();
+    _me
+      ..photo = bytes
+      ..photoVersion += 1;
+    return _me.toMe(_today);
+  }
+
+  @override
+  Future<void> removePhoto() async {
+    await _wait();
+    _me.photo = null;
+  }
+
+  @override
+  Future<Uint8List> photo(String url) async {
+    final bytes = _me.photo;
+    if (bytes == null) throw const ApiException('not_found', '', statusCode: 404);
+    return bytes;
+  }
+
+  @override
+  Future<PublicProfile> publicProfile(String userId) async {
+    await _wait();
+    if (userId == demoMeId) {
+      final me = _me;
+      return PublicProfile(
+        id: demoMeId,
+        firstName: me.firstName,
+        reliabilityScore: _score(demoMeId),
+        ridesCompleted: 12,
+        photoUrl: me.toMe(_today).photoUrl,
+        age: me.birthYear == null ? null : _now.year - me.birthYear!,
+        studyProgram: me.studyProgram,
+        interests: me.interests,
+      );
+    }
+    final person = demoPeople[userId];
+    if (person == null) throw const ApiException('not_found', '', statusCode: 404);
+    final about = demoAbout[userId];
+    return PublicProfile(
+      id: userId,
+      firstName: person.firstName,
+      reliabilityScore: person.score,
+      ridesCompleted: 8 + userId.length,
+      age: about?.age,
+      studyProgram: about?.study,
+      interests: about?.interests ?? const [],
+    );
+  }
+
+  @override
   Future<Me> setAddress(String address) async {
     await _wait();
     // Géocodage fictif : seules les adresses de la démo existent.
@@ -1996,6 +2062,11 @@ class _DemoAccount {
   String? defaultNavApp;
   final Map<OnboardingStep, StepStatus> steps = {};
   final List<Pause> pauses = [];
+  String? studyProgram;
+  int? birthYear;
+  List<String> interests = const [];
+  Uint8List? photo;
+  int photoVersion = 0;
 
   Me toMe(DateTime today) {
     final next = OnboardingStep.values.where((s) => !steps.containsKey(s)).firstOrNull;
@@ -2021,6 +2092,10 @@ class _DemoAccount {
         ),
       ),
       defaultNavApp: defaultNavApp,
+      photoUrl: photo == null ? null : 'demo://photo/$photoVersion',
+      studyProgram: studyProgram,
+      birthYear: birthYear,
+      interests: interests,
     );
   }
 }

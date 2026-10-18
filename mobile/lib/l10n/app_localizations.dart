@@ -3439,6 +3439,150 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ton trajet'**
   String get chatRideBar;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À propos de moi'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Visible par les étudiants que tu croises sur un trajet. Tout est facultatif.'**
+  String get aboutIntro;
+
+  /// No description provided for @aboutEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Formation, âge, centres d\'intérêt'**
+  String get aboutEmpty;
+
+  /// No description provided for @aboutStudy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Formation'**
+  String get aboutStudy;
+
+  /// No description provided for @aboutStudyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'BUT Informatique'**
+  String get aboutStudyHint;
+
+  /// No description provided for @aboutBirthYear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Année de naissance'**
+  String get aboutBirthYear;
+
+  /// No description provided for @aboutBirthYearHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seul ton âge est affiché.'**
+  String get aboutBirthYearHelp;
+
+  /// No description provided for @aboutBirthYearInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique une année, par exemple 2005.'**
+  String get aboutBirthYearInvalid;
+
+  /// No description provided for @aboutInterests.
+  ///
+  /// In fr, this message translates to:
+  /// **'Centres d\'intérêt'**
+  String get aboutInterests;
+
+  /// No description provided for @aboutInterestAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un centre d\'intérêt'**
+  String get aboutInterestAdd;
+
+  /// No description provided for @aboutInterestHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Escalade'**
+  String get aboutInterestHint;
+
+  /// No description provided for @aboutInterestRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {interest}'**
+  String aboutInterestRemove(String interest);
+
+  /// No description provided for @ageYears.
+  ///
+  /// In fr, this message translates to:
+  /// **'{age} ans'**
+  String ageYears(int age);
+
+  /// No description provided for @profileNameAge.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name}, {age} ans'**
+  String profileNameAge(String name, int age);
+
+  /// No description provided for @profileSeeMine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir mon profil comme les autres'**
+  String get profileSeeMine;
+
+  /// No description provided for @profileUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce profil n\'est pas disponible.'**
+  String get profileUnavailable;
+
+  /// No description provided for @statRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun trajet mené} =1{1 trajet mené à bien} other{{count} trajets menés à bien}}'**
+  String statRides(int count);
+
+  /// No description provided for @photoChange.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer ma photo'**
+  String get photoChange;
+
+  /// No description provided for @photoFromGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une photo'**
+  String get photoFromGallery;
+
+  /// No description provided for @photoFromCamera.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get photoFromCamera;
+
+  /// No description provided for @photoRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer la photo'**
+  String get photoRemove;
+
+  /// No description provided for @photoSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo enregistrée.'**
+  String get photoSaved;
+
+  /// No description provided for @photoUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir tes photos. Vérifie l\'autorisation dans les réglages.'**
+  String get photoUnavailable;
+
+  /// No description provided for @errorPhotoInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une photo JPEG ou PNG.'**
+  String get errorPhotoInvalid;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

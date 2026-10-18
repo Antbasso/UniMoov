@@ -16,7 +16,10 @@ import {
   publicProfileResponse,
   vehicleSchema,
 } from './schema.js';
+import { AppError } from '../../shared/errors.js';
 import type { ProfileService } from './service.js';
+
+const PHOTO_MAX_BYTES = 600 * 1024;
 
 /** Toutes les routes exigent un JWT ; l'utilisateur ne touche qu'à son propre profil. */
 export const profileRoutes: FastifyPluginAsyncZod<{ service: ProfileService }> = (app, { service }) => {
@@ -72,8 +75,34 @@ export const profileRoutes: FastifyPluginAsyncZod<{ service: ProfileService }> =
   });
 
   app.get('/users/:id/public', { schema: { params: idParams, response: { 200: publicProfileResponse } } }, (request) =>
-    service.getPublicProfile(request.params.id),
+    service.getPublicProfile(request.userId, request.params.id),
   );
+
+  // Photo de profil : corps brut JPEG ou PNG, 600 Ko au plus (l'app la réduit avant l'envoi).
+  app.addContentTypeParser(['image/jpeg', 'image/png'], { parseAs: 'buffer', bodyLimit: PHOTO_MAX_BYTES }, (_request, body, done) => {
+    done(null, body);
+  });
+
+  app.put(
+    '/me/photo',
+    { bodyLimit: PHOTO_MAX_BYTES, config: { rateLimit: { max: 10, timeWindow: '1 hour' } }, schema: { response: { 200: meResponse } } },
+    (request) => {
+      const contentType = request.headers['content-type']?.split(';')[0]?.trim() ?? '';
+      if (!Buffer.isBuffer(request.body)) throw new AppError(415, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+      return service.setPhoto(request.userId, contentType, request.body);
+    },
+  );
+
+  app.delete('/me/photo', { schema: { response: { 204: z.null() } } }, async (request, reply) => {
+    await service.removePhoto(request.userId);
+    return reply.code(204).send(null);
+  });
+
+  app.get('/users/:id/photo', { schema: { params: idParams } }, async (request, reply) => {
+    const photo = await service.getPhoto(request.userId, request.params.id);
+    // L'URL change avec la photo : l'app peut la garder longtemps.
+    return reply.header('cache-control', 'private, max-age=604800').type(photo.contentType).send(photo.data);
+  });
 
   return Promise.resolve();
 };

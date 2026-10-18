@@ -57,7 +57,8 @@ export class AccountRepo {
     const all = async (query: ReturnType<typeof sql>): Promise<Row[]> => (await this.db.execute<Row>(query)).rows;
     const [profile] = await all(sql`
       SELECT u.university_email AS "universityEmail", u.first_name AS "firstName", u.last_name AS "lastName",
-             u.photo_url AS "photoUrl", u.home_address AS "homeAddress",
+             u.photo_url AS "photoUrl", u.study_program AS "studyProgram", u.birth_year AS "birthYear",
+             u.interests, u.home_address AS "homeAddress",
              ST_Y(u.home_location::geometry) AS "homeLat", ST_X(u.home_location::geometry) AS "homeLon",
              u.home_sector AS "homeSector", c.name AS campus, u.role_mode AS "roleMode",
              u.default_nav_app AS "defaultNavApp", u.reliability_score::float AS "reliabilityScore",
@@ -212,9 +213,11 @@ export class AccountRepo {
       await tx.execute(sql`
         UPDATE users SET university_email = ${`supprime-${userId}@invalid`}, password_hash = NULL,
           first_name = 'Ancien membre', last_name = '', photo_url = NULL, home_address = NULL,
+          study_program = NULL, birth_year = NULL, interests = '{}',
           home_location = NULL, home_sector = NULL, default_nav_app = NULL, paused_until = NULL,
           onboarding_steps = '{}'::jsonb, deleted_at = ${now}
         WHERE id = ${userId}`);
+      await tx.execute(sql`DELETE FROM user_photos WHERE user_id = ${userId}`);
     });
   }
 }

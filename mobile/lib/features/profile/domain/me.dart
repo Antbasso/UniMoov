@@ -71,6 +71,10 @@ class Me {
     required this.discoveryMode,
     required this.pausedToday,
     this.defaultNavApp,
+    this.photoUrl,
+    this.studyProgram,
+    this.birthYear,
+    this.interests = const [],
   });
 
   factory Me.fromJson(Map<String, dynamic> json) {
@@ -97,6 +101,10 @@ class Me {
       discoveryMode: json['discoveryMode'] as bool,
       pausedToday: json['pausedToday'] as bool,
       defaultNavApp: json['defaultNavApp'] as String?,
+      photoUrl: json['photoUrl'] as String?,
+      studyProgram: json['studyProgram'] as String?,
+      birthYear: json['birthYear'] as int?,
+      interests: [for (final i in json['interests'] as List<dynamic>? ?? const []) i as String],
     );
   }
 
@@ -115,6 +123,50 @@ class Me {
 
   /// Application GPS choisie au premier départ (`google_maps`, `waze`, `apple_maps`).
   final String? defaultNavApp;
+
+  /// Photo de profil (chemin de l'API, chargé avec le jeton).
+  final String? photoUrl;
+
+  /// Visible par les personnes croisées : formation, âge (année de naissance), centres d'intérêt.
+  final String? studyProgram;
+  final int? birthYear;
+  final List<String> interests;
+}
+
+/// Profil d'une personne croisée sur un trajet ou dans une conversation (`GET /users/{id}/public`).
+class PublicProfile {
+  const PublicProfile({
+    required this.id,
+    required this.firstName,
+    required this.reliabilityScore,
+    required this.ridesCompleted,
+    this.photoUrl,
+    this.age,
+    this.studyProgram,
+    this.interests = const [],
+  });
+
+  factory PublicProfile.fromJson(Map<String, dynamic> json) => PublicProfile(
+    id: json['id'] as String,
+    firstName: json['firstName'] as String,
+    photoUrl: json['photoUrl'] as String?,
+    reliabilityScore: (json['reliabilityScore'] as num).toDouble(),
+    age: json['age'] as int?,
+    studyProgram: json['studyProgram'] as String?,
+    interests: [for (final i in json['interests'] as List<dynamic>) i as String],
+    ridesCompleted: json['ridesCompleted'] as int,
+  );
+
+  final String id;
+  final String firstName;
+  final String? photoUrl;
+  final double reliabilityScore;
+  final int? age;
+  final String? studyProgram;
+  final List<String> interests;
+  final int ridesCompleted;
+
+  String get scoreOutOfFive => (reliabilityScore * 5).toStringAsFixed(1).replaceAll('.', ',');
 }
 
 /// Répétition d'une pause, comme un événement d'agenda (cahier §12, docs/api.md).

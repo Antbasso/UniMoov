@@ -14,6 +14,9 @@ export class ProfileRepo {
         firstName: users.firstName,
         lastName: users.lastName,
         photoUrl: users.photoUrl,
+        studyProgram: users.studyProgram,
+        birthYear: users.birthYear,
+        interests: users.interests,
         campusId: users.campusId,
         homeAddress: users.homeAddress,
         homeLat: sql<number | null>`ST_Y(${users.homeLocation}::geometry)`,
@@ -36,10 +39,54 @@ export class ProfileRepo {
         firstName: users.firstName,
         photoUrl: users.photoUrl,
         reliabilityScore: users.reliabilityScore,
+        birthYear: users.birthYear,
+        studyProgram: users.studyProgram,
+        interests: users.interests,
+        ridesCompleted: sql<number>`(SELECT count(*)::int FROM ride_participants p JOIN rides r ON r.id = p.ride_id
+          WHERE p.user_id = ${users.id} AND r.status = 'completed' AND p.status IN ('accepted', 'picked_up'))`,
       })
       .from(users)
       .where(and(eq(users.id, userId), isNull(users.deletedAt)));
     return user;
+  }
+
+  /**
+   * Les deux personnes se sont croisées : même trajet (proposé, demandé ou accepté) ou même
+   * conversation. Seules ces personnes voient le profil et la photo de l'autre.
+   */
+  async related(viewerId: string, userId: string): Promise<boolean> {
+    const { rows } = await this.db.execute<{ ok: boolean }>(sql`
+      SELECT EXISTS (
+        SELECT 1 FROM ride_participants a JOIN ride_participants b ON b.ride_id = a.ride_id
+        WHERE a.user_id = ${viewerId} AND b.user_id = ${userId}
+          AND a.status NOT IN ('declined') AND b.status NOT IN ('declined')
+      ) OR EXISTS (
+        SELECT 1 FROM conversation_members a JOIN conversation_members b ON b.conversation_id = a.conversation_id
+        WHERE a.user_id = ${viewerId} AND b.user_id = ${userId}
+      ) AS ok`);
+    return rows[0]?.ok === true;
+  }
+
+  async setPhoto(userId: string, photo: { contentType: string; data: Buffer; url: string } | null): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      if (photo) {
+        await tx.execute(sql`
+          INSERT INTO user_photos (user_id, content_type, data, updated_at)
+          VALUES (${userId}, ${photo.contentType}, ${photo.data}, now())
+          ON CONFLICT (user_id) DO UPDATE SET content_type = EXCLUDED.content_type, data = EXCLUDED.data, updated_at = now()`);
+      } else {
+        await tx.execute(sql`DELETE FROM user_photos WHERE user_id = ${userId}`);
+      }
+      await tx.update(users).set({ photoUrl: photo?.url ?? null }).where(eq(users.id, userId));
+    });
+  }
+
+  async photo(userId: string): Promise<{ contentType: string; data: Buffer } | undefined> {
+    const { rows } = await this.db.execute<{ content_type: string; data: Buffer }>(sql`
+      SELECT p.content_type, p.data FROM user_photos p JOIN users u ON u.id = p.user_id
+      WHERE p.user_id = ${userId} AND u.deleted_at IS NULL`);
+    const row = rows[0];
+    return row ? { contentType: row.content_type, data: row.data } : undefined;
   }
 
   async findVehicle(userId: string) {
@@ -52,6 +99,9 @@ export class ProfileRepo {
     values: Partial<{
       firstName: string;
       lastName: string;
+      studyProgram: string | null;
+      birthYear: number | null;
+      interests: string[];
       roleMode: RoleMode;
       defaultNavApp: string | null;
       onboardingSteps: OnboardingState;

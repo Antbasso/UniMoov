@@ -15,6 +15,8 @@ import '../domain/vehicle_input.dart';
 import 'me_controller.dart';
 import 'pause_format.dart';
 import 'pause_sheet.dart';
+import 'person_avatar.dart';
+import 'photo_sheet.dart';
 import '../../wallet/presentation/wallet_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -47,7 +49,34 @@ class ProfileScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            UmAvatar(name: me.firstName, size: UmSize.avatarLg),
+            // Toucher la photo : en choisir une, la reprendre ou la retirer.
+            Semantics(
+              button: true,
+              label: l10n.photoChange,
+              excludeSemantics: true,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => showPhotoSheet(context, ref, hasPhoto: me.photoUrl != null),
+                child: Stack(
+                  children: [
+                    PersonAvatar(name: me.firstName, photoUrl: me.photoUrl, size: UmSize.avatarLg),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: CircleAvatar(
+                        radius: UmSize.iconSm / 2 + UmSpace.s1,
+                        backgroundColor: c.brandStrong,
+                        child: Icon(
+                          Icons.photo_camera_rounded,
+                          size: UmSize.iconSm,
+                          color: c.onBrand,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(width: UmSpace.s4),
             Expanded(
               child: Column(
@@ -67,6 +96,22 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: UmSpace.s5),
+        _Group(
+          children: [
+            _Row(
+              icon: Icons.person_outline_rounded,
+              title: l10n.aboutTitle,
+              value: aboutSummary(l10n, me) ?? l10n.aboutEmpty,
+              onTap: () => context.push(AppRoutes.profileAbout),
+            ),
+            _Row(
+              icon: Icons.visibility_outlined,
+              title: l10n.profileSeeMine,
+              onTap: () => context.push(AppRoutes.person(me.id)),
+            ),
+          ],
+        ),
+        const SizedBox(height: UmSpace.s4),
         _Group(
           children: [
             _Row(
@@ -372,4 +417,15 @@ class _ExportRowState extends ConsumerState<_ExportRow> {
       ),
     );
   }
+}
+
+/// « BUT Informatique · 21 ans · Escalade, Jazz », ou null si rien n'est renseigné.
+String? aboutSummary(AppLocalizations l10n, Me me) {
+  final age = me.birthYear == null ? null : DateTime.now().year - me.birthYear!;
+  final parts = [
+    ?me.studyProgram,
+    if (age != null) l10n.ageYears(age),
+    if (me.interests.isNotEmpty) me.interests.join(', '),
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }

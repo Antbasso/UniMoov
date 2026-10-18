@@ -1141,5 +1141,60 @@
       }
     }
   },
-  "chatRideBar": "Ton trajet"
+  "chatRideBar": "Ton trajet",
+  "aboutTitle": "À propos de moi",
+  "aboutIntro": "Visible par les étudiants que tu croises sur un trajet. Tout est facultatif.",
+  "aboutEmpty": "Formation, âge, centres d'intérêt",
+  "aboutStudy": "Formation",
+  "aboutStudyHint": "BUT Informatique",
+  "aboutBirthYear": "Année de naissance",
+  "aboutBirthYearHelp": "Seul ton âge est affiché.",
+  "aboutBirthYearInvalid": "Indique une année, par exemple 2005.",
+  "aboutInterests": "Centres d'intérêt",
+  "aboutInterestAdd": "Ajouter un centre d'intérêt",
+  "aboutInterestHint": "Escalade",
+  "aboutInterestRemove": "Retirer {interest}",
+  "@aboutInterestRemove": {
+    "placeholders": {
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "ageYears": "{age} ans",
+  "@ageYears": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "profileNameAge": "{name}, {age} ans",
+  "@profileNameAge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSeeMine": "Voir mon profil comme les autres",
+  "profileUnavailable": "Ce profil n'est pas disponible.",
+  "statRides": "{count, plural, =0{Aucun trajet mené} =1{1 trajet mené à bien} other{{count} trajets menés à bien}}",
+  "@statRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoChange": "Changer ma photo",
+  "photoFromGallery": "Choisir une photo",
+  "photoFromCamera": "Prendre une photo",
+  "photoRemove": "Retirer la photo",
+  "photoSaved": "Photo enregistrée.",
+  "photoUnavailable": "Impossible d'ouvrir tes photos. Vérifie l'autorisation dans les réglages.",
+  "errorPhotoInvalid": "Choisis une photo JPEG ou PNG."
 }

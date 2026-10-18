@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/presentation/session_controller.dart';
@@ -26,6 +28,21 @@ class MeController extends AsyncNotifier<Me?> {
   Future<void> setDefaultNavApp(String app) => _apply(() => _api.setDefaultNavApp(app));
   Future<void> updateNames({String? firstName, String? lastName}) =>
       _apply(() => _api.updateNames(firstName: firstName, lastName: lastName));
+  Future<void> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+  }) => _apply(
+    () => _api.updateAbout(studyProgram: studyProgram, birthYear: birthYear, interests: interests),
+  );
+  Future<void> setPhoto(Uint8List bytes, String contentType) =>
+      _apply(() => _api.setPhoto(bytes, contentType));
+
+  Future<void> removePhoto() async {
+    await _api.removePhoto();
+    state = AsyncData(await _api.getMe());
+  }
+
   Future<void> setStep(OnboardingStep step, StepStatus status) =>
       _apply(() => _api.setStep(step, status));
 
@@ -66,5 +83,18 @@ class PausesController extends AsyncNotifier<List<Pause>> {
 
 final pausesProvider = AsyncNotifierProvider.autoDispose<PausesController, List<Pause>>(
   PausesController.new,
+  retry: (retryCount, error) => null,
+);
+
+/// Octets d'une photo de profil, chargés avec le jeton et gardés le temps de la session (l'URL
+/// change à chaque nouvelle photo).
+final photoProvider = FutureProvider.family<Uint8List, String>(
+  (ref, url) => ref.watch(profileApiProvider).photo(url),
+  retry: (retryCount, error) => null,
+);
+
+/// Profil d'une personne croisée.
+final publicProfileProvider = FutureProvider.autoDispose.family<PublicProfile, String>(
+  (ref, userId) => ref.watch(profileApiProvider).publicProfile(userId),
   retry: (retryCount, error) => null,
 );

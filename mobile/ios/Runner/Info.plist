@@ -70,6 +70,10 @@
 	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pour choisir ta photo de profil, visible par les étudiants que tu croises sur un trajet.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Pour prendre ta photo de profil.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Uni-Moov partage ta position avec les participants de ton trajet, seulement pendant le trajet.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

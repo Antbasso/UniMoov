@@ -9,6 +9,7 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../profile/presentation/person_avatar.dart';
 import '../../rides/data/rides_api.dart';
 import '../../rides/domain/ride.dart';
 import '../../rides/presentation/ride_map.dart';
@@ -210,7 +211,9 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                     for (final person in people)
                       PersonRow(
                         name: person.firstName,
-                        leading: proposal.isDriver ? null : UmAvatar(name: person.firstName),
+                        leading: PersonAvatar(name: person.firstName, photoUrl: person.photoUrl),
+                        // Toucher la personne : son profil (formation, âge, centres d'intérêt).
+                        onTap: () => context.push(AppRoutes.person(person.userId)),
                         stats: personStats(l10n, person, isDriver: !proposal.isDriver),
                         status: personStatusChip(l10n, person.status),
                         // Conducteur : une demande de place attend sa réponse.

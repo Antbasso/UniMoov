@@ -54,6 +54,9 @@ export class ProfileService {
       firstName: user.firstName,
       lastName: user.lastName,
       photoUrl: user.photoUrl,
+      studyProgram: user.studyProgram,
+      birthYear: user.birthYear,
+      interests: user.interests,
       campusId: user.campusId,
       home: hasHome
         ? { address: user.homeAddress!, lat: user.homeLat!, lon: user.homeLon!, sector: user.homeSector ?? '' }
@@ -74,8 +77,23 @@ export class ProfileService {
     };
   }
 
-  async updateNames(userId: string, values: { firstName?: string | undefined; lastName?: string | undefined }): Promise<MeResponse> {
-    await this.repo.updateUser(userId, withoutUndefined(values));
+  async updateNames(
+    userId: string,
+    values: {
+      firstName?: string | undefined;
+      lastName?: string | undefined;
+      studyProgram?: string | null | undefined;
+      birthYear?: number | null | undefined;
+      interests?: string[] | undefined;
+    },
+  ): Promise<MeResponse> {
+    const clean = withoutUndefined(values);
+    // Centres d'intérêt : sans doublon (casse ignorée), dans l'ordre saisi.
+    if (clean.interests) {
+      const seen = new Set<string>();
+      clean.interests = clean.interests.filter((i) => !seen.has(i.toLowerCase()) && seen.add(i.toLowerCase()));
+    }
+    await this.repo.updateUser(userId, clean);
     return this.getMe(userId);
   }
 
@@ -173,9 +191,42 @@ export class ProfileService {
     await this.onMatchingInputsChanged(userId);
   }
 
-  async getPublicProfile(userId: string) {
+  /** Profil d'une personne croisée (même trajet ou conversation), sinon 404 comme un inconnu. */
+  async getPublicProfile(viewerId: string, userId: string) {
+    if (viewerId !== userId && !(await this.repo.related(viewerId, userId))) throw notFound();
     const user = await this.repo.findPublicUser(userId);
     if (!user) throw notFound();
-    return { ...user, reliabilityScore: Number(user.reliabilityScore) };
+    const { birthYear, ...rest } = user;
+    return {
+      ...rest,
+      reliabilityScore: Number(user.reliabilityScore),
+      // Âge approché à l'année : seule l'année de naissance est gardée.
+      age: birthYear === null ? null : Number(parisDate(this.clock()).slice(0, 4)) - birthYear,
+    };
+  }
+
+  /**
+   * Photo de profil (JPEG ou PNG, 600 Ko au plus, contrôlée sur ses premiers octets) : gardée
+   * en base, servie par `GET /users/{id}/photo` ; l'URL change à chaque photo (cache des apps).
+   */
+  async setPhoto(userId: string, contentType: string, data: Buffer): Promise<MeResponse> {
+    const jpeg = data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+    const png = data.length > 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    if ((contentType === 'image/jpeg' && !jpeg) || (contentType === 'image/png' && !png) || (!jpeg && !png)) {
+      throw new AppError(400, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+    }
+    await this.repo.setPhoto(userId, { contentType, data, url: `/api/v1/users/${userId}/photo?v=${this.clock().getTime()}` });
+    return this.getMe(userId);
+  }
+
+  async removePhoto(userId: string): Promise<void> {
+    await this.repo.setPhoto(userId, null);
+  }
+
+  async getPhoto(viewerId: string, userId: string): Promise<{ contentType: string; data: Buffer }> {
+    if (viewerId !== userId && !(await this.repo.related(viewerId, userId))) throw notFound();
+    const photo = await this.repo.photo(userId);
+    if (!photo) throw notFound();
+    return photo;
   }
 }

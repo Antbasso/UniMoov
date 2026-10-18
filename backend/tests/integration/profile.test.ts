@@ -190,11 +190,57 @@ describe('contrôle d’accès', () => {
     expect(response.json()).toMatchObject({ firstName: 'Léna', universityEmail: 'lea@etu.univ-smb.fr' });
   });
 
-  it('le profil public n’expose que prénom, photo et score', async () => {
+  it('profil d’une personne : seulement entre personnes qui se sont croisées, sans nom ni adresse', async () => {
+    // Inconnus l'un pour l'autre : 404, comme un compte qui n'existe pas.
+    expect((await call(lea, 'GET', `/users/${hugoId}/public`)).statusCode).toBe(404);
+    // Une conversation commune (ou un trajet) : le profil s'ouvre.
+    const leaId = (await call(lea, 'GET', '/me')).json<{ id: string }>().id;
+    const { rows } = await ctx.database.pool.query<{ id: string }>(`INSERT INTO conversations (kind, title) VALUES ('group', 'Covoit') RETURNING id`);
+    await ctx.database.pool.query(`INSERT INTO conversation_members (conversation_id, user_id) VALUES ($1, $2), ($1, $3)`, [rows[0]!.id, leaId, hugoId]);
+    const patched = await call(hugo, 'PATCH', '/me', { studyProgram: 'BUT Informatique', birthYear: 2005, interests: ['Escalade', 'escalade', 'Jazz'] });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json()).toMatchObject({ studyProgram: 'BUT Informatique', birthYear: 2005, interests: ['Escalade', 'Jazz'] });
+
     const response = await call(lea, 'GET', `/users/${hugoId}/public`);
     expect(response.statusCode).toBe(200);
-    expect(Object.keys(response.json()).sort()).toEqual(['firstName', 'id', 'photoUrl', 'reliabilityScore']);
-    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|lat|address/);
+    expect(response.json()).toEqual({
+      id: hugoId,
+      firstName: 'Hugo',
+      photoUrl: null,
+      reliabilityScore: expect.any(Number) as number,
+      age: 21,
+      studyProgram: 'BUT Informatique',
+      interests: ['Escalade', 'Jazz'],
+      ridesCompleted: 0,
+    });
+    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|lat|address|2005/);
+    expect((await call(hugo, 'PATCH', '/me', { interests: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).statusCode).toBe(400);
+  });
+
+  it('photo de profil : JPEG ou PNG vérifié, servie aux personnes croisées seulement', async () => {
+    const put = (body: Buffer, type: string) =>
+      ctx.app.inject({ method: 'PUT', url: '/api/v1/me/photo', headers: { ...bearer(hugo), 'content-type': type }, payload: body });
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
+    // Un faux JPEG (texte), un type non accepté, une image trop lourde : refusés.
+    expect((await put(Buffer.from('<script>alert(1)</script>'), 'image/jpeg')).json<{ error: { code: string } }>().error.code).toBe('photo_invalid');
+    expect((await put(jpeg, 'image/gif')).statusCode).toBe(415);
+    expect((await put(Buffer.concat([jpeg, Buffer.alloc(700 * 1024)]), 'image/jpeg')).statusCode).toBe(413);
+
+    const saved = await put(jpeg, 'image/jpeg');
+    expect(saved.statusCode).toBe(200);
+    const url = saved.json<{ photoUrl: string }>().photoUrl;
+    expect(url).toMatch(new RegExp(`^/api/v1/users/${hugoId}/photo\\?v=`));
+    const photo = await ctx.app.inject({ method: 'GET', url, headers: bearer(lea) });
+    expect(photo.statusCode).toBe(200);
+    expect(photo.headers['content-type']).toBe('image/jpeg');
+    expect(photo.rawPayload.equals(jpeg)).toBe(true);
+    expect((await ctx.app.inject({ method: 'GET', url })).statusCode).toBe(401);
+    const stranger = await signUp(ctx, 'chloe@etu.univ-smb.fr', { firstName: 'Chloé', lastName: 'Martin' });
+    expect((await ctx.app.inject({ method: 'GET', url, headers: bearer(stranger) })).statusCode).toBe(404);
+
+    expect((await call(hugo, 'DELETE', '/me/photo')).statusCode).toBe(204);
+    expect((await call(hugo, 'GET', '/me')).json<{ photoUrl: string | null }>().photoUrl).toBeNull();
+    expect((await ctx.app.inject({ method: 'GET', url, headers: bearer(lea) })).statusCode).toBe(404);
   });
 
   it('profil public : exige un JWT et renvoie 404 pour un inconnu', async () => {

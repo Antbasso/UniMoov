@@ -13,7 +13,9 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/splash_screen.dart';
 import '../../features/home/presentation/welcome_screen.dart';
 import '../../features/notifications/presentation/notification_settings_screen.dart';
+import '../../features/profile/presentation/about_screen.dart';
 import '../../features/profile/presentation/me_controller.dart';
+import '../../features/profile/presentation/public_profile_screen.dart';
 import '../../features/profile/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_edit_screens.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -111,6 +113,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (_, _) => const EditRoleScreen(),
                   ),
                   GoRoute(
+                    path: 'about',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const EditAboutScreen(),
+                  ),
+                  GoRoute(
                     path: 'history',
                     parentNavigatorKey: _rootKey,
                     builder: (_, _) => const HistoryScreen(),
@@ -146,6 +153,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
+      GoRoute(
+        path: '/users/:id',
+        builder: (_, state) => PublicProfileScreen(userId: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: AppRoutes.wallet,
         builder: (_, _) => const WalletScreen(),

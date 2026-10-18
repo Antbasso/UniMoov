@@ -66,7 +66,7 @@ void main() {
     expect(find.byType(CircleLayer), findsOneWidget);
     expect(find.text('Nathan'), findsOneWidget);
     expect(find.text('4,5'), findsOneWidget);
-    expect(find.bySemanticsLabel('Fait 4 minutes de détour pour toi'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Fait 4 minutes de détour pour toi')), findsOneWidget);
     expect(find.textContaining('Nom et adresse sont partagés'), findsOneWidget);
     // Titre court dans la barre du haut.
     expect(find.textContaining('Aller · '), findsOneWidget);

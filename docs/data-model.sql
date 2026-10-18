@@ -22,7 +22,10 @@ CREATE TABLE users (
   apple_sub text UNIQUE,
   first_name text NOT NULL,
   last_name text NOT NULL,
-  photo_url text,
+  photo_url text,                          -- /api/v1/users/{id}/photo?v=… (photo dans user_photos)
+  study_program text CHECK (char_length(study_program) <= 80),
+  birth_year smallint CHECK (birth_year BETWEEN 1940 AND 2020),  -- âge affiché, jamais la date
+  interests text[] NOT NULL DEFAULT '{}' CHECK (cardinality(interests) <= 6),
   home_address text,
   home_location geography(Point,4326),
   home_sector text,                       -- cellule de grille ~500 m, calculée côté serveur
@@ -42,6 +45,13 @@ CREATE TABLE campuses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   location geography(Point,4326) NOT NULL
+);
+
+CREATE TABLE user_photos (                -- photo de profil, sauvegardée avec la base
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  content_type text NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png')),
+  data bytea NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE vehicles (

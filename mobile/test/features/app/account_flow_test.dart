@@ -66,6 +66,47 @@ void main() {
     expect(find.textContaining('2,45'), findsOneWidget);
   });
 
+  testWidgets('profil : photo, « À propos de moi », puis mon profil vu par les autres', (
+    tester,
+  ) async {
+    await open(tester, AppRoutes.profile);
+    await tester.tap(find.bySemanticsLabel('Changer ma photo'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Choisir une photo');
+    expect(find.text('Photo enregistrée.'), findsOneWidget);
+    expect(backend.me.photo, testPng);
+    // Le message disparaît avant la suite (il couvrirait le bouton du bas).
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tapText(tester, 'À propos de moi');
+    await tester.enterText(fieldLabeled('Formation'), 'BUT Informatique');
+    await tester.enterText(fieldLabeled('Année de naissance'), '1900');
+    await tester.enterText(fieldLabeled('Ajouter un centre d\'intérêt'), 'Escalade');
+    await tester.tap(find.byTooltip('Ajouter un centre d\'intérêt'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Enregistrer');
+    expect(find.textContaining('Indique une année, par exemple 2005.'), findsOneWidget);
+    await tester.enterText(fieldLabeled('Année de naissance'), '2005');
+    await tapText(tester, 'Enregistrer');
+    expect(backend.me.studyProgram, 'BUT Informatique');
+    expect(backend.me.birthYear, 2005);
+    expect(backend.me.interests, ['Escalade']);
+    expect(find.textContaining('BUT Informatique · '), findsOneWidget);
+  });
+
+  testWidgets('trajet : toucher le conducteur ouvre son profil, sans nom ni adresse', (tester) async {
+    await launchApp(tester, backend: backend, storage: storage);
+    await openTrip(tester, index: 0);
+    await tester.tap(find.text('Nathan Petit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nathan, 20 ans'), findsOneWidget);
+    expect(find.text('BUT Génie mécanique'), findsOneWidget);
+    expect(find.text('Ski'), findsOneWidget);
+    expect(find.text('14'), findsOneWidget);
+    expect(find.textContaining('Petit'), findsNothing);
+  });
+
   testWidgets('profil : télécharger mes données ouvre la feuille de partage avec le fichier', (
     tester,
   ) async {

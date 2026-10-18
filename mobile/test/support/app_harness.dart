@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +12,7 @@ import 'package:unimoov/features/account/data/account_api.dart';
 import 'package:unimoov/features/account/data/export_sharer.dart';
 import 'package:unimoov/features/auth/data/auth_api.dart';
 import 'package:unimoov/features/profile/data/profile_api.dart';
+import 'package:unimoov/features/profile/presentation/person_avatar.dart';
 import 'package:unimoov/features/proposals/data/proposals_api.dart';
 import 'package:unimoov/core/location/location_service.dart';
 import 'package:unimoov/features/rides/data/live_channel.dart';
@@ -68,6 +72,8 @@ Future<void> launchApp(
         notificationsApiProvider.overrideWithValue(backend),
         accountApiProvider.overrideWithValue(backend),
         exportSharerProvider.overrideWithValue(sharer ?? FakeExportSharer()),
+        // Sélecteur de photo : une petite image PNG valide, sans galerie.
+        photoPickerProvider.overrideWithValue(({required bool camera}) async => testPng),
         userSocketConnectorProvider.overrideWithValue(backend.socket),
         pushServiceProvider.overrideWithValue(push ?? FakePushService()),
         liveConnectorProvider.overrideWithValue(live ?? FakeLiveConnector()),
@@ -117,3 +123,10 @@ Future<void> tapText(WidgetTester tester, String text, {int? index}) async {
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
+
+/// Image PNG d'un pixel (en-tête valide), pour la photo de profil.
+final testPng = Uint8List.fromList(
+  base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  ),
+);

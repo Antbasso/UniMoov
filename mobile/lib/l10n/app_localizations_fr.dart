@@ -1961,4 +1961,93 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatRideBar => 'Ton trajet';
+
+  @override
+  String get aboutTitle => 'À propos de moi';
+
+  @override
+  String get aboutIntro =>
+      'Visible par les étudiants que tu croises sur un trajet. Tout est facultatif.';
+
+  @override
+  String get aboutEmpty => 'Formation, âge, centres d\'intérêt';
+
+  @override
+  String get aboutStudy => 'Formation';
+
+  @override
+  String get aboutStudyHint => 'BUT Informatique';
+
+  @override
+  String get aboutBirthYear => 'Année de naissance';
+
+  @override
+  String get aboutBirthYearHelp => 'Seul ton âge est affiché.';
+
+  @override
+  String get aboutBirthYearInvalid => 'Indique une année, par exemple 2005.';
+
+  @override
+  String get aboutInterests => 'Centres d\'intérêt';
+
+  @override
+  String get aboutInterestAdd => 'Ajouter un centre d\'intérêt';
+
+  @override
+  String get aboutInterestHint => 'Escalade';
+
+  @override
+  String aboutInterestRemove(String interest) {
+    return 'Retirer $interest';
+  }
+
+  @override
+  String ageYears(int age) {
+    return '$age ans';
+  }
+
+  @override
+  String profileNameAge(String name, int age) {
+    return '$name, $age ans';
+  }
+
+  @override
+  String get profileSeeMine => 'Voir mon profil comme les autres';
+
+  @override
+  String get profileUnavailable => 'Ce profil n\'est pas disponible.';
+
+  @override
+  String statRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trajets menés à bien',
+      one: '1 trajet mené à bien',
+      zero: 'Aucun trajet mené',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get photoChange => 'Changer ma photo';
+
+  @override
+  String get photoFromGallery => 'Choisir une photo';
+
+  @override
+  String get photoFromCamera => 'Prendre une photo';
+
+  @override
+  String get photoRemove => 'Retirer la photo';
+
+  @override
+  String get photoSaved => 'Photo enregistrée.';
+
+  @override
+  String get photoUnavailable =>
+      'Impossible d\'ouvrir tes photos. Vérifie l\'autorisation dans les réglages.';
+
+  @override
+  String get errorPhotoInvalid => 'Choisis une photo JPEG ou PNG.';
 }

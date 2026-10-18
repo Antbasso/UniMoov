@@ -43,6 +43,7 @@ String apiErrorMessage(AppLocalizations l10n, String? code) => switch (code) {
   'topup_too_small' => l10n.errorTopupTooSmall,
   'topup_failed' => l10n.errorTopupFailed,
   'insufficient_funds' => l10n.errorInsufficientFunds,
+  'photo_invalid' => l10n.errorPhotoInvalid,
   'iban_invalid' => l10n.errorIbanInvalid,
   'payout_too_small' => l10n.errorPayoutTooSmall,
   'payout_too_soon' => l10n.errorPayoutTooSoon,

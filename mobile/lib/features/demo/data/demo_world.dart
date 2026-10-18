@@ -97,6 +97,17 @@ const demoPeople = <String, DemoPerson>{
   ),
 };
 
+/// Profil visible des étudiants fictifs : formation, âge, centres d'intérêt.
+const demoAbout = <String, ({String study, int age, List<String> interests})>{
+  'nathan': (study: 'BUT Génie mécanique', age: 20, interests: ['Ski', 'Rock']),
+  'ines': (study: 'Licence Droit', age: 19, interests: ['Théâtre', 'Randonnée']),
+  'hugo': (study: 'BUT Informatique', age: 21, interests: ['Jeux vidéo', 'Escalade']),
+  'lea': (study: 'Master Management', age: 23, interests: ['Course à pied', 'Cuisine']),
+  'manon': (study: 'BUT Techniques de commercialisation', age: 20, interests: ['Danse']),
+  'lucas': (study: 'Licence Mathématiques', age: 22, interests: ['Échecs', 'Vélo']),
+  'theo': (study: 'BUT Mesures physiques', age: 19, interests: ['Football']),
+};
+
 /// Place d'une personne dans un trajet de démo.
 class DemoSeat {
   DemoSeat(this.personId, this.status, {this.detourMinutes = 3});

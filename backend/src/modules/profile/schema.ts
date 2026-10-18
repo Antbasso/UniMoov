@@ -19,6 +19,9 @@ export const meResponse = z.object({
   firstName: z.string(),
   lastName: z.string(),
   photoUrl: z.string().nullable(),
+  studyProgram: z.string().nullable(),
+  birthYear: z.number().int().nullable(),
+  interests: z.array(z.string()),
   campusId: z.uuid().nullable(),
   home: z
     .object({ address: z.string(), lat: z.number(), lon: z.number(), sector: z.string() })
@@ -37,8 +40,17 @@ export const meResponse = z.object({
 });
 export type MeResponse = z.infer<typeof meResponse>;
 
+/** Centres d'intérêt : quelques mots courts (6 au plus). */
+const interests = z.array(z.string().trim().min(1).max(30)).max(6);
+
 export const patchMeBody = z
-  .object({ firstName: name, lastName: name })
+  .object({
+    firstName: name,
+    lastName: name,
+    studyProgram: z.string().trim().min(1).max(80).nullable(),
+    birthYear: z.number().int().min(1940).max(2020).nullable(),
+    interests,
+  })
   .partial()
   .refine((body) => Object.keys(body).length > 0, 'Aucun champ à modifier');
 
@@ -69,9 +81,17 @@ export const pauseBody = pauseSchema.omit({ id: true }).extend({ repeatUntil: is
 export const pausesResponse = z.object({ pauses: z.array(pauseSchema) });
 export const idParams = z.object({ id: z.uuid() });
 
-export const publicProfileResponse = z.object({
+/**
+ * Profil d'une personne croisée sur un trajet ou une conversation : prénom, photo, âge,
+ * formation, centres d'intérêt, fiabilité. Jamais le nom de famille ni l'adresse (cahier §4).
+ */
+export const publicProfileResponse = z.strictObject({
   id: z.uuid(),
   firstName: z.string(),
   photoUrl: z.string().nullable(),
   reliabilityScore: z.number(),
+  age: z.number().int().nullable(),
+  studyProgram: z.string().nullable(),
+  interests: z.array(z.string()),
+  ridesCompleted: z.number().int(),
 });
