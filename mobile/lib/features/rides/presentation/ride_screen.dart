@@ -14,7 +14,6 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../proposals/domain/proposal.dart';
-import '../../chat/data/chat_api.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../../proposals/presentation/proposals_controller.dart';
 import '../../trust/domain/trust.dart';
@@ -24,6 +23,7 @@ import '../../trust/presentation/report_sheet.dart';
 import '../../trust/presentation/trust_info.dart';
 import '../domain/ride.dart';
 import 'live_actions.dart';
+import '../../chat/presentation/open_ride_chat.dart';
 import 'live_controller.dart';
 import 'ride_map.dart';
 import 'rides_controller.dart';
@@ -110,11 +110,10 @@ class _RideContentState extends ConsumerState<_RideContent> {
     router.go(AppRoutes.home);
   }
 
+  /// Conversation du trajet, dans l'onglet Messages.
   Future<void> _openChat() async {
-    final router = GoRouter.of(context);
     try {
-      final chat = await ref.read(chatApiProvider).rideConversation(widget.ride.id);
-      await router.push(AppRoutes.conversation(chat.id));
+      await openRideChat(context, ref, widget.ride.id);
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
     }
@@ -274,6 +273,16 @@ class _RideContentState extends ConsumerState<_RideContent> {
                           tone: UmChipTone.success,
                         ),
                       },
+                    ),
+                    const SizedBox(height: UmSpace.s3),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: UmButton(
+                        label: l10n.rideChatOpen,
+                        icon: Icons.chat_bubble_outline_rounded,
+                        variant: UmButtonVariant.secondary,
+                        onPressed: _openChat,
+                      ),
                     ),
                     if (live != null && !ride.isDriver) ...[
                       const SizedBox(height: UmSpace.s3),

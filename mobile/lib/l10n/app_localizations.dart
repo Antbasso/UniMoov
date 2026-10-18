@@ -2978,6 +2978,12 @@ abstract class AppLocalizations {
   /// **'Chat du trajet'**
   String get rideChat;
 
+  /// No description provided for @rideChatOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire au groupe'**
+  String get rideChatOpen;
+
   /// No description provided for @profileNotifications.
   ///
   /// In fr, this message translates to:

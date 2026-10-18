@@ -13,6 +13,7 @@ import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
 import '../../wallet/presentation/insufficient_funds_dialog.dart';
+import '../../chat/presentation/open_ride_chat.dart';
 
 /// Détail d'une proposition : informations publiques seulement, puis accepter, refuser ou
 /// voir d'autres voitures.
@@ -147,12 +148,21 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
             loading: _busy,
             onPressed: () => _run(() => controller.decline(proposal.id), popAfter: true),
           ),
-        if (proposal.state == ProposalState.confirmed)
+        if (proposal.state == ProposalState.confirmed) ...[
           UmButton(
             label: l10n.rideMapOpen,
             expand: true,
             onPressed: () => context.push(AppRoutes.ride(proposal.id)),
           ),
+          // Trajet confirmé : la conversation du groupe est ouverte (cahier §6).
+          UmButton(
+            label: l10n.rideChatOpen,
+            icon: Icons.chat_bubble_outline_rounded,
+            variant: UmButtonVariant.secondary,
+            expand: true,
+            onPressed: () => _run(() => openRideChat(context, ref, proposal.id)),
+          ),
+        ],
         // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
         if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled && open)
           UmButton(

@@ -155,6 +155,20 @@ void main() {
     expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
   });
 
+  testWidgets('depuis l’accueil : « Écrire au groupe » ouvre la conversation dans Messages', (
+    tester,
+  ) async {
+    await launchApp(tester, backend: backend, storage: storage);
+    await tapText(tester, 'Voir', index: 0);
+    await tapText(tester, 'Écrire au groupe');
+    expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
+    // Retour : la liste des conversations, onglet Messages actif.
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+    // Titre de la liste et libellé de l'onglet.
+    expect(find.text('Messages'), findsNWidgets(2));
+  });
+
   testWidgets('préférences : couper le chat, garder les rappels', (tester) async {
     await open(tester, AppRoutes.notificationSettings);
     expect(find.text('Rappel de trajet'), findsOneWidget);

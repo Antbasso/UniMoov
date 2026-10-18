@@ -974,6 +974,7 @@
     }
   },
   "rideChat": "Chat du trajet",
+  "rideChatOpen": "Écrire au groupe",
   "profileNotifications": "Notifications",
   "profileNotificationsBody": "Choisis ce qui te prévient sur ton téléphone.",
   "notificationsTitle": "Notifications",

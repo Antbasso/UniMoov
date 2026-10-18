@@ -1702,6 +1702,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rideChat => 'Chat du trajet';
 
   @override
+  String get rideChatOpen => 'Écrire au groupe';
+
+  @override
   String get profileNotifications => 'Notifications';
 
   @override
