@@ -24,6 +24,8 @@ const settingSchemas = {
   'wallet.minPayoutCents': z.number().int().min(1).max(100_000),
   'wallet.payoutMinIntervalDays': z.number().int().min(0).max(90),
   'wallet.holdMarginPercent': z.number().min(0).max(100),
+  /** Délai de signalement avant que la part du conducteur soit versée sur son solde. */
+  'wallet.releaseAfterHours': z.number().int().min(0).max(24 * 14),
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
   'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),
   'tracking.traceRetentionDays': z.number().int().min(1).max(365),

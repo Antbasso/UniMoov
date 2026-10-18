@@ -1907,19 +1907,19 @@ abstract class AppLocalizations {
   /// No description provided for @presenceOnBoard.
   ///
   /// In fr, this message translates to:
-  /// **'Présence validée : ta part est prélevée à l\'arrivée'**
+  /// **'Présence validée : ta part est prélevée à la fin du trajet'**
   String get presenceOnBoard;
 
   /// No description provided for @tripArrived.
   ///
   /// In fr, this message translates to:
-  /// **'Arrivée à destination : ta part est prélevée à la clôture du trajet.'**
+  /// **'Arrivée à destination : ta part est prélevée à la clôture du trajet. Un problème ? Signale-le dans les 24 h.'**
   String get tripArrived;
 
   /// No description provided for @tripLeftEarly.
   ///
   /// In fr, this message translates to:
-  /// **'Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.'**
+  /// **'Tu as terminé ton trajet avant la destination prévue : ta part est prélevée à la clôture. Un problème ? Signale-le dans les 24 h.'**
   String get tripLeftEarly;
 
   /// No description provided for @stopArrived.
@@ -2144,6 +2144,12 @@ abstract class AppLocalizations {
   /// **'Disponible'**
   String get walletBalance;
 
+  /// No description provided for @walletPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} reçus, versés après 24 h sans signalement'**
+  String walletPending(String amount);
+
   /// No description provided for @walletHeld.
   ///
   /// In fr, this message translates to:
@@ -2249,7 +2255,7 @@ abstract class AppLocalizations {
   /// No description provided for @finishConfirmBody.
   ///
   /// In fr, this message translates to:
-  /// **'Le suivi s\'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n\'es pas rémunéré pour eux.'**
+  /// **'Le suivi s\'arrête pour tout le monde. Les passagers pris en charge paient leur part ; ta part est versée après 24 h, sauf si un problème est signalé.'**
   String get finishConfirmBody;
 
   /// No description provided for @finishConfirmCancel.
@@ -2273,7 +2279,7 @@ abstract class AppLocalizations {
   /// No description provided for @finishMyTripBody.
   ///
   /// In fr, this message translates to:
-  /// **'Tu n\'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n\'est pas rémunéré pour toi. Il est prévenu tout de suite.'**
+  /// **'Tu n\'as pas encore atteint la destination prévue. Tu as été pris en charge : ta part reste due, même si tu descends ailleurs. Le conducteur est prévenu tout de suite. Un problème ? Signale-le après le trajet, dans les 24 h.'**
   String get finishMyTripBody;
 
   /// No description provided for @finishMyTripConfirm.

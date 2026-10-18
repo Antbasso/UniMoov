@@ -679,9 +679,9 @@
   "liveReconnecting": "Connexion au suivi en direct…",
   "liveEnded": "Le suivi en direct est terminé.",
   "presenceValidated": "Présence validée",
-  "presenceOnBoard": "Présence validée : ta part est prélevée à l'arrivée",
-  "tripArrived": "Arrivée à destination : ta part est prélevée à la clôture du trajet.",
-  "tripLeftEarly": "Tu as terminé ton trajet avant l'arrivée : tu ne le paies pas.",
+  "presenceOnBoard": "Présence validée : ta part est prélevée à la fin du trajet",
+  "tripArrived": "Arrivée à destination : ta part est prélevée à la clôture du trajet. Un problème ? Signale-le dans les 24 h.",
+  "tripLeftEarly": "Tu as terminé ton trajet avant la destination prévue : ta part est prélevée à la clôture. Un problème ? Signale-le dans les 24 h.",
   "stopArrived": "Arrivée",
   "stopLeftEarly": "Terminé avant l'arrivée",
   "confirmPresence": "Valider ma présence",
@@ -726,6 +726,14 @@
   "walletTitle": "Ton portefeuille",
   "walletIntro": "Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.",
   "walletBalance": "Disponible",
+  "walletPending": "{amount} reçus, versés après 24 h sans signalement",
+  "@walletPending": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "walletHeld": "{amount} retenus pour un trajet en cours",
   "@walletHeld": {
     "placeholders": {
@@ -757,11 +765,11 @@
   "errorTopupTooSmall": "Montant de recharge trop faible.",
   "errorTopupFailed": "La recharge a été refusée.",
   "finishConfirmTitle": "Terminer le trajet ?",
-  "finishConfirmBody": "Le suivi s'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n'es pas rémunéré pour eux.",
+  "finishConfirmBody": "Le suivi s'arrête pour tout le monde. Les passagers pris en charge paient leur part ; ta part est versée après 24 h, sauf si un problème est signalé.",
   "finishConfirmCancel": "Continuer le trajet",
   "finishMyTrip": "Terminer mon trajet",
   "finishMyTripTitle": "Terminer ton trajet maintenant ?",
-  "finishMyTripBody": "Tu n'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n'est pas rémunéré pour toi. Il est prévenu tout de suite.",
+  "finishMyTripBody": "Tu n'as pas encore atteint la destination prévue. Tu as été pris en charge : ta part reste due, même si tu descends ailleurs. Le conducteur est prévenu tout de suite. Un problème ? Signale-le après le trajet, dans les 24 h.",
   "finishMyTripConfirm": "Terminer quand même",
   "finishMyTripDone": "Trajet terminé. Le conducteur est prévenu.",
   "insufficientFundsTitle": "Solde insuffisant",

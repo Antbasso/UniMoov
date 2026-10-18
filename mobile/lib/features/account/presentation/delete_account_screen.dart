@@ -76,7 +76,9 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     final c = context.umColors;
     // Lecture impossible : le serveur vérifie de toute façon à la suppression.
     final wallet = ref.watch(walletProvider).value;
-    final leftCents = wallet == null ? 0 : wallet.balanceCents + wallet.heldCents;
+    final leftCents = wallet == null
+        ? 0
+        : wallet.balanceCents + wallet.heldCents + wallet.pendingCents;
     final blocked = leftCents > 0 || _errorCode == 'wallet_not_empty';
 
     Widget point(IconData icon, String lead, String text) => Padding(

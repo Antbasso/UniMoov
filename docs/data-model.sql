@@ -180,6 +180,7 @@ CREATE TABLE wallets (
   user_id uuid PRIMARY KEY REFERENCES users(id),
   balance_cents integer NOT NULL DEFAULT 0,       -- cache de SUM(wallet_ledger), recalculable
   held_cents integer NOT NULL DEFAULT 0,          -- retenues en attente de clôture
+  pending_cents integer NOT NULL DEFAULT 0,       -- parts reçues, versées après le délai de signalement
   provider_account_ref text,                      -- compte chez le prestataire agréé
   identity_verified_at timestamptz                -- requis pour retirer (conducteur)
 );
@@ -188,7 +189,7 @@ CREATE TABLE wallets (
 CREATE TABLE wallet_ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   idempotency_key text NOT NULL UNIQUE,
-  account text NOT NULL,                          -- 'user:<uuid>' | 'platform:commission' | 'provider:clearing'
+  account text NOT NULL,                          -- 'user:<uuid>' | 'held:<uuid>' | 'pending:<uuid>' | 'platform:commission' | 'provider:clearing'
   ride_id uuid REFERENCES rides(id),
   kind text NOT NULL,       -- topup | hold | hold_release | ride_charge | ride_credit | commission | payout | refund
   amount_cents integer NOT NULL,                  -- signé ; la somme des écritures d'une opération vaut 0
@@ -232,6 +233,7 @@ CREATE TABLE payments (                          -- un enregistrement par passag
   status text NOT NULL DEFAULT 'held',           -- held | paid | failed | refunded
   held_cents integer NOT NULL DEFAULT 0 CHECK (held_cents >= 0),  -- retenu au départ
   paid_at timestamptz,
+  released_at timestamptz,                       -- part versée au conducteur (après le délai, sans litige)
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (ride_id, payer_id)
 );

@@ -2,7 +2,8 @@
  * Registre du portefeuille (cahier §5, AGENTS.md « Argent ») : fonctions pures qui
  * construisent des opérations équilibrées (la somme des écritures vaut zéro), en centimes.
  *
- * Comptes : `user:<id>` (disponible), `held:<id>` (retenu pour un trajet),
+ * Comptes : `user:<id>` (disponible), `held:<id>` (retenu pour un trajet), `pending:<id>` (part
+ * reçue, versée après le délai de signalement),
  * `platform:commission`, `provider:clearing` (contrepartie des fonds du prestataire).
  */
 export type EntryKind =
@@ -23,6 +24,7 @@ export interface Entry {
 
 export const userAccount = (id: string) => `user:${id}`;
 export const heldAccount = (id: string) => `held:${id}`;
+export const pendingAccount = (id: string) => `pending:${id}`;
 export const COMMISSION = 'platform:commission';
 export const CLEARING = 'provider:clearing';
 
@@ -78,9 +80,19 @@ export function chargeEntries(input: {
   const entries: Entry[] = heldCents > 0 ? releaseEntries(passengerId, heldCents) : [];
   const total = shareCents + commissionCents;
   if (total > 0) entries.push({ account: userAccount(passengerId), kind: 'ride_charge', amountCents: -total });
-  if (shareCents > 0) entries.push({ account: userAccount(driverId), kind: 'ride_credit', amountCents: shareCents });
+  // La part attend le délai de signalement avant d'être disponible (`earningsReleaseEntries`).
+  if (shareCents > 0) entries.push({ account: pendingAccount(driverId), kind: 'ride_credit', amountCents: shareCents });
   if (commissionCents > 0) entries.push({ account: COMMISSION, kind: 'commission', amountCents: commissionCents });
   return entries;
+}
+
+/** Délai de signalement passé, sans litige : la part du conducteur devient disponible. */
+export function earningsReleaseEntries(driverId: string, shareCents: number): Entry[] {
+  positive(shareCents, 'part');
+  return [
+    { account: pendingAccount(driverId), kind: 'ride_credit', amountCents: -shareCents },
+    { account: userAccount(driverId), kind: 'ride_credit', amountCents: shareCents },
+  ];
 }
 
 /** Retrait vers le compte bancaire du conducteur. */

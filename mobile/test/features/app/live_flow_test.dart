@@ -169,7 +169,10 @@ void main() {
       await tapText(tester, 'Valider ma présence');
       expect(backend.actions.last, 'presence');
       expect(find.text('Présence validée. Bon trajet.'), findsOneWidget);
-      expect(find.text('Présence validée : ta part est prélevée à l\'arrivée'), findsOneWidget);
+      expect(
+        find.text('Présence validée : ta part est prélevée à la fin du trajet'),
+        findsOneWidget,
+      );
       expect(find.text('Valider ma présence'), findsNothing);
       expect(find.text('Annuler ma place'), findsNothing);
     });
@@ -182,7 +185,7 @@ void main() {
         await tester.pump(const Duration(seconds: 5)); // le message disparaît
         await tester.pumpAndSettle();
         await tapText(tester, 'Terminer mon trajet');
-        expect(find.textContaining('le conducteur n\'est pas rémunéré pour toi'), findsOneWidget);
+        expect(find.textContaining('ta part reste due'), findsOneWidget);
         await tapText(tester, 'Continuer le trajet');
         expect(backend.actions, isNot(contains('finish')));
 
@@ -191,7 +194,7 @@ void main() {
         expect(backend.actions.last, 'finish');
         expect(find.text('Trajet terminé. Le conducteur est prévenu.'), findsOneWidget);
         expect(
-          find.text('Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.'),
+          find.textContaining('avant la destination prévue : ta part est prélevée'),
           findsOneWidget,
         );
         expect(find.text('Terminer mon trajet'), findsNothing);

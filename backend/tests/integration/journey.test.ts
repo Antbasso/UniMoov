@@ -124,10 +124,11 @@ describe('parcours complet', () => {
     expect(await passenger.closed).toBe(4410);
 
     const yanisWallet = (await call(yanis, 'GET', '/wallet')).json<{ balanceCents: number; heldCents: number }>();
-    const camilleWallet = (await call(camille, 'GET', '/wallet')).json<{ balanceCents: number }>();
+    // Part du conducteur en attente du délai de signalement (24 h).
+    const camilleWallet = (await call(camille, 'GET', '/wallet')).json<{ balanceCents: number; pendingCents: number }>();
     expect(yanisWallet.heldCents).toBe(0);
     expect(yanisWallet.balanceCents).toBeLessThan(1000);
-    expect(camilleWallet.balanceCents).toBeGreaterThan(0);
+    expect(camilleWallet.pendingCents).toBeGreaterThan(0);
     const { rows } = await ctx.database.pool.query<{ total: string }>(
       `SELECT sum(amount_cents) AS total FROM wallet_ledger WHERE ride_id = $1`,
       [ids.ride],

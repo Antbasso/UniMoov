@@ -45,7 +45,7 @@ export function pushMessage(event: NotificationEvent): PushMessage {
     case 'passenger_left':
       return {
         title: 'Passager descendu avant l’arrivée',
-        body: 'Un passager a terminé son trajet avant l’arrivée : sa part ne te sera pas versée.',
+        body: 'Un passager a terminé son trajet avant la destination prévue. Sa part reste due ; il peut signaler un problème pendant 24 h.',
         data: { type: event.type, rideId: event.rideId },
       };
     case 'ride_requested':

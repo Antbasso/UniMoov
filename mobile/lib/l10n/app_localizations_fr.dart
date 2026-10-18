@@ -1085,13 +1085,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get presenceValidated => 'Présence validée';
 
   @override
-  String get presenceOnBoard => 'Présence validée : ta part est prélevée à l\'arrivée';
+  String get presenceOnBoard => 'Présence validée : ta part est prélevée à la fin du trajet';
 
   @override
-  String get tripArrived => 'Arrivée à destination : ta part est prélevée à la clôture du trajet.';
+  String get tripArrived =>
+      'Arrivée à destination : ta part est prélevée à la clôture du trajet. Un problème ? Signale-le dans les 24 h.';
 
   @override
-  String get tripLeftEarly => 'Tu as terminé ton trajet avant l\'arrivée : tu ne le paies pas.';
+  String get tripLeftEarly =>
+      'Tu as terminé ton trajet avant la destination prévue : ta part est prélevée à la clôture. Un problème ? Signale-le dans les 24 h.';
 
   @override
   String get stopArrived => 'Arrivée';
@@ -1212,6 +1214,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get walletBalance => 'Disponible';
 
   @override
+  String walletPending(String amount) {
+    return '$amount reçus, versés après 24 h sans signalement';
+  }
+
+  @override
   String walletHeld(String amount) {
     return '$amount retenus pour un trajet en cours';
   }
@@ -1269,7 +1276,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishConfirmBody =>
-      'Le suivi s\'arrête pour tout le monde. Les passagers pas encore à destination ne paient pas : tu n\'es pas rémunéré pour eux.';
+      'Le suivi s\'arrête pour tout le monde. Les passagers pris en charge paient leur part ; ta part est versée après 24 h, sauf si un problème est signalé.';
 
   @override
   String get finishConfirmCancel => 'Continuer le trajet';
@@ -1282,7 +1289,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishMyTripBody =>
-      'Tu n\'as pas encore atteint ta destination. Si tu termines maintenant, tu ne paies pas ce trajet et le conducteur n\'est pas rémunéré pour toi. Il est prévenu tout de suite.';
+      'Tu n\'as pas encore atteint la destination prévue. Tu as été pris en charge : ta part reste due, même si tu descends ailleurs. Le conducteur est prévenu tout de suite. Un problème ? Signale-le après le trajet, dans les 24 h.';
 
   @override
   String get finishMyTripConfirm => 'Terminer quand même';

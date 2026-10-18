@@ -7,6 +7,7 @@ import type { TrustService } from './modules/trust/service.js';
 import type { ChatService } from './modules/chat/service.js';
 import type { NotificationService } from './modules/notifications/service.js';
 import type { AccountService } from './modules/account/service.js';
+import type { WalletService } from './modules/payments/service.js';
 import { addDaysIso, isoWeekOf, parisDateOf, weekDays } from './shared/time.js';
 
 /**
@@ -19,7 +20,7 @@ import { addDaysIso, isoWeekOf, parisDateOf, weekDays } from './shared/time.js';
  */
 export async function startJobs(
   databaseUrl: string,
-  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService; chat: ChatService; notifications: NotificationService; account: AccountService },
+  services: { calendar: CalendarService; matching: MatchingService; lifecycle: RideLifecycle; trust: TrustService; chat: ChatService; notifications: NotificationService; account: AccountService; wallet: WalletService },
   log: FastifyBaseLogger,
   clock: () => Date = () => new Date(),
 ): Promise<() => Promise<void>> {
@@ -28,6 +29,7 @@ export async function startJobs(
   await boss.start();
 
   await boss.createQueue('calendar-sync');
+  await boss.createQueue('earnings-release');
   await boss.createQueue('weekly-matching');
   await boss.createQueue('trace-purge');
   await boss.createQueue('stale-rides');
@@ -39,6 +41,7 @@ export async function startJobs(
   await boss.schedule('ride-reminders', '*/5 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('reliability-refresh', '15 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('stale-rides', '0 * * * *', null, { tz: 'Europe/Paris' });
+  await boss.schedule('earnings-release', '20 * * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('trace-purge', '30 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('data-purge', '50 4 * * *', null, { tz: 'Europe/Paris' });
   await boss.schedule('calendar-sync', '0 5 * * *', null, { tz: 'Europe/Paris' });
@@ -60,6 +63,10 @@ export async function startJobs(
   await boss.work('stale-rides', async () => {
     const closed = await services.lifecycle.closeStale();
     if (closed > 0) log.info({ closed }, 'stale rides closed');
+  });
+  await boss.work('earnings-release', async () => {
+    const released = await services.wallet.releaseEarnings(new Date());
+    if (released > 0) log.info({ released }, 'driver earnings released');
   });
   await boss.work('reliability-refresh', async () => {
     const refreshed = await services.trust.refreshExpired();

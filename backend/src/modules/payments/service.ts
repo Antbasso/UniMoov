@@ -3,6 +3,7 @@ import { IdempotencyConflictError, type PaymentProvider } from '../../shared/pay
 import type { SettingsService } from '../settings/service.js';
 import {
   chargeEntries,
+  earningsReleaseEntries,
   holdEntries,
   isBalanced,
   isValidIban,
@@ -19,6 +20,8 @@ import type { Entry } from './domain.js';
 export interface WalletView {
   balanceCents: number;
   heldCents: number;
+  /** Parts reçues, versées sur le solde après le délai de signalement. */
+  pendingCents: number;
   history: { kind: string; amountCents: number; rideId: string | null; createdAt: Date }[];
 }
 
@@ -181,6 +184,27 @@ export class WalletService {
     });
     if (result.status === 'failed') throw new AppError(402, 'payout_failed', 'Le virement a été refusé');
     return this.wallet(userId);
+  }
+
+  /**
+   * Délai de signalement passé (`wallet.releaseAfterHours`) : la part de chaque trajet payé
+   * devient disponible pour le conducteur, sauf litige en attente d'arbitrage. Idempotent.
+   */
+  async releaseEarnings(now: Date): Promise<number> {
+    const hours = await this.settings.get('wallet.releaseAfterHours');
+    const due = await this.repo.releasablePayments(new Date(now.getTime() - hours * 3_600_000));
+    let released = 0;
+    for (const p of due) {
+      await this.repo.transaction(async (tx) => {
+        await this.repo.lockWallets([p.payeeId], tx);
+        if (!(await this.repo.markReleased(p.rideId, p.payerId, now, tx))) return;
+        if (p.shareCents > 0) {
+          await this.record(`ride:${p.rideId}:earnings:${p.payerId}`, earningsReleaseEntries(p.payeeId, p.shareCents), p.rideId, tx);
+        }
+        released++;
+      });
+    }
+    return released;
   }
 
   /** Clôture : les retenues des passagers absents sont libérées, sans paiement. */

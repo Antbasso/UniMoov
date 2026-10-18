@@ -106,6 +106,9 @@ void main() {
     expect(closed, 4410);
     final ride = await b.ride('demo-drive');
     expect(ride.completed, isTrue);
-    expect((await b.wallet()).balanceCents, greaterThan(balance));
+    // Part en attente 24 h (délai de signalement), pas encore sur le solde.
+    final wallet = await b.wallet();
+    expect(wallet.balanceCents, balance);
+    expect(wallet.pendingCents, greaterThan(0));
   });
 }

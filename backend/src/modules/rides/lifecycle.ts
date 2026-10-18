@@ -250,10 +250,11 @@ export class RideLifecycle {
   }
 
   /**
-   * « Terminer le trajet » (cahier §9, décision du 17/10/2026). Conducteur : clôture pour tous ;
-   * les passagers pas encore arrivés ne paient pas. Passager : son trajet seulement ; terminé
-   * avant l'arrivée, il ne paie pas (le conducteur n'est pas rémunéré pour lui) et le conducteur
-   * est prévenu tout de suite. Idempotent.
+   * « Terminer le trajet » (cahier §9, décision du 18/10/2026). Conducteur : clôture pour tous.
+   * Passager : son trajet seulement ; à bord (présence validée), sa part reste due même s'il
+   * descend avant la destination prévue, comme chez les autres services de covoiturage ; un
+   * problème se règle par un litige pendant le délai de signalement. Le conducteur est prévenu
+   * tout de suite. Idempotent.
    */
   async finish(rideId: string, byUserId: string | null): Promise<void> {
     if (byUserId) {
@@ -325,8 +326,9 @@ export class RideLifecycle {
 
   /**
    * Clôture (conducteur, arrivée, tous terminés, ou trajet oublié) : prix final = coût ÷
-   * personnes présentes (conducteur compris), payé par chaque passager présent et arrivé ; les
-   * autres retenues sont libérées ; absences constatées ; suivi fermé. Idempotente.
+   * personnes présentes (conducteur compris), payé par chaque passager présent (pris en charge,
+   * arrivé ou descendu avant) ; les autres retenues sont libérées ; absences constatées ; suivi
+   * fermé. La part du conducteur attend le délai de signalement. Idempotente.
    */
   private async close(rideId: string): Promise<void> {
     const closed = await this.repo.transaction(async (tx) => {
@@ -346,8 +348,8 @@ export class RideLifecycle {
       const noShow = missing.filter((m) => !notReached.includes(m));
       const price = await this.rides.estimate(ride, await this.rides.billingDistance(rideId), present.length + 1);
       await this.repo.setRideStatus(rideId, 'completed', { endedAt: now, finalTotalCostCents: price?.totalCostCents ?? null }, tx);
-      // Paiement des seuls passagers arrivés, au prix final partagé entre les présents.
-      for (const p of present.filter((m) => m.arrivedAt)) {
+      // Paiement de chaque passager pris en charge, au prix final partagé entre les présents.
+      for (const p of present) {
         await this.wallet.chargeForRide(
           {
             rideId,

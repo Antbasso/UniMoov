@@ -66,7 +66,7 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     }
     await tester.pumpAndSettle();
-    expect(find.text('Présence validée : ta part est prélevée à l\'arrivée'), findsOneWidget);
+    expect(find.text('Présence validée : ta part est prélevée à la fin du trajet'), findsOneWidget);
 
     // Quitter la carte : le suivi se ferme, plus aucune minuterie.
     await tester.pumpWidget(const SizedBox.shrink());

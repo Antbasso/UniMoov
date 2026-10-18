@@ -17,8 +17,8 @@ export class AccountRepo {
   async lockOut(userId: string, now: Date): Promise<'locked' | 'ride_in_progress' | 'wallet_not_empty' | 'gone'> {
     return this.db.transaction(async (tx: Tx) => {
       // Portefeuille puis utilisateur : même ordre que la clôture d'un trajet (pas d'interblocage).
-      const { rows: wallet } = await tx.execute<{ balance_cents: number; held_cents: number }>(sql`
-        SELECT balance_cents, held_cents FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
+      const { rows: wallet } = await tx.execute<{ balance_cents: number; held_cents: number; pending_cents: number }>(sql`
+        SELECT balance_cents, held_cents, pending_cents FROM wallets WHERE user_id = ${userId} FOR UPDATE`);
       const { rows: user } = await tx.execute(sql`
         SELECT 1 FROM users WHERE id = ${userId} AND deleted_at IS NULL FOR UPDATE`);
       if (user.length === 0) return 'gone';
@@ -27,7 +27,9 @@ export class AccountRepo {
         WHERE rp.user_id = ${userId} AND r.status = 'in_progress' AND rp.status IN ('accepted', 'picked_up')
         LIMIT 1`);
       if (riding.length > 0) return 'ride_in_progress';
-      if ((wallet[0]?.balance_cents ?? 0) !== 0 || (wallet[0]?.held_cents ?? 0) !== 0) return 'wallet_not_empty';
+      if ((wallet[0]?.balance_cents ?? 0) !== 0 || (wallet[0]?.held_cents ?? 0) !== 0 || (wallet[0]?.pending_cents ?? 0) !== 0) {
+        return 'wallet_not_empty';
+      }
       await tx.execute(sql`UPDATE users SET deleted_at = ${now} WHERE id = ${userId}`);
       await tx.execute(sql`DELETE FROM refresh_tokens WHERE user_id = ${userId}`);
       return 'locked';

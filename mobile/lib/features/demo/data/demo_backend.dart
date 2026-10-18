@@ -98,6 +98,7 @@ class DemoBackend
   final Set<String> _hidden = {};
   int balanceCents = 0;
   int heldCents = 0;
+  int pendingCents = 0;
   final List<WalletEntry> _history = [];
   final Map<String, int> _held = {};
 
@@ -1105,7 +1106,8 @@ class DemoBackend
     _close(r);
   }
 
-  /// Clôture : prix final partagé entre les présents, payé par les passagers arrivés.
+  /// Clôture : prix final partagé entre les présents, payé par chaque passager pris en charge
+  /// (arrivé ou descendu avant) ; la part du conducteur attend 24 h (délai de signalement).
   void _close(DemoRide r) {
     if (r.status == 'completed') return;
     r.status = 'completed';
@@ -1113,17 +1115,13 @@ class DemoBackend
     final price = _priceOf(r, persons: present.length + 1);
     final at = _now;
     if (r.driverIsMe) {
-      final paying = present.where((s) => s.arrived).length;
-      if (paying > 0) {
-        balanceCents += price.share * paying;
-        _entry('ride_credit', price.share * paying, at);
-      }
+      if (present.isNotEmpty) pendingCents += price.share * present.length;
     } else {
       final held = _held.remove(r.id) ?? 0;
       heldCents -= held;
       balanceCents += held;
       final me = r.seatOf(demoMeId)!;
-      if (me.presenceValidated && me.arrived) {
+      if (me.presenceValidated) {
         final paid = min(price.youPay, held == 0 ? price.youPay : held);
         balanceCents -= paid;
         _entry('ride_charge', -paid, at);
@@ -1274,8 +1272,12 @@ class DemoBackend
   final Set<String> _keys = {};
   DateTime? _lastPayout;
 
-  Wallet get _wallet =>
-      Wallet(balanceCents: balanceCents, heldCents: heldCents, history: List.of(_history));
+  Wallet get _wallet => Wallet(
+    balanceCents: balanceCents,
+    heldCents: heldCents,
+    pendingCents: pendingCents,
+    history: List.of(_history),
+  );
 
   @override
   Future<Wallet> wallet() async {
@@ -1782,7 +1784,7 @@ class DemoBackend
     if (_rides.values.any((r) => r.status == 'in_progress' && _involvesMe(r))) {
       throw const ApiException('ride_in_progress', '', statusCode: 409);
     }
-    if (balanceCents + heldCents > 0) {
+    if (balanceCents + heldCents + pendingCents > 0) {
       throw const ApiException('wallet_not_empty', '', statusCode: 409);
     }
     _closeAllLive();

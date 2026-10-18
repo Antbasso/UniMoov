@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const walletResponse = z.strictObject({
   balanceCents: z.number().int(),
   heldCents: z.number().int(),
+  pendingCents: z.number().int(),
   history: z.array(
     z.strictObject({
       kind: z.string(),

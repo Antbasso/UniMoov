@@ -134,7 +134,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
         AsyncValue(:final value?) => [
           UmCard(
             child: Semantics(
-              label: '${l10n.walletBalance} ${euros(value.balanceCents)}',
+              label: [
+                '${l10n.walletBalance} ${euros(value.balanceCents)}',
+                if (value.heldCents > 0) l10n.walletHeld(euros(value.heldCents)),
+                if (value.pendingCents > 0) l10n.walletPending(euros(value.pendingCents)),
+              ].join('. '),
               excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,6 +148,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                   if (value.heldCents > 0)
                     Text(
                       l10n.walletHeld(euros(value.heldCents)),
+                      style: UmText.bodySm.copyWith(color: c.inkMuted),
+                    ),
+                  if (value.pendingCents > 0)
+                    Text(
+                      l10n.walletPending(euros(value.pendingCents)),
                       style: UmText.bodySm.copyWith(color: c.inkMuted),
                     ),
                 ],

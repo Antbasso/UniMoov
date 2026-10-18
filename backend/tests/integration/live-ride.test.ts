@@ -280,7 +280,15 @@ describe('clôture', () => {
     expect(hugoPayment.share_cents).toBe(Math.ceil(ride[0]!.final_total_cost_cents / 2));
     const paid = hugoPayment.share_cents + hugoPayment.commission_cents;
     expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: SEED + 1000 - paid });
-    expect((await wallet('Léa')).balanceCents).toBe(hugoPayment.share_cents);
+    // Part de Léa en attente 24 h (délai de signalement), puis versée sur son solde.
+    expect(await wallet('Léa')).toMatchObject({ balanceCents: 0, pendingCents: hugoPayment.share_cents });
+    ctx.clock.advance(23 * 3_600_000);
+    expect(await ctx.app.services!.wallet.releaseEarnings(ctx.clock.now)).toBe(0);
+    ctx.clock.advance(2 * 3_600_000);
+    expect(await ctx.app.services!.wallet.releaseEarnings(ctx.clock.now)).toBe(1);
+    expect(await ctx.app.services!.wallet.releaseEarnings(ctx.clock.now)).toBe(0); // rejoué : sans effet
+    ctx.clock.advance(-25 * 3_600_000);
+    expect(await wallet('Léa')).toMatchObject({ balanceCents: hugoPayment.share_cents, pendingCents: 0 });
     expect(await wallet('Inès')).toMatchObject({ heldCents: 0, balanceCents: SEED });
 
     const { rows } = await ctx.database.pool.query<{ account: string; total: string }>(
@@ -312,7 +320,7 @@ describe('clôture', () => {
     expect((await call('Léa', 'POST', `/rides/${wednesday}/start`)).json<{ error: { code: string } }>().error.code).toBe('too_late');
   });
 
-  it('passager qui termine avant l’arrivée : il ne paie pas, la conductrice est prévenue tout de suite', async () => {
+  it('passager à bord qui descend avant l’arrivée : il paie ; litige ouvert, la part reste en attente', async () => {
     const thursday = (await call('Léa', 'GET', '/proposals?week=2026-W43')).json<{ proposals: { id: string; day: string; direction: string }[] }>()
       .proposals.find((p) => p.day === '2026-10-22' && p.direction === 'to_campus')!.id;
     for (const name of ['Léa', 'Hugo']) await call(name, 'POST', `/proposals/${thursday}/accept`);
@@ -325,12 +333,23 @@ describe('clôture', () => {
 
     expect((await call('Hugo', 'POST', `/rides/${thursday}/finish`)).statusCode).toBe(204);
     expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id], event: { type: 'passenger_left', rideId: thursday } });
-    // Seul passager, il a fini : le trajet est clos ; il ne paie rien, Léa ne reçoit rien.
+    // Seul passager, il a fini : le trajet est clos ; à bord, il paie sa part (destination changée).
     const thursdayRide = (await call('Hugo', 'GET', `/rides/${thursday}`)).json<{ status: string; stops: { userId: string | null; arrived: boolean; ended: boolean }[] }>();
     expect(thursdayRide.status).toBe('completed');
     expect(thursdayRide.stops.find((s) => s.userId === user('Hugo').id)).toMatchObject({ arrived: false, ended: true });
-    expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: before.hugo });
-    expect((await wallet('Léa')).balanceCents).toBe(before.lea);
+    const { rows } = await ctx.database.pool.query<{ status: string; share_cents: number; commission_cents: number }>(
+      `SELECT status, share_cents, commission_cents FROM payments WHERE ride_id = $1 AND payer_id = $2`,
+      [thursday, user('Hugo').id],
+    );
+    expect(rows[0]!.status).toBe('paid');
+    expect(await wallet('Hugo')).toMatchObject({ heldCents: 0, balanceCents: before.hugo - rows[0]!.share_cents - rows[0]!.commission_cents });
+    // La part attend le délai de signalement ; Hugo signale un problème : elle reste bloquée.
+    expect(await wallet('Léa')).toMatchObject({ balanceCents: before.lea, pendingCents: rows[0]!.share_cents });
+    expect((await call('Hugo', 'POST', `/rides/${thursday}/disputes`, { reason: 'payment', message: 'Arrêté plus tôt' })).statusCode).toBe(201);
+    ctx.clock.advance(25 * 3_600_000);
+    await ctx.app.services!.wallet.releaseEarnings(ctx.clock.now);
+    expect(await wallet('Léa')).toMatchObject({ balanceCents: before.lea, pendingCents: rows[0]!.share_cents });
+    ctx.clock.advance(-25 * 3_600_000);
   });
 
   it('pas encore à bord : annule sa place pendant le trajet ; prélèvement plafonné à la retenue', async () => {

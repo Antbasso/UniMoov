@@ -75,6 +75,7 @@ declare module 'fastify' {
       chat: ChatService;
       notifications: NotificationService;
       account: AccountService;
+      wallet: WalletService;
     };
   }
 }
@@ -287,6 +288,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       chat,
       notifications,
       account: accountService,
+      wallet,
     });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
