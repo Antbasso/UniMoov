@@ -36,6 +36,7 @@ abstract final class AppRoutes {
   static const notificationSettings = '/profile/notifications';
   static const deleteAccount = '/profile/delete';
   static const messages = '/messages';
+  static const charter = '/charter';
   static String conversation(String id) => '/messages/$id';
 
   /// Litige sur un trajet ; route à part, car un passager qui a annulé n'a plus accès au trajet.
@@ -44,7 +45,7 @@ abstract final class AppRoutes {
     queryParameters: reason == null ? null : {'reason': reason.wire},
   ).toString();
 
-  static const public = {welcome, login, signup};
+  static const public = {welcome, login, signup, charter};
   static const entry = {splash, welcome, login, signup, onboarding};
 }
 

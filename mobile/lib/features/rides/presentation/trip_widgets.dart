@@ -201,31 +201,71 @@ class PriceBullets extends StatelessWidget {
     final number = NumberFormat('0.##', l10n.localeName);
     String km(int meters) => number.format(meters / 1000);
     final perMeter = b.distanceM == 0 ? 0.0 : p.totalCostCents / b.distanceM;
-    final lines = <(String, String?)>[
-      (
-        l10n.calcLitres(
-          km(b.distanceM),
-          number.format(b.consumptionLPer100km),
-          number.format(b.litres),
-        ),
-        null,
+    final sharesSum = b.shares.fold<int>(0, (sum, s) => sum + s.shareCents);
+
+    // Trois étapes, chacune avec son résultat : le carburant du trajet, le partage tronçon par
+    // tronçon, puis l'addition qui donne exactement le montant affiché en haut.
+    final steps = <Widget>[
+      _CalcStep(
+        number: 1,
+        title: l10n.calcStepFuel,
+        lines: [
+          (
+            l10n.calcLitres(
+              km(b.distanceM),
+              number.format(b.consumptionLPer100km),
+              number.format(b.litres),
+            ),
+            null,
+          ),
+          (l10n.calcFuel(number.format(b.litres), euros(b.fuelPriceCentsPerLitre)), null),
+        ],
+        result: (l10n.calcTripCost, euros(p.totalCostCents)),
       ),
-      (
-        l10n.calcFuel(number.format(b.litres), euros(b.fuelPriceCentsPerLitre)),
-        euros(p.totalCostCents),
-      ),
-      for (final portion in b.portions)
-        (
-          l10n.calcPortion(km(portion.distanceM), portion.persons),
-          euros(portion.distanceM * perMeter / portion.persons),
+      if (b.portions.isNotEmpty)
+        _CalcStep(
+          number: 2,
+          title: l10n.calcStepShare,
+          note: l10n.calcStepShareNote,
+          lines: [
+            for (final portion in b.portions)
+              (
+                l10n.calcPortionEach(
+                  km(portion.distanceM),
+                  euros(portion.distanceM * perMeter),
+                  portion.persons,
+                ),
+                euros(portion.distanceM * perMeter / portion.persons),
+              ),
+          ],
+          result: isDriver ? null : (l10n.calcMyShare, euros(p.shareCents)),
         ),
       if (isDriver)
-        for (final share in b.shares) (l10n.calcShareOf(share.firstName), euros(share.shareCents))
-      else ...[
-        (l10n.calcMyShare, euros(p.shareCents)),
-        (l10n.calcCommission, euros(p.commissionCents)),
-      ],
-      (isDriver ? l10n.calcTotalReceived : l10n.calcTotalPaid, amount),
+        _CalcStep(
+          number: b.portions.isEmpty ? 2 : 3,
+          title: l10n.calcStepReceive,
+          lines: [
+            for (final share in b.shares)
+              (l10n.calcShareOf(share.firstName), euros(share.shareCents)),
+          ],
+          result: (l10n.calcTotalReceived, euros(sharesSum)),
+          // Vérification : ce que tu reçois + ta propre part = le coût du trajet.
+          footnote: l10n.calcDriverCheck(
+            euros(sharesSum),
+            euros(p.totalCostCents - sharesSum),
+            euros(p.totalCostCents),
+          ),
+        )
+      else
+        _CalcStep(
+          number: b.portions.isEmpty ? 2 : 3,
+          title: l10n.calcStepPay,
+          lines: [
+            (l10n.calcMyShare, euros(p.shareCents)),
+            (l10n.calcCommissionPlus, euros(p.commissionCents)),
+          ],
+          result: (l10n.calcTotalPaid, euros(p.shareCents + p.commissionCents)),
+        ),
     ];
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -236,36 +276,94 @@ class PriceBullets extends StatelessWidget {
         title: header,
         subtitle: Text(l10n.calcTitle, style: UmText.caption.copyWith(color: c.brandStrong)),
         children: [
-          for (final (i, (label, value)) in lines.indexed)
-            Padding(
-              padding: const EdgeInsets.only(top: UmSpace.s1),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: UmText.bodySm.copyWith(
-                        color: i == lines.length - 1 ? c.ink : c.inkMuted,
-                        fontWeight: i == lines.length - 1 ? FontWeight.w600 : null,
-                      ),
-                    ),
-                  ),
-                  if (value != null) ...[
-                    const SizedBox(width: UmSpace.s3),
-                    Text(
-                      value,
-                      style: UmText.bodySm.copyWith(
-                        color: c.ink,
-                        fontWeight: i == lines.length - 1 ? FontWeight.w600 : null,
-                      ),
-                    ),
-                  ],
-                ],
+          for (final step in steps) ...[step, const SizedBox(height: UmSpace.s3)],
+          Text(l10n.calcRounding, style: UmText.caption.copyWith(color: c.inkMuted)),
+          const SizedBox(height: UmSpace.s1),
+          Text(l10n.priceBulletFinal, style: UmText.caption.copyWith(color: c.inkMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Une étape du calcul : numéro et titre, lignes « libellé … montant », puis son résultat
+/// souligné d'un filet, comme une addition posée.
+class _CalcStep extends StatelessWidget {
+  const _CalcStep({
+    required this.number,
+    required this.title,
+    required this.lines,
+    this.result,
+    this.note,
+    this.footnote,
+  });
+
+  final int number;
+  final String title;
+  final List<(String, String?)> lines;
+  final (String, String)? result;
+  final String? note;
+  final String? footnote;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    Widget row(String label, String? value, {bool strong = false}) => Padding(
+      padding: const EdgeInsets.only(top: UmSpace.s1),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: UmText.bodySm.copyWith(
+                color: strong ? c.ink : c.inkMuted,
+                fontWeight: strong ? FontWeight.w600 : null,
               ),
             ),
-          const SizedBox(height: UmSpace.s2),
-          Text(l10n.priceBulletFinal, style: UmText.caption.copyWith(color: c.inkMuted)),
+          ),
+          if (value != null) ...[
+            const SizedBox(width: UmSpace.s3),
+            Text(
+              value,
+              style: UmText.bodySm.copyWith(
+                color: c.ink,
+                fontWeight: strong ? FontWeight.w600 : null,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(UmSpace.s3),
+      decoration: BoxDecoration(
+        color: c.surfaceTint,
+        borderRadius: BorderRadius.circular(UmRadius.sm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text('$number. $title', style: UmText.label.copyWith(color: c.brandStrong)),
+          ),
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.only(top: UmSpace.s1),
+              child: Text(note!, style: UmText.caption.copyWith(color: c.inkMuted)),
+            ),
+          for (final (label, value) in lines) row(label, value),
+          if (result case (final label, final value)) ...[
+            const SizedBox(height: UmSpace.s2),
+            Divider(height: 1, color: c.borderControl),
+            row(label, value, strong: true),
+          ],
+          if (footnote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: UmSpace.s2),
+              child: Text(footnote!, style: UmText.caption.copyWith(color: c.inkMuted)),
+            ),
         ],
       ),
     );

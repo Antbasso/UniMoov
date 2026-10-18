@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'tokens.g.dart';
+import 'um_sizes.dart';
 
 export 'tokens.g.dart';
 export 'um_sizes.dart';
@@ -120,6 +121,20 @@ ThemeData buildUmTheme(Brightness brightness) {
     materialTapTargetSize: MaterialTapTargetSize.padded,
     // Pastille (messages non lus) aux couleurs de la marque, pas le rouge d'erreur de Material.
     badgeTheme: BadgeThemeData(backgroundColor: c.brand, textColor: c.onBrand),
+    // Même barre partout : retour et titre à la taille du reste de l'app, et un haut qui reste
+    // de la couleur du fond quand on fait défiler (pas de teinte violette Material 3).
+    appBarTheme: AppBarTheme(
+      backgroundColor: c.surface,
+      foregroundColor: c.ink,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      toolbarHeight: UmSize.appBarHeight,
+      titleTextStyle: UmText.h2.copyWith(color: c.ink),
+      iconTheme: IconThemeData(color: c.ink, size: UmSize.appBarIcon),
+      actionsIconTheme: IconThemeData(color: c.brandStrong, size: UmSize.appBarIcon),
+    ),
     extensions: [ext],
   );
 }

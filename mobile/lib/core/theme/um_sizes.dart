@@ -60,6 +60,10 @@ abstract final class UmSize {
   /// Opacité d'un contrôle désactivé (reste lisible).
   static const double disabledOpacity = 0.45;
 
+  /// Barre du haut : hauteur et icônes (retour, actions), plus grandes que les icônes du texte.
+  static const double appBarHeight = 64;
+  static const double appBarIcon = 28;
+
   /// Largeur maximale d'une bulle de message, en part de l'écran.
   static const double bubbleWidthFactor = 0.86;
 

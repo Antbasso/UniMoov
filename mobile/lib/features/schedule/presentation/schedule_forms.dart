@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/um_theme.dart';
@@ -39,6 +40,19 @@ class _IcsFormState extends ConsumerState<IcsForm> with SubmitStateMixin {
     super.dispose();
   }
 
+  /// Coller le lien copié depuis l'agenda (ENT, Google Agenda, Outlook…).
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (!mounted) return;
+    if (text == null || text.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).icsClipboardEmpty)));
+      return;
+    }
+    setState(() => _url.text = text);
+  }
+
   void _submit() {
     setState(() => _showFieldErrors = true);
     if (_url.text.trim().length < 10 || !_consent) return;
@@ -66,6 +80,18 @@ class _IcsFormState extends ConsumerState<IcsForm> with SubmitStateMixin {
           keyboardType: TextInputType.url,
           error: _showFieldErrors && _url.text.trim().length < 10 ? l10n.errorCalendarUrl : null,
         ),
+        const SizedBox(height: UmSpace.s2),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: UmButton(
+            label: l10n.icsPaste,
+            icon: Icons.content_paste_rounded,
+            variant: UmButtonVariant.ghost,
+            onPressed: _paste,
+          ),
+        ),
+        const SizedBox(height: UmSpace.s2),
+        Text(l10n.icsWhere, style: UmText.bodySm.copyWith(color: c.inkMuted)),
         const SizedBox(height: UmSpace.s4),
         CheckboxListTile(
           value: _consent,

@@ -213,6 +213,11 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.profileNotifications,
               onTap: () => context.push(AppRoutes.notificationSettings),
             ),
+            _Row(
+              icon: Icons.handshake_outlined,
+              title: l10n.charterTitle,
+              onTap: () => context.push(AppRoutes.charter),
+            ),
             const _ExportRow(),
             _Row(
               icon: Icons.delete_outline_rounded,

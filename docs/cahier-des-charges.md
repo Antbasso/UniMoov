@@ -4,6 +4,8 @@
 
 ## 1. Inscription et authentification
 
+- Charte de bonne conduite (`docs/charte-bonne-conduite.md`) : acceptée à la création du compte, lisible à tout moment depuis le profil.
+
 - Vérification d'identité obligatoire à l'inscription : l'utilisateur saisit son adresse mail universitaire et reçoit un code de confirmation par mail.
 - Une fois vérifié, choix de la méthode de connexion au quotidien : identifiant (mail universitaire) + mot de passe, ou connexion rapide via Google ou Apple, reliée au compte déjà vérifié *(reporté en v1.1 pour limiter les coûts, voir `docs/couts.md`)*.
 - Onboarding en plusieurs étapes, chacune avec un bouton « passer / configurer plus tard » : profil (adresse domicile, lieu de cours), véhicule si applicable, connexion de l'emploi du temps, validation des préférences de trajet pour la semaine.

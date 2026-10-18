@@ -326,8 +326,8 @@ class _LiveChip extends StatelessWidget {
   }
 }
 
-/// Fond du trajet en cours : dégradé de la marque qui glisse doucement (fixe si les
-/// animations sont réduites).
+/// Fond du trajet en cours : dégradé de la marque qui ondule, traversé par un reflet fin qui
+/// passe toutes les quelques secondes (fixe si les animations sont réduites).
 class UmLiveGradient extends StatefulWidget {
   const UmLiveGradient({super.key, required this.child, this.radius = UmRadius.md});
 
@@ -341,7 +341,7 @@ class UmLiveGradient extends StatefulWidget {
 typedef _LiveGradient = UmLiveGradient;
 
 class _UmLiveGradientState extends State<UmLiveGradient> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+  late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 4));
 
   @override
   void didChangeDependencies() {
@@ -351,7 +351,7 @@ class _UmLiveGradientState extends State<UmLiveGradient> with SingleTickerProvid
         ..stop()
         ..value = 0.5;
     } else if (!_controller.isAnimating) {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     }
   }
 
@@ -364,22 +364,42 @@ class _UmLiveGradientState extends State<UmLiveGradient> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final c = context.umColors;
+    final shape = BorderRadius.circular(widget.radius);
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final t = Curves.easeInOut.transform(_controller.value);
+        final t = _controller.value;
+        // Ondulation : aller-retour lissé sur un tour complet (pas d'à-coup à la reprise).
+        final wave = Curves.easeInOut.transform(t < 0.5 ? t * 2 : 2 - t * 2);
+        // Reflet : une bande étroite qui traverse la carte de gauche à droite.
+        final sheen = -1.6 + 3.2 * Curves.easeInOutCubic.transform(t);
         return DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
+            borderRadius: shape,
             boxShadow: context.umShadowSoft,
             gradient: LinearGradient(
-              begin: Alignment(-1 - t, -1),
-              end: Alignment(1 - t, 1),
+              begin: Alignment(-1 - wave, -1),
+              end: Alignment(1 - wave, 1),
+              // Seules teintes où le texte `on-brand` reste lisible en clair comme en sombre.
               colors: [c.brandStrong, c.brand, c.brandStrong],
               tileMode: TileMode.mirror,
             ),
           ),
-          child: child,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: shape,
+              gradient: LinearGradient(
+                begin: Alignment(sheen - 0.35, -1),
+                end: Alignment(sheen + 0.35, 1),
+                colors: [
+                  c.onBrand.withValues(alpha: 0),
+                  c.onBrand.withValues(alpha: 0.12),
+                  c.onBrand.withValues(alpha: 0),
+                ],
+              ),
+            ),
+            child: child,
+          ),
         );
       },
       child: widget.child,

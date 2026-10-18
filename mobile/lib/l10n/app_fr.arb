@@ -311,7 +311,7 @@
   "icsTitle": "Ton lien d'agenda",
   "icsBody": "Copie le lien d'abonnement (ICS) de ton emploi du temps, par exemple depuis ADE, puis colle-le ici.",
   "icsLabel": "Lien ICS",
-  "icsPlaceholder": "https://…",
+  "icsPlaceholder": "https://… ou webcal://…",
   "icsConsent": "J'accepte qu'Uni-Moov lise cet agenda pour n'en garder que l'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.",
   "icsConsentRequired": "Coche la case pour autoriser la lecture de ton agenda.",
   "manualTitle": "Tes horaires de la semaine",
@@ -1243,17 +1243,6 @@
       }
     }
   },
-  "calcPortion": "{km} km à {persons} (conducteur compris)",
-  "@calcPortion": {
-    "placeholders": {
-      "km": {
-        "type": "String"
-      },
-      "persons": {
-        "type": "int"
-      }
-    }
-  },
   "calcShareOf": "Part de {name}",
   "@calcShareOf": {
     "placeholders": {
@@ -1264,8 +1253,8 @@
   },
   "calcMyShare": "Ta part du carburant",
   "calcCommission": "Frais de service",
-  "calcTotalPaid": "Tu paies",
-  "calcTotalReceived": "Tu reçois",
+  "calcTotalPaid": "= Tu paies",
+  "calcTotalReceived": "= Tu reçois au total",
   "carpoolArriveAt": "Arrivée au campus",
   "carpoolLeaveAt": "Départ du campus",
   "carpoolReturnAt": "Retour, départ du campus",
@@ -1570,5 +1559,68 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapFocusVehicle": "Voir le véhicule",
+  "calcStepFuel": "Le carburant du trajet",
+  "calcTripCost": "Coût du trajet",
+  "calcStepShare": "Le partage, tronçon par tronçon",
+  "calcStepShareNote": "Chaque tronçon est partagé entre les personnes à bord, conducteur compris.",
+  "calcPortionEach": "{km} km ({cost}) ÷ {persons}",
+  "@calcPortionEach": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      },
+      "cost": {
+        "type": "String"
+      },
+      "persons": {
+        "type": "int"
+      }
+    }
+  },
+  "calcStepReceive": "Ce que paie chaque passager",
+  "calcStepPay": "Ce que tu paies",
+  "calcCommissionPlus": "+ frais de service Uni-Moov",
+  "calcDriverCheck": "Vérification : {received} reçus + {own} pour ta propre part = {total}, le coût du trajet.",
+  "@calcDriverCheck": {
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "own": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "calcRounding": "Montants arrondis au centime ; le conducteur n'est jamais perdant.",
+  "charterTitle": "Charte de bonne conduite",
+  "charterIntro": "Pour que chaque trajet se passe bien, tout le monde s'engage à respecter ces règles, comme sur les autres applis de covoiturage.",
+  "charterRead": "Lire la charte de bonne conduite",
+  "charterSignupNote": "En créant ton compte, tu t'engages à respecter la charte de bonne conduite.",
+  "charterContact": "Une question ou un signalement : unimoov.support@gmail.com",
+  "charter1Title": "Respect et bienveillance",
+  "charter1Body": "Sois poli et bienveillant avec tout le monde, dans la voiture comme dans les messages.\nAucune discrimination, aucun propos ou geste déplacé, aucun harcèlement : tolérance zéro.\nRespecte les choix de chacun : discuter ou rester au calme, écouter de la musique ou non.",
+  "charter2Title": "Ponctualité",
+  "charter2Body": "Sois au point de rendez-vous à l'heure de passage indiquée dans l'app ; elle peut avancer si un passager s'ajoute, l'app te prévient.\nEn retard ? Préviens dans le chat du trajet dès que possible.\nConducteur : attends au moins 5 minutes au point de rendez-vous ; passager : ne fais pas attendre plus.",
+  "charter3Title": "Fiabilité",
+  "charter3Body": "N'accepte que les trajets que tu feras vraiment.\nSi tu ne peux plus venir, annule le plus tôt possible : une annulation tardive ou une absence baisse ton score de fiabilité.\nValide ta présence à la prise en charge et termine ton trajet dans l'app.",
+  "charter4Title": "Sécurité",
+  "charter4Body": "Conducteur : permis valide, assurance à jour, véhicule entretenu, pas plus de passagers que de places déclarées.\nRespecte le code de la route ; jamais d'alcool, de drogue ou de téléphone en main au volant.\nCeinture attachée pour tout le monde, à chaque trajet.\nPassager : tu peux demander à descendre ou à ralentir si tu ne te sens pas en sécurité, puis le signaler.",
+  "charter5Title": "Partage des frais, sans profit",
+  "charter5Body": "Le prix couvre seulement le carburant, partagé entre les personnes à bord, plus de petits frais de service ; le covoiturage n'est pas un service de taxi.\nTout se paie dans l'app : pas d'argent liquide ni de paiement à côté, pas de supplément demandé.\nLe prix définitif est calculé à l'arrivée, entre les seules personnes présentes.",
+  "charter6Title": "Confort à bord",
+  "charter6Body": "Respecte les préférences affichées sur le profil du conducteur et des passagers (musique, cigarette, animaux).\nGarde la voiture propre ; pas de repas salissant sans accord.\nBagages : un sac de cours ; pour plus encombrant, demande avant dans le chat.",
+  "charter7Title": "Confidentialité",
+  "charter7Body": "Les adresses, noms et photos des autres ne servent qu'au trajet : ne les partage pas et ne les publie pas.\nNe prends pas de photo ni de vidéo d'une personne sans son accord.\nLe suivi de position ne fonctionne que pendant le trajet, pour ses seuls participants.",
+  "charter8Title": "Notes honnêtes et signalements",
+  "charter8Body": "Note chaque trajet honnêtement, sur ce qui s'est vraiment passé.\nSignale dans l'app tout comportement dangereux, irrespectueux ou contraire à cette charte ; l'équipe Uni-Moov lit chaque signalement.\nEn cas de désaccord sur un trajet (absence, paiement), ouvre un litige depuis le trajet plutôt que de régler ça à deux.",
+  "charter9Title": "En cas de manquement",
+  "charter9Body": "Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.",
+  "icsPaste": "Coller le lien copié",
+  "icsClipboardEmpty": "Rien à coller : copie d'abord le lien de ton agenda.",
+  "icsWhere": "Où le trouver : dans ADE, « Exporter l'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi."
 }

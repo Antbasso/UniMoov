@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/error_messages.dart';
+import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
@@ -82,6 +83,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
     final state = ref.watch(signupProvider);
     String? check(bool valid, String message) => _showFieldErrors && !valid ? message : null;
 
@@ -143,6 +145,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             help: l10n.passwordHelp,
             autofillHints: const [AutofillHints.newPassword],
             error: check(AuthValidators.isPassword(_password.text), l10n.fieldPasswordTooShort),
+          ),
+          const SizedBox(height: UmSpace.s5),
+          // Créer son compte vaut engagement à respecter la charte, lisible avant de valider.
+          Text(l10n.charterSignupNote, style: UmText.bodySm.copyWith(color: c.inkMuted)),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: UmButton(
+              label: l10n.charterRead,
+              icon: Icons.handshake_outlined,
+              variant: UmButtonVariant.ghost,
+              onPressed: () => context.push(AppRoutes.charter),
+            ),
           ),
         ],
       ),

@@ -171,12 +171,7 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          tripTitle(l10n, proposal.direction, proposal.day),
-          style: UmText.h3.copyWith(color: c.ink),
-        ),
-      ),
+      appBar: AppBar(title: Text(tripTitle(l10n, proposal.direction, proposal.day))),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

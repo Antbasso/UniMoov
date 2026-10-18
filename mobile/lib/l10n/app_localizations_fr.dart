@@ -543,7 +543,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get icsLabel => 'Lien ICS';
 
   @override
-  String get icsPlaceholder => 'https://…';
+  String get icsPlaceholder => 'https://… ou webcal://…';
 
   @override
   String get icsConsent =>
@@ -2146,11 +2146,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String calcPortion(String km, int persons) {
-    return '$km km à $persons (conducteur compris)';
-  }
-
-  @override
   String calcShareOf(String name) {
     return 'Part de $name';
   }
@@ -2162,10 +2157,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get calcCommission => 'Frais de service';
 
   @override
-  String get calcTotalPaid => 'Tu paies';
+  String get calcTotalPaid => '= Tu paies';
 
   @override
-  String get calcTotalReceived => 'Tu reçois';
+  String get calcTotalReceived => '= Tu reçois au total';
 
   @override
   String get carpoolArriveAt => 'Arrivée au campus';
@@ -2559,4 +2554,132 @@ class AppLocalizationsFr extends AppLocalizations {
   String profileCo2(int kg) {
     return '$kg kg de CO2 évités en covoiturant';
   }
+
+  @override
+  String get mapFocusVehicle => 'Voir le véhicule';
+
+  @override
+  String get calcStepFuel => 'Le carburant du trajet';
+
+  @override
+  String get calcTripCost => 'Coût du trajet';
+
+  @override
+  String get calcStepShare => 'Le partage, tronçon par tronçon';
+
+  @override
+  String get calcStepShareNote =>
+      'Chaque tronçon est partagé entre les personnes à bord, conducteur compris.';
+
+  @override
+  String calcPortionEach(String km, String cost, int persons) {
+    return '$km km ($cost) ÷ $persons';
+  }
+
+  @override
+  String get calcStepReceive => 'Ce que paie chaque passager';
+
+  @override
+  String get calcStepPay => 'Ce que tu paies';
+
+  @override
+  String get calcCommissionPlus => '+ frais de service Uni-Moov';
+
+  @override
+  String calcDriverCheck(String received, String own, String total) {
+    return 'Vérification : $received reçus + $own pour ta propre part = $total, le coût du trajet.';
+  }
+
+  @override
+  String get calcRounding => 'Montants arrondis au centime ; le conducteur n\'est jamais perdant.';
+
+  @override
+  String get charterTitle => 'Charte de bonne conduite';
+
+  @override
+  String get charterIntro =>
+      'Pour que chaque trajet se passe bien, tout le monde s\'engage à respecter ces règles, comme sur les autres applis de covoiturage.';
+
+  @override
+  String get charterRead => 'Lire la charte de bonne conduite';
+
+  @override
+  String get charterSignupNote =>
+      'En créant ton compte, tu t\'engages à respecter la charte de bonne conduite.';
+
+  @override
+  String get charterContact => 'Une question ou un signalement : unimoov.support@gmail.com';
+
+  @override
+  String get charter1Title => 'Respect et bienveillance';
+
+  @override
+  String get charter1Body =>
+      'Sois poli et bienveillant avec tout le monde, dans la voiture comme dans les messages.\nAucune discrimination, aucun propos ou geste déplacé, aucun harcèlement : tolérance zéro.\nRespecte les choix de chacun : discuter ou rester au calme, écouter de la musique ou non.';
+
+  @override
+  String get charter2Title => 'Ponctualité';
+
+  @override
+  String get charter2Body =>
+      'Sois au point de rendez-vous à l\'heure de passage indiquée dans l\'app ; elle peut avancer si un passager s\'ajoute, l\'app te prévient.\nEn retard ? Préviens dans le chat du trajet dès que possible.\nConducteur : attends au moins 5 minutes au point de rendez-vous ; passager : ne fais pas attendre plus.';
+
+  @override
+  String get charter3Title => 'Fiabilité';
+
+  @override
+  String get charter3Body =>
+      'N\'accepte que les trajets que tu feras vraiment.\nSi tu ne peux plus venir, annule le plus tôt possible : une annulation tardive ou une absence baisse ton score de fiabilité.\nValide ta présence à la prise en charge et termine ton trajet dans l\'app.';
+
+  @override
+  String get charter4Title => 'Sécurité';
+
+  @override
+  String get charter4Body =>
+      'Conducteur : permis valide, assurance à jour, véhicule entretenu, pas plus de passagers que de places déclarées.\nRespecte le code de la route ; jamais d\'alcool, de drogue ou de téléphone en main au volant.\nCeinture attachée pour tout le monde, à chaque trajet.\nPassager : tu peux demander à descendre ou à ralentir si tu ne te sens pas en sécurité, puis le signaler.';
+
+  @override
+  String get charter5Title => 'Partage des frais, sans profit';
+
+  @override
+  String get charter5Body =>
+      'Le prix couvre seulement le carburant, partagé entre les personnes à bord, plus de petits frais de service ; le covoiturage n\'est pas un service de taxi.\nTout se paie dans l\'app : pas d\'argent liquide ni de paiement à côté, pas de supplément demandé.\nLe prix définitif est calculé à l\'arrivée, entre les seules personnes présentes.';
+
+  @override
+  String get charter6Title => 'Confort à bord';
+
+  @override
+  String get charter6Body =>
+      'Respecte les préférences affichées sur le profil du conducteur et des passagers (musique, cigarette, animaux).\nGarde la voiture propre ; pas de repas salissant sans accord.\nBagages : un sac de cours ; pour plus encombrant, demande avant dans le chat.';
+
+  @override
+  String get charter7Title => 'Confidentialité';
+
+  @override
+  String get charter7Body =>
+      'Les adresses, noms et photos des autres ne servent qu\'au trajet : ne les partage pas et ne les publie pas.\nNe prends pas de photo ni de vidéo d\'une personne sans son accord.\nLe suivi de position ne fonctionne que pendant le trajet, pour ses seuls participants.';
+
+  @override
+  String get charter8Title => 'Notes honnêtes et signalements';
+
+  @override
+  String get charter8Body =>
+      'Note chaque trajet honnêtement, sur ce qui s\'est vraiment passé.\nSignale dans l\'app tout comportement dangereux, irrespectueux ou contraire à cette charte ; l\'équipe Uni-Moov lit chaque signalement.\nEn cas de désaccord sur un trajet (absence, paiement), ouvre un litige depuis le trajet plutôt que de régler ça à deux.';
+
+  @override
+  String get charter9Title => 'En cas de manquement';
+
+  @override
+  String get charter9Body =>
+      'Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.';
+
+  @override
+  String get icsPaste => 'Coller le lien copié';
+
+  @override
+  String get icsClipboardEmpty => 'Rien à coller : copie d\'abord le lien de ton agenda.';
+
+  @override
+  String get icsWhere =>
+      'Où le trouver : dans ADE, « Exporter l\'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.';
 }

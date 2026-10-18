@@ -1037,7 +1037,7 @@ abstract class AppLocalizations {
   /// No description provided for @icsPlaceholder.
   ///
   /// In fr, this message translates to:
-  /// **'https://…'**
+  /// **'https://… ou webcal://…'**
   String get icsPlaceholder;
 
   /// No description provided for @icsConsent.
@@ -3722,12 +3722,6 @@ abstract class AppLocalizations {
   /// **'{litres} L × {price} le litre'**
   String calcFuel(String litres, String price);
 
-  /// No description provided for @calcPortion.
-  ///
-  /// In fr, this message translates to:
-  /// **'{km} km à {persons} (conducteur compris)'**
-  String calcPortion(String km, int persons);
-
   /// No description provided for @calcShareOf.
   ///
   /// In fr, this message translates to:
@@ -3749,13 +3743,13 @@ abstract class AppLocalizations {
   /// No description provided for @calcTotalPaid.
   ///
   /// In fr, this message translates to:
-  /// **'Tu paies'**
+  /// **'= Tu paies'**
   String get calcTotalPaid;
 
   /// No description provided for @calcTotalReceived.
   ///
   /// In fr, this message translates to:
-  /// **'Tu reçois'**
+  /// **'= Tu reçois au total'**
   String get calcTotalReceived;
 
   /// No description provided for @carpoolArriveAt.
@@ -4399,6 +4393,228 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{kg} kg de CO2 évités en covoiturant'**
   String profileCo2(int kg);
+
+  /// No description provided for @mapFocusVehicle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le véhicule'**
+  String get mapFocusVehicle;
+
+  /// No description provided for @calcStepFuel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le carburant du trajet'**
+  String get calcStepFuel;
+
+  /// No description provided for @calcTripCost.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coût du trajet'**
+  String get calcTripCost;
+
+  /// No description provided for @calcStepShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le partage, tronçon par tronçon'**
+  String get calcStepShare;
+
+  /// No description provided for @calcStepShareNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque tronçon est partagé entre les personnes à bord, conducteur compris.'**
+  String get calcStepShareNote;
+
+  /// No description provided for @calcPortionEach.
+  ///
+  /// In fr, this message translates to:
+  /// **'{km} km ({cost}) ÷ {persons}'**
+  String calcPortionEach(String km, String cost, int persons);
+
+  /// No description provided for @calcStepReceive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que paie chaque passager'**
+  String get calcStepReceive;
+
+  /// No description provided for @calcStepPay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce que tu paies'**
+  String get calcStepPay;
+
+  /// No description provided for @calcCommissionPlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'+ frais de service Uni-Moov'**
+  String get calcCommissionPlus;
+
+  /// No description provided for @calcDriverCheck.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification : {received} reçus + {own} pour ta propre part = {total}, le coût du trajet.'**
+  String calcDriverCheck(String received, String own, String total);
+
+  /// No description provided for @calcRounding.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montants arrondis au centime ; le conducteur n\'est jamais perdant.'**
+  String get calcRounding;
+
+  /// No description provided for @charterTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charte de bonne conduite'**
+  String get charterTitle;
+
+  /// No description provided for @charterIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pour que chaque trajet se passe bien, tout le monde s\'engage à respecter ces règles, comme sur les autres applis de covoiturage.'**
+  String get charterIntro;
+
+  /// No description provided for @charterRead.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lire la charte de bonne conduite'**
+  String get charterRead;
+
+  /// No description provided for @charterSignupNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'En créant ton compte, tu t\'engages à respecter la charte de bonne conduite.'**
+  String get charterSignupNote;
+
+  /// No description provided for @charterContact.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une question ou un signalement : unimoov.support@gmail.com'**
+  String get charterContact;
+
+  /// No description provided for @charter1Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Respect et bienveillance'**
+  String get charter1Title;
+
+  /// No description provided for @charter1Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sois poli et bienveillant avec tout le monde, dans la voiture comme dans les messages.\nAucune discrimination, aucun propos ou geste déplacé, aucun harcèlement : tolérance zéro.\nRespecte les choix de chacun : discuter ou rester au calme, écouter de la musique ou non.'**
+  String get charter1Body;
+
+  /// No description provided for @charter2Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ponctualité'**
+  String get charter2Title;
+
+  /// No description provided for @charter2Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sois au point de rendez-vous à l\'heure de passage indiquée dans l\'app ; elle peut avancer si un passager s\'ajoute, l\'app te prévient.\nEn retard ? Préviens dans le chat du trajet dès que possible.\nConducteur : attends au moins 5 minutes au point de rendez-vous ; passager : ne fais pas attendre plus.'**
+  String get charter2Body;
+
+  /// No description provided for @charter3Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fiabilité'**
+  String get charter3Title;
+
+  /// No description provided for @charter3Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'N\'accepte que les trajets que tu feras vraiment.\nSi tu ne peux plus venir, annule le plus tôt possible : une annulation tardive ou une absence baisse ton score de fiabilité.\nValide ta présence à la prise en charge et termine ton trajet dans l\'app.'**
+  String get charter3Body;
+
+  /// No description provided for @charter4Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sécurité'**
+  String get charter4Title;
+
+  /// No description provided for @charter4Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conducteur : permis valide, assurance à jour, véhicule entretenu, pas plus de passagers que de places déclarées.\nRespecte le code de la route ; jamais d\'alcool, de drogue ou de téléphone en main au volant.\nCeinture attachée pour tout le monde, à chaque trajet.\nPassager : tu peux demander à descendre ou à ralentir si tu ne te sens pas en sécurité, puis le signaler.'**
+  String get charter4Body;
+
+  /// No description provided for @charter5Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage des frais, sans profit'**
+  String get charter5Title;
+
+  /// No description provided for @charter5Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le prix couvre seulement le carburant, partagé entre les personnes à bord, plus de petits frais de service ; le covoiturage n\'est pas un service de taxi.\nTout se paie dans l\'app : pas d\'argent liquide ni de paiement à côté, pas de supplément demandé.\nLe prix définitif est calculé à l\'arrivée, entre les seules personnes présentes.'**
+  String get charter5Body;
+
+  /// No description provided for @charter6Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confort à bord'**
+  String get charter6Title;
+
+  /// No description provided for @charter6Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Respecte les préférences affichées sur le profil du conducteur et des passagers (musique, cigarette, animaux).\nGarde la voiture propre ; pas de repas salissant sans accord.\nBagages : un sac de cours ; pour plus encombrant, demande avant dans le chat.'**
+  String get charter6Body;
+
+  /// No description provided for @charter7Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confidentialité'**
+  String get charter7Title;
+
+  /// No description provided for @charter7Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les adresses, noms et photos des autres ne servent qu\'au trajet : ne les partage pas et ne les publie pas.\nNe prends pas de photo ni de vidéo d\'une personne sans son accord.\nLe suivi de position ne fonctionne que pendant le trajet, pour ses seuls participants.'**
+  String get charter7Body;
+
+  /// No description provided for @charter8Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes honnêtes et signalements'**
+  String get charter8Title;
+
+  /// No description provided for @charter8Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note chaque trajet honnêtement, sur ce qui s\'est vraiment passé.\nSignale dans l\'app tout comportement dangereux, irrespectueux ou contraire à cette charte ; l\'équipe Uni-Moov lit chaque signalement.\nEn cas de désaccord sur un trajet (absence, paiement), ouvre un litige depuis le trajet plutôt que de régler ça à deux.'**
+  String get charter8Body;
+
+  /// No description provided for @charter9Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'En cas de manquement'**
+  String get charter9Title;
+
+  /// No description provided for @charter9Body.
+  ///
+  /// In fr, this message translates to:
+  /// **'Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.'**
+  String get charter9Body;
+
+  /// No description provided for @icsPaste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coller le lien copié'**
+  String get icsPaste;
+
+  /// No description provided for @icsClipboardEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien à coller : copie d\'abord le lien de ton agenda.'**
+  String get icsClipboardEmpty;
+
+  /// No description provided for @icsWhere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Où le trouver : dans ADE, « Exporter l\'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.'**
+  String get icsWhere;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

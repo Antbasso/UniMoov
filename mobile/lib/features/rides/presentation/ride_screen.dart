@@ -371,10 +371,7 @@ class _RideContentState extends ConsumerState<_RideContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          tripTitle(l10n, ride.direction, ride.day),
-          style: UmText.h3.copyWith(color: c.ink),
-        ),
+        title: Text(tripTitle(l10n, ride.direction, ride.day)),
         actions: [
           // Chat du trajet (cahier §6), créé à la confirmation.
           IconButton(

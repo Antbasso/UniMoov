@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../../l10n/app_localizations.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -83,7 +86,7 @@ List<LatLng> _areaCorners(LatLng center) {
 
 /// Carte d'un trajet : tracé, arrêts numérotés dans l'ordre, campus, zones approximatives.
 /// `onTap` sert au choix d'un point de rendez-vous ; `pin` montre le point choisi.
-class RideMap extends ConsumerWidget {
+class RideMap extends ConsumerStatefulWidget {
   const RideMap({
     super.key,
     required this.stops,
@@ -112,8 +115,29 @@ class RideMap extends ConsumerWidget {
   final LatLng? live;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RideMap> createState() => _RideMapState();
+}
+
+class _RideMapState extends ConsumerState<RideMap> {
+  final _map = MapController();
+
+  /// Trajet en cours : la carte se centre sur le véhicule (zoom de rue).
+  void _focusVehicle() {
+    final live = widget.live;
+    if (live != null) _map.move(live, UmSize.mapMaxZoom);
+  }
+
+  @override
+  void dispose() {
+    _map.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = context.umColors;
+    final RideMap(:stops, :route, :areas, :pin, :onTap, :live, :dashed, :semanticLabel) = widget;
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
     final points = [
       ...line,
@@ -136,11 +160,12 @@ class RideMap extends ConsumerWidget {
       ...areas,
     ];
 
-    return Semantics(
+    final map = Semantics(
       label: semanticLabel,
       // La liste des arrêts, sous la carte, porte la même information pour les lecteurs d'écran.
       excludeSemantics: onTap == null,
       child: FlutterMap(
+        mapController: _map,
         options: MapOptions(
           backgroundColor: c.surfaceTint,
           initialCameraFit: points.length < 2
@@ -155,7 +180,7 @@ class RideMap extends ConsumerWidget {
           interactionOptions: const InteractionOptions(
             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
           ),
-          onTap: onTap == null ? null : (_, point) => onTap!(point),
+          onTap: onTap == null ? null : (_, point) => onTap(point),
         ),
         children: [
           const BaseMapLayer(),
@@ -206,7 +231,7 @@ class RideMap extends ConsumerWidget {
                 ),
               if (live != null)
                 Marker(
-                  point: live!,
+                  point: live,
                   width: UmSize.mapMarker,
                   height: UmSize.mapMarker,
                   child: DecoratedBox(
@@ -225,7 +250,7 @@ class RideMap extends ConsumerWidget {
                 ),
               if (pin != null)
                 Marker(
-                  point: pin!,
+                  point: pin,
                   width: UmSize.mapMarker,
                   height: UmSize.mapMarker,
                   alignment: Alignment.topCenter,
@@ -236,6 +261,31 @@ class RideMap extends ConsumerWidget {
           const MapAttribution(),
         ],
       ),
+    );
+    if (live == null) return map;
+    // Petit bouton dans le coin bas gauche (l'attribution est à droite) : voir le véhicule.
+    return Stack(
+      children: [
+        Positioned.fill(child: map),
+        Positioned(
+          left: UmSpace.s3,
+          bottom: UmSpace.s3,
+          child: Material(
+            color: c.surfaceRaised,
+            shape: const CircleBorder(),
+            elevation: 2,
+            child: IconButton(
+              tooltip: l10n.mapFocusVehicle,
+              constraints: const BoxConstraints(
+                minWidth: UmSize.tapTarget,
+                minHeight: UmSize.tapTarget,
+              ),
+              icon: Icon(Icons.my_location_rounded, color: c.brandStrong),
+              onPressed: _focusVehicle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -31,6 +31,7 @@ import '../../features/rides/presentation/suggestions_screen.dart';
 import '../../features/trust/domain/trust.dart';
 import '../../features/trust/presentation/dispute_screen.dart';
 import '../../features/trust/presentation/reliability_screen.dart';
+import '../../features/trust/presentation/charter_screen.dart';
 import '../../features/achievements/presentation/achievements_screen.dart';
 import '../../features/wallet/presentation/payout_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
@@ -68,6 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: AppRoutes.signup, builder: (_, _) => const SignupScreen()),
       GoRoute(path: AppRoutes.onboarding, builder: (_, _) => const OnboardingScreen()),
+      GoRoute(path: AppRoutes.charter, builder: (_, _) => const CharterScreen()),
       // Onglets : messages, accueil, profil (barre du bas, trajet en cours visible partout).
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => AppShell(shell: shell),
@@ -148,8 +150,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     parentNavigatorKey: _rootKey,
                     builder: (_, _) => const ScheduleScreen(),
                     routes: [
-                      GoRoute(path: 'ics', builder: (_, _) => const EditIcsScreen()),
-                      GoRoute(path: 'manual', builder: (_, _) => const EditManualScheduleScreen()),
+                      // Au-dessus de l'écran de l'agenda (navigateur racine), sinon ils
+                      // s'ouvraient dessous, sans rien montrer.
+                      GoRoute(
+                        path: 'ics',
+                        parentNavigatorKey: _rootKey,
+                        builder: (_, _) => const EditIcsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'manual',
+                        parentNavigatorKey: _rootKey,
+                        builder: (_, _) => const EditManualScheduleScreen(),
+                      ),
                     ],
                   ),
                 ],

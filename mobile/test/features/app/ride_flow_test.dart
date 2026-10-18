@@ -40,9 +40,12 @@ void main() {
     await tester.ensureVisible(find.text('Détail du calcul'));
     await tapText(tester, 'Détail du calcul');
     expect(find.text('15,9 km × 5,8 L/100 km = 0,92 L'), findsOneWidget);
-    expect(find.text('9 km à 3 (conducteur compris)'), findsOneWidget);
-    expect(find.text('Ta part du carburant'), findsOneWidget);
-    expect(find.text('Frais de service'), findsOneWidget);
+    // Étapes numérotées : carburant, partage par tronçon, puis l'addition jusqu'au total payé.
+    expect(find.text('1. Le carburant du trajet'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^9 km \(.*\) ÷ 3$')), findsOneWidget);
+    expect(find.text('Ta part du carburant'), findsNWidgets(2));
+    expect(find.text('+ frais de service Uni-Moov'), findsOneWidget);
+    expect(find.text('= Tu paies'), findsOneWidget);
     expect(find.byIcon(Icons.schedule_rounded), findsNWidgets(4));
     // Chat en icône en haut, plus de grand bouton en double.
     expect(find.byTooltip('Chat du trajet'), findsOneWidget);
@@ -94,6 +97,9 @@ void main() {
     await tester.ensureVisible(find.text('Détail du calcul'));
     await tapText(tester, 'Détail du calcul');
     expect(find.text('Part de Hugo'), findsOneWidget);
+    // La somme des parts retombe sur le total reçu, vérifiée avec la part du conducteur.
+    expect(find.text('= Tu reçois au total'), findsOneWidget);
+    expect(find.textContaining('Vérification : 1,12'), findsOneWidget);
     expect(find.text('Inès Robert'), findsOneWidget);
     await tapText(tester, 'Ajouter des passagers');
 
