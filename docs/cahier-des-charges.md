@@ -81,7 +81,7 @@ Architecture façon Teams, trois niveaux de conversation :
 
 - Bouton de mise en pause visible directement sur l'écran principal (pas enfoui dans les paramètres).
 - La pause n'affecte pas le score de fiabilité.
-- Programmable à l'avance avec récurrence (ex. une semaine sur deux, pour les rythmes d'alternance).
+- Programmable à l'avance comme un événement d'agenda : des dates (du … au …), certains jours chaque semaine (ex. tous les lundis) jusqu'à une date, ou une période qui se répète (toutes les N semaines, tous les N mois, par exemple pour l'alternance) jusqu'à une date.
 
 ## 13. Plateforme
 

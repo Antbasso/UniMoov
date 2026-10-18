@@ -102,7 +102,7 @@ export class ProfileRepo {
 
   async listPauses(userId: string) {
     return this.db
-      .select({ id: pauses.id, startsOn: pauses.startsOn, endsOn: pauses.endsOn, recurrence: pauses.recurrence })
+      .select({ id: pauses.id, startsOn: pauses.startsOn, endsOn: pauses.endsOn, recurrence: pauses.recurrence, repeatUntil: pauses.repeatUntil })
       .from(pauses)
       .where(eq(pauses.userId, userId))
       .orderBy(asc(pauses.startsOn));
@@ -117,7 +117,7 @@ export class ProfileRepo {
     const [created] = await this.db
       .insert(pauses)
       .values({ userId, ...pause })
-      .returning({ id: pauses.id, startsOn: pauses.startsOn, endsOn: pauses.endsOn, recurrence: pauses.recurrence });
+      .returning({ id: pauses.id, startsOn: pauses.startsOn, endsOn: pauses.endsOn, recurrence: pauses.recurrence, repeatUntil: pauses.repeatUntil });
     return created!;
   }
 

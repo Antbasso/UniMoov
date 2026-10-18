@@ -20,7 +20,8 @@ Base : `/api/v1`, JSON, UTF-8. Authentification `Authorization: Bearer <jwt>` sa
 - `PUT /me/vehicle` `{ consumptionLPer100km, defaultSeats, maxDetourMinutes }` (un seul véhicule), `DELETE /me/vehicle` (repasse en `always_passenger`).
 - `PATCH /me/preferences` `{ roleMode?, defaultNavApp? }` : `auto` et `always_driver` exigent un véhicule (`409 vehicle_required`). Détour max : dans le véhicule ; notifications : M6.
 - `PUT /me/onboarding/{step}` `{ status: "done" | "skipped" }`, étapes `profile`, `vehicle`, `preferences`, `calendar` : l'app reprend à `onboarding.nextStep`.
-- `GET /me/pauses`, `POST /me/pauses` `{ startsOn, endsOn, recurrence: null | "weekly:2" | "weekly:3" | "weekly:4" }` (une semaine sur N, un an au plus), `DELETE /me/pauses/{id}` (404 si la pause n'appartient pas à l'utilisateur).
+- `GET /me/pauses`, `POST /me/pauses` `{ startsOn, endsOn, recurrence, repeatUntil }`, `DELETE /me/pauses/{id}` (404 si la pause n'appartient pas à l'utilisateur). Comme un événement d'agenda : la première pause va de `startsOn` à `endsOn` ; `recurrence` la répète jusqu'à `repeatUntil` (obligatoire avec une récurrence) : `null` (une seule fois), `"weekly:N"` (toutes les N semaines, 1 à 8 ; la première pause tient dans 7 × N jours), `"monthly:N"` (tous les N mois, 1 à 6, même jour du mois ; 28 jours au plus), `"days:1,3"` (chaque semaine, les jours ISO donnés, 1 = lundi). Un an au plus du début à la fin. `400 invalid_pause` sinon.
+- `GET /addresses?q=` (3 caractères au moins, 120 par heure) → `{ suggestions: [{ label }] }` : adresses existantes proposées pendant la saisie (Base Adresse Nationale, autocomplétion, proches du campus) ; l'app envoie ensuite le libellé choisi à `PUT /me/address`.
 - `GET /users/{id}/public` : prénom, photo, score uniquement.
 
 ## Agenda

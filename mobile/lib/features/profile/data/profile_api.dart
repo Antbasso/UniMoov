@@ -20,7 +20,7 @@ abstract interface class ProfileApi {
   Future<Me> setDefaultNavApp(String app);
   Future<Me> setStep(OnboardingStep step, StepStatus status);
   Future<List<Pause>> listPauses();
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks);
+  Future<Pause> addPause(PauseDraft pause);
   Future<void> removePause(String id);
 }
 
@@ -85,11 +85,8 @@ class DioProfileApi implements ProfileApi {
   });
 
   @override
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks) => guardApi(() async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '$_me/pauses',
-      data: Pause.requestBody(startsOn, endsOn, everyWeeks),
-    );
+  Future<Pause> addPause(PauseDraft pause) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>('$_me/pauses', data: pause.toJson());
     return Pause.fromJson(response.data!);
   });
 

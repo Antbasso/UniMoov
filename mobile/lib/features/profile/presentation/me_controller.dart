@@ -51,8 +51,8 @@ class PausesController extends AsyncNotifier<List<Pause>> {
   @override
   Future<List<Pause>> build() => ref.watch(profileApiProvider).listPauses();
 
-  Future<void> add(DateTime startsOn, DateTime endsOn, int? everyWeeks) async {
-    await _api.addPause(startsOn, endsOn, everyWeeks);
+  Future<void> add(PauseDraft pause) async {
+    await _api.addPause(pause);
     state = AsyncData(await _api.listPauses());
     await ref.read(meProvider.notifier).reload();
   }

@@ -552,14 +552,17 @@ class DemoBackend
   }
 
   @override
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks) async {
+  Future<Pause> addPause(PauseDraft draft) async {
     await _wait();
-    if (endsOn.isBefore(startsOn)) throw const ApiException('invalid_pause', '', statusCode: 400);
+    if (draft.endsOn.isBefore(draft.startsOn) || !draft.fitsPeriod) {
+      throw const ApiException('invalid_pause', '', statusCode: 400);
+    }
     final pause = Pause(
       id: _id('pause'),
-      startsOn: startsOn,
-      endsOn: endsOn,
-      everyWeeks: everyWeeks,
+      startsOn: draft.startsOn,
+      endsOn: draft.endsOn,
+      repeat: draft.repeat,
+      repeatUntil: draft.repeatUntil,
     );
     _me.pauses.add(pause);
     return pause;
@@ -1900,7 +1903,15 @@ class _DemoAccount {
       nextStep: next,
       onboardingCompleted: next == null,
       discoveryMode: home == null,
-      pausedToday: pauses.any((p) => !today.isBefore(p.startsOn) && !today.isAfter(p.endsOn)),
+      pausedToday: pauses.any(
+        (p) => pauseCovers(
+          startsOn: p.startsOn,
+          endsOn: p.endsOn,
+          repeat: p.repeat,
+          repeatUntil: p.repeatUntil,
+          day: today,
+        ),
+      ),
       defaultNavApp: defaultNavApp,
     );
   }

@@ -71,7 +71,8 @@ export class AccountRepo {
             FROM vehicles WHERE user_id = ${userId}`)
         )[0] ?? null,
       pauses: await all(sql`
-        SELECT starts_on AS "startsOn", ends_on AS "endsOn" FROM pauses WHERE user_id = ${userId} ORDER BY starts_on`),
+        SELECT starts_on AS "startsOn", ends_on AS "endsOn", recurrence, repeat_until AS "repeatUntil"
+        FROM pauses WHERE user_id = ${userId} ORDER BY starts_on`),
       calendarConnections: await all(sql`
         SELECT provider, consented_at AS "consentedAt", last_synced_at AS "lastSyncedAt"
         FROM calendar_connections WHERE user_id = ${userId}`),

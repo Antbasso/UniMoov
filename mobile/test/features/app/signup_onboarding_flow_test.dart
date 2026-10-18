@@ -148,6 +148,17 @@ void main() {
     await tapText(tester, 'Enregistrer la pause');
     expect(find.textContaining('Du '), findsOneWidget);
 
+    // Comme dans un agenda : tous les lundis, jusqu'à une date.
+    await tapText(tester, 'Mettre en pause');
+    await tapText(tester, 'Certains jours');
+    await tapText(tester, 'lun.');
+    await tapText(tester, 'Choisir la date de fin');
+    await tapText(tester, 'OK');
+    expect(find.textContaining('Tous les lundis jusqu'), findsOneWidget);
+    await tapText(tester, 'Enregistrer la pause');
+    expect(find.textContaining('Tous les lundis jusqu'), findsOneWidget);
+    expect((backend.lastPause!.repeat! as RepeatDays).weekdays, {1});
+
     await tapText(tester, 'Me déconnecter');
     expect(find.text('Créer mon compte'), findsOneWidget);
     expect(storage.tokens, isNull);

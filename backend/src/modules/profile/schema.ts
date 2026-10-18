@@ -58,9 +58,14 @@ export const pauseSchema = z.object({
   id: z.uuid(),
   startsOn: isoDate,
   endsOn: isoDate,
-  recurrence: z.enum(['weekly:2', 'weekly:3', 'weekly:4']).nullable(),
+  /** `weekly:N` (1-8), `monthly:N` (1-6) ou `days:1,3` (jours ISO), voir docs/api.md. */
+  recurrence: z
+    .string()
+    .regex(/^(weekly:[1-8]|monthly:[1-6]|days:[1-7](,[1-7]){0,6})$/)
+    .nullable(),
+  repeatUntil: isoDate.nullable(),
 });
-export const pauseBody = pauseSchema.omit({ id: true });
+export const pauseBody = pauseSchema.omit({ id: true }).extend({ repeatUntil: isoDate.nullable().default(null) });
 export const pausesResponse = z.object({ pauses: z.array(pauseSchema) });
 export const idParams = z.object({ id: z.uuid() });
 

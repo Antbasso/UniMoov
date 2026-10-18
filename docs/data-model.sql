@@ -58,7 +58,9 @@ CREATE TABLE pauses (                     -- pause programmée, récurrence opti
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   starts_on date NOT NULL,
   ends_on date NOT NULL,
-  recurrence text                         -- ex. 'weekly:2' (une semaine sur deux)
+  recurrence text,                        -- 'weekly:N', 'monthly:N' ou 'days:1,3' (jours ISO)
+  repeat_until date,                      -- fin de la répétition (avec recurrence seulement)
+  CHECK ((recurrence IS NULL) = (repeat_until IS NULL) AND (repeat_until IS NULL OR repeat_until >= ends_on))
 );
 CREATE INDEX pauses_user_idx ON pauses (user_id);
 

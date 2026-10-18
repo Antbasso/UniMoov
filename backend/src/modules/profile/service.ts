@@ -11,7 +11,7 @@ import {
   type OnboardingStep,
   type Pause,
   parisDate,
-  pauseLengthDays,
+  pauseProblem,
   type RoleMode,
   type StepStatus,
 } from './domain.js';
@@ -19,7 +19,6 @@ import type { ProfileRepo } from './repo.js';
 import type { MeResponse } from './schema.js';
 
 const MAX_PAUSES = 20;
-const MAX_PAUSE_DAYS = 366;
 
 /** Retire les clés absentes du corps PATCH (exactOptionalPropertyTypes). */
 function withoutUndefined<T extends object>(values: T): { [K in keyof T]?: Exclude<T[K], undefined> } {
@@ -159,12 +158,8 @@ export class ProfileService {
   }
 
   async addPause(userId: string, pause: Pause) {
-    if (pause.endsOn < pause.startsOn) {
-      throw new AppError(400, 'invalid_pause', 'La fin de la pause précède son début');
-    }
-    if (pauseLengthDays(pause) > MAX_PAUSE_DAYS) {
-      throw new AppError(400, 'invalid_pause', 'Une pause dure au plus un an');
-    }
+    const problem = pauseProblem(pause);
+    if (problem) throw new AppError(400, 'invalid_pause', problem);
     if ((await this.repo.countPauses(userId)) >= MAX_PAUSES) {
       throw new AppError(409, 'too_many_pauses', 'Trop de pauses programmées');
     }

@@ -83,7 +83,8 @@ export const pauses = pgTable('pauses', {
     .references(() => users.id, { onDelete: 'cascade' }),
   startsOn: date('starts_on').notNull(),
   endsOn: date('ends_on').notNull(),
-  recurrence: text('recurrence').$type<'weekly:2' | 'weekly:3' | 'weekly:4'>(),
+  recurrence: text('recurrence'),
+  repeatUntil: date('repeat_until'),
 });
 
 export const verificationCodes = pgTable('verification_codes', {

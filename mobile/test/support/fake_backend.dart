@@ -196,16 +196,20 @@ class FakeBackend
   @override
   Future<List<Pause>> listPauses() async => List.of(_me.pauses);
 
+  Pause? lastPause;
+
   @override
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks) async {
+  Future<Pause> addPause(PauseDraft draft) async {
     _maybeFail();
     final pause = Pause(
       id: 'pause-${_me.pauses.length + 1}',
-      startsOn: startsOn,
-      endsOn: endsOn,
-      everyWeeks: everyWeeks,
+      startsOn: draft.startsOn,
+      endsOn: draft.endsOn,
+      repeat: draft.repeat,
+      repeatUntil: draft.repeatUntil,
     );
     _me.pauses.add(pause);
+    lastPause = pause;
     return pause;
   }
 

@@ -108,12 +108,12 @@ export class MatchingRepo {
   async pausesFor(userIds: readonly string[], db: DbOrTx = this.db): Promise<Map<string, Pause[]>> {
     const map = new Map<string, Pause[]>();
     if (userIds.length === 0) return map;
-    const { rows } = await db.execute<{ user_id: string; starts_on: string; ends_on: string; recurrence: Pause['recurrence'] }>(
-      sql`SELECT user_id, starts_on::text, ends_on::text, recurrence FROM pauses
+    const { rows } = await db.execute<{ user_id: string; starts_on: string; ends_on: string; recurrence: Pause['recurrence']; repeat_until: string | null }>(
+      sql`SELECT user_id, starts_on::text, ends_on::text, recurrence, repeat_until::text FROM pauses
           WHERE user_id IN (${sql.join(userIds.map((id) => sql`${id}::uuid`), sql`, `)})`,
     );
     for (const r of rows) {
-      map.set(r.user_id, [...(map.get(r.user_id) ?? []), { startsOn: r.starts_on, endsOn: r.ends_on, recurrence: r.recurrence }]);
+      map.set(r.user_id, [...(map.get(r.user_id) ?? []), { startsOn: r.starts_on, endsOn: r.ends_on, recurrence: r.recurrence, repeatUntil: r.repeat_until }]);
     }
     return map;
   }

@@ -129,13 +129,33 @@ describe('pauses', () => {
   it('une pause en cours met l’utilisateur en pause aujourd’hui', async () => {
     const created = await call(hugo, 'POST', '/me/pauses', {
       startsOn: '2026-11-02',
-      endsOn: '2027-06-30',
+      endsOn: '2026-11-08',
       recurrence: 'weekly:2',
+      repeatUntil: '2027-06-30',
     });
     expect(created.statusCode).toBe(201);
     expect((await call(hugo, 'GET', '/me')).json()).toMatchObject({ pausedToday: true });
     ctx.clock.advance(7 * 86_400_000); // semaine suivante : pas de pause
     expect((await call(hugo, 'GET', '/me')).json()).toMatchObject({ pausedToday: false });
+    expect((await call(hugo, 'GET', '/me/pauses')).json<{ pauses: unknown[] }>().pauses).toContainEqual(
+      expect.objectContaining({ recurrence: 'weekly:2', repeatUntil: '2027-06-30' }),
+    );
+  });
+
+  it('certains jours chaque semaine : le jour même seulement', async () => {
+    const today = new Date(ctx.clock.now);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const weekday = ((today.getUTCDay() + 6) % 7) + 1;
+    const until = new Date(today.getTime() + 30 * 86_400_000);
+    const created = await call(lea, 'POST', '/me/pauses', {
+      startsOn: iso(today),
+      endsOn: iso(today),
+      recurrence: `days:${weekday}`,
+      repeatUntil: iso(until),
+    });
+    expect(created.statusCode).toBe(201);
+    expect((await call(lea, 'GET', '/me')).json()).toMatchObject({ pausedToday: true });
+    await call(lea, 'DELETE', `/me/pauses/${created.json<{ id: string }>().id}`);
   });
 
   it('refuse une pause à l’envers ou trop longue', async () => {
@@ -149,6 +169,8 @@ describe('pauses', () => {
       recurrence: 'daily',
     });
     expect(badRecurrence.statusCode).toBe(400);
+    const noEnd = await call(hugo, 'POST', '/me/pauses', { startsOn: '2026-12-01', endsOn: '2026-12-01', recurrence: 'weekly:1' });
+    expect(noEnd.json()).toMatchObject({ error: { code: 'invalid_pause' } });
   });
 });
 

@@ -64,6 +64,13 @@
       "when": 1792246575434,
       "tag": "0008_security_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792296940988,
+      "tag": "0009_pause_recurrence",
+      "breakpoints": true
     }
   ]
 }

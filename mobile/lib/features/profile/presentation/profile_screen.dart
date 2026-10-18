@@ -13,6 +13,7 @@ import '../../auth/presentation/session_controller.dart';
 import '../domain/me.dart';
 import '../domain/vehicle_input.dart';
 import 'me_controller.dart';
+import 'pause_format.dart';
 import 'pause_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -149,13 +150,13 @@ class _PausesSection extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  [
-                    l10n.pauseRange(
-                      formatPauseDate(pause.startsOn, l10n.localeName),
-                      formatPauseDate(pause.endsOn, l10n.localeName),
-                    ),
-                    if (pause.everyWeeks != null) l10n.pauseAlternating(pause.everyWeeks!),
-                  ].join(', '),
+                  describePause(
+                    startsOn: pause.startsOn,
+                    endsOn: pause.endsOn,
+                    repeat: pause.repeat,
+                    repeatUntil: pause.repeatUntil,
+                    l10n: l10n,
+                  ),
                   style: UmText.bodySm.copyWith(color: c.ink),
                 ),
               ),

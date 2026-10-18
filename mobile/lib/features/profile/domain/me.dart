@@ -117,32 +117,135 @@ class Me {
   final String? defaultNavApp;
 }
 
-/// Pause programmée ; `everyWeeks` : une semaine sur N (alternance), `null` : continue.
-class Pause {
-  const Pause({required this.id, required this.startsOn, required this.endsOn, this.everyWeeks});
+/// Répétition d'une pause, comme un événement d'agenda (cahier §12, docs/api.md).
+sealed class PauseRepeat {
+  const PauseRepeat();
 
-  factory Pause.fromJson(Map<String, dynamic> json) {
-    final recurrence = json['recurrence'] as String?;
-    return Pause(
-      id: json['id'] as String,
-      startsOn: DateTime.parse(json['startsOn'] as String),
-      endsOn: DateTime.parse(json['endsOn'] as String),
-      everyWeeks: recurrence == null ? null : int.parse(recurrence.split(':').last),
-    );
+  static PauseRepeat? fromWire(String? wire) {
+    if (wire == null) return null;
+    final [kind, value] = wire.split(':');
+    return switch (kind) {
+      'weekly' => RepeatWeekly(int.parse(value)),
+      'monthly' => RepeatMonthly(int.parse(value)),
+      'days' => RepeatDays({for (final d in value.split(',')) int.parse(d)}),
+      _ => null,
+    };
   }
+
+  String get wire;
+}
+
+/// La première occurrence revient toutes les `every` semaines (1 : chaque semaine).
+class RepeatWeekly extends PauseRepeat {
+  const RepeatWeekly(this.every);
+  final int every;
+  @override
+  String get wire => 'weekly:$every';
+}
+
+/// La première occurrence revient tous les `every` mois, au même jour du mois.
+class RepeatMonthly extends PauseRepeat {
+  const RepeatMonthly(this.every);
+  final int every;
+  @override
+  String get wire => 'monthly:$every';
+}
+
+/// Chaque semaine, les jours ISO donnés (1 = lundi).
+class RepeatDays extends PauseRepeat {
+  const RepeatDays(this.weekdays);
+  final Set<int> weekdays;
+  @override
+  String get wire => 'days:${(weekdays.toList()..sort()).join(',')}';
+}
+
+/// Pause programmée : première occurrence (du `startsOn` au `endsOn`), répétée jusqu'à
+/// `repeatUntil` si `repeat` est donné.
+class Pause {
+  const Pause({
+    required this.id,
+    required this.startsOn,
+    required this.endsOn,
+    this.repeat,
+    this.repeatUntil,
+  });
+
+  factory Pause.fromJson(Map<String, dynamic> json) => Pause(
+    id: json['id'] as String,
+    startsOn: DateTime.parse(json['startsOn'] as String),
+    endsOn: DateTime.parse(json['endsOn'] as String),
+    repeat: PauseRepeat.fromWire(json['recurrence'] as String?),
+    repeatUntil: json['repeatUntil'] == null ? null : DateTime.parse(json['repeatUntil'] as String),
+  );
 
   final String id;
   final DateTime startsOn;
   final DateTime endsOn;
-  final int? everyWeeks;
+  final PauseRepeat? repeat;
+  final DateTime? repeatUntil;
 
   static String isoDate(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+}
 
-  static Map<String, Object?> requestBody(DateTime startsOn, DateTime endsOn, int? everyWeeks) => {
-    'startsOn': isoDate(startsOn),
-    'endsOn': isoDate(endsOn),
-    'recurrence': everyWeeks == null ? null : 'weekly:$everyWeeks',
+/// Pause à créer.
+class PauseDraft {
+  const PauseDraft({required this.startsOn, required this.endsOn, this.repeat, this.repeatUntil});
+
+  final DateTime startsOn;
+  final DateTime endsOn;
+  final PauseRepeat? repeat;
+  final DateTime? repeatUntil;
+
+  Map<String, Object?> toJson() => {
+    'startsOn': Pause.isoDate(startsOn),
+    'endsOn': Pause.isoDate(endsOn),
+    'recurrence': repeat?.wire,
+    'repeatUntil': repeat == null || repeatUntil == null ? null : Pause.isoDate(repeatUntil!),
   };
+
+  /// Même règle que le serveur : la première occurrence tient dans sa période.
+  bool get fitsPeriod => switch (repeat) {
+    RepeatWeekly(:final every) => endsOn.difference(startsOn).inDays < 7 * every,
+    RepeatMonthly() => endsOn.difference(startsOn).inDays < 28,
+    _ => true,
+  };
+}
+
+/// Même règle que le serveur (backend/src/modules/profile/domain.ts) : la pause couvre-t-elle
+/// ce jour ? Sert au mode démo, qui n'a pas de serveur.
+bool pauseCovers({
+  required DateTime startsOn,
+  required DateTime endsOn,
+  required PauseRepeat? repeat,
+  required DateTime? repeatUntil,
+  required DateTime day,
+}) {
+  int days(DateTime d) => DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ 86400000;
+  final today = days(day);
+  final start = days(startsOn);
+  final length = days(endsOn) - start + 1;
+  if (today < start) return false;
+  if (repeat == null || repeatUntil == null) return today < start + length;
+  if (today > days(repeatUntil)) return false;
+  switch (repeat) {
+    case RepeatDays(:final weekdays):
+      return weekdays.contains(day.weekday);
+    case RepeatWeekly(:final every):
+      return (today - start) % (7 * every) < length;
+    case RepeatMonthly(:final every):
+      for (var k = 0; ; k += every) {
+        final lastDay = DateTime.utc(startsOn.year, startsOn.month + k + 1, 0).day;
+        final occurrence = days(
+          DateTime.utc(
+            startsOn.year,
+            startsOn.month + k,
+            startsOn.day > lastDay ? lastDay : startsOn.day,
+          ),
+        );
+        if (occurrence > today) return false;
+        if (today < occurrence + length) return true;
+      }
+  }
 }

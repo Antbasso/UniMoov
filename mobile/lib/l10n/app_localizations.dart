@@ -61,7 +61,8 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -69,7 +70,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -896,11 +898,41 @@ abstract class AppLocalizations {
   /// **'Du {start} au {end}'**
   String pauseRange(String start, String end);
 
-  /// No description provided for @pauseAlternating.
+  /// No description provided for @pauseOn.
   ///
   /// In fr, this message translates to:
-  /// **'une semaine sur {weeks}'**
-  String pauseAlternating(int weeks);
+  /// **'Le {date}'**
+  String pauseOn(String date);
+
+  /// No description provided for @pauseUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'jusqu\'au {date}'**
+  String pauseUntil(String date);
+
+  /// No description provided for @pauseEveryWeekdays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les {days}'**
+  String pauseEveryWeekdays(String days);
+
+  /// No description provided for @pauseEveryWeeks.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{chaque semaine} other{toutes les {count} semaines}}'**
+  String pauseEveryWeeks(int count);
+
+  /// No description provided for @pauseEveryMonths.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{chaque mois} other{tous les {count} mois}}'**
+  String pauseEveryMonths(int count);
+
+  /// No description provided for @and.
+  ///
+  /// In fr, this message translates to:
+  /// **'et'**
+  String get and;
 
   /// No description provided for @pauseDelete.
   ///
@@ -926,11 +958,83 @@ abstract class AppLocalizations {
   /// **'Choisir les dates'**
   String get pauseChooseDates;
 
-  /// No description provided for @pauseAlternatingToggle.
+  /// No description provided for @pauseModeDates.
   ///
   /// In fr, this message translates to:
-  /// **'Une semaine sur deux (alternance)'**
-  String get pauseAlternatingToggle;
+  /// **'Des dates'**
+  String get pauseModeDates;
+
+  /// No description provided for @pauseModeDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Certains jours'**
+  String get pauseModeDays;
+
+  /// No description provided for @pauseModeRepeat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répéter'**
+  String get pauseModeRepeat;
+
+  /// No description provided for @pauseModeLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Type de pause'**
+  String get pauseModeLabel;
+
+  /// No description provided for @pauseDatesLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Période de pause'**
+  String get pauseDatesLabel;
+
+  /// No description provided for @pauseDaysLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les jours de pause chaque semaine'**
+  String get pauseDaysLabel;
+
+  /// No description provided for @pauseFirstLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Première pause'**
+  String get pauseFirstLabel;
+
+  /// No description provided for @pauseFrequencyLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fréquence'**
+  String get pauseFrequencyLabel;
+
+  /// No description provided for @pauseUntilLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'au'**
+  String get pauseUntilLabel;
+
+  /// No description provided for @pauseChooseUntil.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir la date de fin'**
+  String get pauseChooseUntil;
+
+  /// No description provided for @pauseChooseFirst.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir la première pause'**
+  String get pauseChooseFirst;
+
+  /// No description provided for @pauseNeedDays.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis au moins un jour.'**
+  String get pauseNeedDays;
+
+  /// No description provided for @pauseTooLongForPeriod.
+  ///
+  /// In fr, this message translates to:
+  /// **'La pause est plus longue que sa fréquence : raccourcis-la.'**
+  String get pauseTooLongForPeriod;
 
   /// No description provided for @pauseSave.
   ///
@@ -3357,7 +3461,8 @@ abstract class AppLocalizations {
   String get requestReject;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -3366,7 +3471,8 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

@@ -253,14 +253,48 @@
       }
     }
   },
-  "pauseAlternating": "une semaine sur {weeks}",
-  "@pauseAlternating": {
+  "pauseOn": "Le {date}",
+  "@pauseOn": {
     "placeholders": {
-      "weeks": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseUntil": "jusqu'au {date}",
+  "@pauseUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseEveryWeekdays": "Tous les {days}",
+  "@pauseEveryWeekdays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseEveryWeeks": "{count, plural, =1{chaque semaine} other{toutes les {count} semaines}}",
+  "@pauseEveryWeeks": {
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
   },
+  "pauseEveryMonths": "{count, plural, =1{chaque mois} other{tous les {count} mois}}",
+  "@pauseEveryMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "and": "et",
+
   "pauseDelete": "Supprimer la pause du {start}",
   "@pauseDelete": {
     "placeholders": {
@@ -272,7 +306,19 @@
   "pauseSheetTitle": "Mettre en pause",
   "pauseSheetBody": "Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n'est pas touché.",
   "pauseChooseDates": "Choisir les dates",
-  "pauseAlternatingToggle": "Une semaine sur deux (alternance)",
+  "pauseModeDates": "Des dates",
+  "pauseModeDays": "Certains jours",
+  "pauseModeRepeat": "Répéter",
+  "pauseModeLabel": "Type de pause",
+  "pauseDatesLabel": "Période de pause",
+  "pauseDaysLabel": "Les jours de pause chaque semaine",
+  "pauseFirstLabel": "Première pause",
+  "pauseFrequencyLabel": "Fréquence",
+  "pauseUntilLabel": "Jusqu'au",
+  "pauseChooseUntil": "Choisir la date de fin",
+  "pauseChooseFirst": "Choisir la première pause",
+  "pauseNeedDays": "Choisis au moins un jour.",
+  "pauseTooLongForPeriod": "La pause est plus longue que sa fréquence : raccourcis-la.",
   "pauseSave": "Enregistrer la pause",
   "rideStatusWaiting": "En attente",
   "campusName": "Campus d'Annecy",
