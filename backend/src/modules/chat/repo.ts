@@ -30,8 +30,8 @@ export interface CarpoolInfo {
   direction: 'to_campus' | 'from_campus';
   /** Heure du trajet proposé (offre). */
   time: Date | null;
-  /** Personnes montées grâce à ce message. */
-  joined: { userId: string; firstName: string }[];
+  /** Personnes montées grâce à ce message, et dans quelle voiture. */
+  joined: { userId: string; firstName: string; rideId: string }[];
 }
 
 export interface MessageRow {
@@ -44,8 +44,8 @@ export interface MessageRow {
 }
 
 /** Colonnes d'un message, avec sa proposition de covoiturage s'il en porte une. */
-const MESSAGE_COLUMNS = sql`m.*, cr.target_time AS carpool_time,
-  (SELECT coalesce(json_agg(json_build_object('userId', u.id, 'firstName', u.first_name) ORDER BY j.created_at), '[]'::json)
+const MESSAGE_COLUMNS = sql`m.*, coalesce(cr.target_time, m.carpool_time) AS carpool_when,
+  (SELECT coalesce(json_agg(json_build_object('userId', u.id, 'firstName', u.first_name, 'rideId', j.ride_id) ORDER BY j.created_at), '[]'::json)
      FROM carpool_joins j JOIN users u ON u.id = j.user_id WHERE j.message_id = m.id) AS carpool_joined`;
 
 const date = (v: unknown) => (v ? new Date(v as string) : null);
@@ -70,7 +70,7 @@ const toMessage = (r: Record<string, unknown>): MessageRow => ({
         rideId: (r.carpool_ride_id as string | null) ?? null,
         day: typeof r.carpool_day === 'string' ? r.carpool_day.slice(0, 10) : new Date(r.carpool_day as Date).toISOString().slice(0, 10),
         direction: r.carpool_direction as CarpoolInfo['direction'],
-        time: date(r.carpool_time),
+        time: date(r.carpool_when),
         joined: (r.carpool_joined as CarpoolInfo['joined'] | undefined) ?? [],
       }
     : null,
@@ -190,12 +190,12 @@ export class ChatRepo {
     body: string,
     at: Date,
     db: DbOrTx = this.db,
-    carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string } | null = null,
+    carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string; time?: Date | null } | null = null,
   ): Promise<MessageRow> {
     const { rows } = await db.execute<{ id: string }>(sql`
-      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction)
+      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction, carpool_time)
       VALUES (${conversationId}, ${senderId}, ${body}, ${at}, ${carpool?.kind ?? null}, ${carpool?.rideId ?? null},
-              ${carpool?.day ?? null}, ${carpool?.direction ?? null})
+              ${carpool?.day ?? null}, ${carpool?.direction ?? null}, ${carpool?.time ?? null})
       RETURNING id`);
     await db.execute(sql`UPDATE conversations SET last_message_at = ${at} WHERE id = ${conversationId}`);
     // Ses propres messages sont lus.

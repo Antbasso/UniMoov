@@ -2034,10 +2034,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get carpoolILook => 'Je cherche';
 
   @override
-  String get carpoolNoRide =>
-      'Aucun trajet à conduire ces deux semaines. Accepte d\'abord un trajet comme conducteur.';
-
-  @override
   String carpoolSeats(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2048,9 +2044,6 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get carpoolPickDay => 'Choisir le jour';
 
   @override
   String get carpoolToCampus => 'Aller';
@@ -2166,4 +2159,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get calcTotalReceived => 'Tu reçois';
+
+  @override
+  String get carpoolArriveAt => 'Arrivée au campus';
+
+  @override
+  String get carpoolLeaveAt => 'Départ du campus';
+
+  @override
+  String get carpoolReturnAt => 'Retour, départ du campus';
+
+  @override
+  String get carpoolWithReturn => 'Programmer le retour';
+
+  @override
+  String get carpoolPublishDrive => 'Proposer ce trajet';
+
+  @override
+  String get carpoolExisting => 'Ou un trajet déjà prévu';
 }

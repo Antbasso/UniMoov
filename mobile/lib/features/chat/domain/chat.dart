@@ -15,6 +15,8 @@ class ChatMember {
   final String? photoUrl;
 }
 
+typedef CarpoolJoin = ({String userId, String firstName, String rideId});
+
 /// Proposition de covoiturage dans une conversation : un conducteur offre un trajet, ou un
 /// passager en cherche un ; les autres l'acceptent d'un toucher.
 class Carpool {
@@ -35,7 +37,11 @@ class Carpool {
     time: json['time'] == null ? null : DateTime.parse(json['time'] as String),
     joined: [
       for (final j in json['joined'] as List<dynamic>)
-        ChatMember.fromJson({...j as Map<String, dynamic>, 'photoUrl': null}),
+        (
+          userId: (j as Map<String, dynamic>)['userId'] as String,
+          firstName: j['firstName'] as String,
+          rideId: j['rideId'] as String,
+        ),
     ],
   );
 
@@ -47,8 +53,18 @@ class Carpool {
   /// Heure du trajet proposé (offre).
   final DateTime? time;
 
-  /// Personnes montées grâce à ce message.
-  final List<ChatMember> joined;
+  /// Personnes montées grâce à ce message, et dans quelle voiture.
+  final List<CarpoolJoin> joined;
+
+  /// Trajet où je suis grâce à ce message (j'ai proposé, ou je suis monté, ou j'ai pris
+  /// quelqu'un), pour l'ouvrir d'un toucher.
+  String? rideFor(String? myId, {required bool mine}) {
+    if (isOffer) {
+      return mine || joined.any((j) => j.userId == myId) ? rideId : null;
+    }
+    if (mine) return joined.firstOrNull?.rideId;
+    return null;
+  }
 }
 
 class ChatMessage {

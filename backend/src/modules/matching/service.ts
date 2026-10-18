@@ -549,6 +549,37 @@ export class MatchingService {
   }
 
   /**
+   * Trajet créé à la main par un conducteur (depuis une conversation) : jour, sens, heure ; il
+   * l'accepte d'office et des passagers peuvent le rejoindre. Ses propositions encore ouvertes
+   * sur ce créneau sont refusées ; impossible s'il est déjà engagé.
+   */
+  async createRide(userId: string, input: { day: string; direction: Direction; time: string }): Promise<ProposalView> {
+    if (input.day < this.today()) throw new AppError(400, 'validation_error', 'Choisis un jour à venir');
+    const targetTime = parisToUtc(input.day, input.time);
+    if (targetTime.getTime() <= this.clock().getTime()) throw new AppError(400, 'validation_error', 'Choisis une heure à venir');
+    const setup = await this.repo.driverSetup(userId);
+    if (setup.seats === null) throw new AppError(409, 'vehicle_required', 'Déclare ton véhicule pour conduire');
+    if (!setup.hasHome || !setup.campusId) throw new AppError(409, 'profile_incomplete', 'Ajoute ton adresse pour trouver un trajet');
+    for (const mine of await this.repo.mySlot(userId, input.day, input.direction)) {
+      if (mine.status === 'accepted' || mine.status === 'picked_up' || mine.status === 'requested') {
+        throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
+      }
+      // Simple proposition : refusée (pour un conducteur, sa voiture proposée est annulée).
+      await this.decline(userId, mine.ride_id);
+    }
+    return this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, input.day);
+      const rideId = await this.repo.insertRide(
+        { driverId: userId, passengers: [], totalDetourSeconds: 0, seats: setup.seats!, targetTime },
+        { day: input.day, direction: input.direction, campusId: setup.campusId! },
+        tx,
+      );
+      await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
+      return this.viewFor(userId, rideId, tx);
+    });
+  }
+
+  /**
    * Accord dans une conversation (proposition de trajet ou demande publiée dans un groupe) : le
    * conducteur et le passager ont tous deux dit oui, le passager est donc accepté directement.
    * Mêmes contrôles qu'une place demandée (trajet ouvert, place libre, solde, pas déjà engagé ce

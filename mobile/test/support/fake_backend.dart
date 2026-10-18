@@ -896,6 +896,10 @@ class FakeBackend
     return message;
   }
 
+  /// Propositions publiées depuis l'app.
+  final List<({String? rideId, DateTime? day, bool toCampus, String? time, bool create})>
+  carpoolPosts = [];
+
   /// Lectures d'une conversation seule (la liste la donne déjà en général).
   int conversationCalls = 0;
 
@@ -908,8 +912,12 @@ class FakeBackend
     String? rideId,
     DateTime? day,
     bool toCampus = true,
+    String? time,
+    bool create = false,
   }) async {
     _maybeFail();
+    carpoolPosts.add((rideId: rideId, day: day, toCampus: toCampus, time: time, create: create));
+    if (create) rideId = 'created-${carpoolPosts.length}';
     final c = conversationsById[id]!;
     final message = ChatMessage(
       id: 'msg-${++_chatCounter}',
@@ -952,7 +960,7 @@ class FakeBackend
         time: c.time,
         joined: [
           ...c.joined,
-          ChatMember(userId: idOf(_me.email), firstName: _me.firstName),
+          (userId: idOf(_me.email), firstName: _me.firstName, rideId: c.rideId ?? 'ride-1'),
         ],
       ),
     );

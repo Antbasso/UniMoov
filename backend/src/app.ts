@@ -232,8 +232,14 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const userHub = new UserHub();
     // Accord dans une conversation : le matching ajoute le passager (déclaré plus bas, appelé
     // seulement pendant une requête).
-    const chat = new ChatService(new ChatRepo(modules.db), userHub, settings, notifier, clock, (rideId, passengerId) =>
-      matchingService.joinByAgreement(rideId, passengerId),
+    const chat = new ChatService(
+      new ChatRepo(modules.db),
+      userHub,
+      settings,
+      notifier,
+      clock,
+      (rideId, passengerId) => matchingService.joinByAgreement(rideId, passengerId),
+      async (driverId, input) => (await matchingService.createRide(driverId, input)).id,
     );
     // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>

@@ -295,6 +295,24 @@ export class MatchingRepo {
     return new Map(rows.map((r) => [r.id, { lat: Number(r.lat), lon: Number(r.lon), maxDetourMinutes: r.max_detour }]));
   }
 
+  /** Campus et véhicule d'un conducteur (création d'un trajet à la main). */
+  async driverSetup(userId: string, db: DbOrTx = this.db): Promise<{ campusId: string | null; hasHome: boolean; seats: number | null }> {
+    const { rows } = await db.execute<{ campus_id: string | null; has_home: boolean; seats: number | null }>(sql`
+      SELECT u.campus_id, u.home_location IS NOT NULL AS has_home, v.default_seats AS seats
+      FROM users u LEFT JOIN vehicles v ON v.user_id = u.id WHERE u.id = ${userId}`);
+    const row = rows[0];
+    return { campusId: row?.campus_id ?? null, hasHome: row?.has_home ?? false, seats: row?.seats ?? null };
+  }
+
+  /** Mes participations encore actives sur un créneau (jour et sens). */
+  async mySlot(userId: string, day: string, direction: Direction, db: DbOrTx = this.db) {
+    const { rows } = await db.execute<{ ride_id: string; role: 'driver' | 'passenger'; status: string }>(sql`
+      SELECT p.ride_id, p.role, p.status FROM ride_participants p JOIN rides r ON r.id = p.ride_id
+      WHERE p.user_id = ${userId} AND r.day = ${day} AND r.direction = ${direction}
+        AND r.status <> 'cancelled' AND p.status NOT IN ('declined', 'cancelled')`);
+    return rows;
+  }
+
   async setParticipantStatus(rideId: string, userId: string, status: 'accepted' | 'declined' | 'requested', db: DbOrTx = this.db) {
     await db
       .update(rideParticipants)

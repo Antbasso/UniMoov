@@ -1772,7 +1772,12 @@ class DemoBackend
   }
 
   /// Remplace un message (proposition acceptée) et le diffuse.
-  ChatMessage _updateCarpool(String conversationId, String messageId, String joinerId) {
+  ChatMessage _updateCarpool(
+    String conversationId,
+    String messageId,
+    String joinerId,
+    String rideId,
+  ) {
     final list = _messages[conversationId]!;
     final i = list.indexWhere((m) => m.id == messageId);
     final m = list[i];
@@ -1789,7 +1794,7 @@ class DemoBackend
         day: c.day,
         toCampus: c.toCampus,
         time: c.time,
-        joined: [...c.joined, _member(joinerId)],
+        joined: [...c.joined, (userId: joinerId, firstName: _firstName(joinerId), rideId: rideId)],
       ),
     );
     list[i] = updated;
@@ -1816,12 +1821,34 @@ class DemoBackend
     String? rideId,
     DateTime? day,
     bool toCampus = true,
+    String? time,
+    bool create = false,
   }) async {
     await _wait();
     final conversation = _conversations[id];
     if (conversation == null) throw const ApiException('not_found', '', statusCode: 404);
     if (conversation.kind == ConversationKind.ride) {
       throw const ApiException('carpool_not_here', '', statusCode: 409);
+    }
+    DateTime at(DateTime d, String hhmm) {
+      final [h, m] = hhmm.split(':');
+      return DateTime(d.year, d.month, d.day, int.parse(h), int.parse(m));
+    }
+
+    // Trajet créé pour l'occasion : Camille conduit ce jour-là, à cette heure.
+    if (create) {
+      final d = DateTime(day!.year, day.month, day.day);
+      final r = DemoRide(
+        id: _id('ride'),
+        day: d,
+        direction: toCampus ? Direction.toCampus : Direction.fromCampus,
+        time: at(d, time!),
+        driverId: demoMeId,
+        driverStatus: 'accepted',
+        seats: [],
+      );
+      _rides[r.id] = r;
+      rideId = r.id;
     }
     final ride = rideId == null ? null : _ride(rideId);
     final message = ChatMessage(
@@ -1835,7 +1862,7 @@ class DemoBackend
         rideId: ride?.id,
         day: ride?.day ?? day!,
         toCampus: ride == null ? toCampus : ride.direction == Direction.toCampus,
-        time: ride?.time.toUtc(),
+        time: ride?.time.toUtc() ?? (time == null ? null : at(day!, time).toUtc()),
       ),
     );
     _messages.putIfAbsent(id, () => []).add(message);
@@ -1846,6 +1873,7 @@ class DemoBackend
       Timer(const Duration(seconds: 4), () {
         if (ride != null) {
           _seatByAgreement(ride, other.userId);
+          _updateCarpool(id, message.id, other.userId, ride.id);
         } else {
           final d = message.carpool!.day;
           final r = DemoRide(
@@ -1859,8 +1887,8 @@ class DemoBackend
           );
           _rides[r.id] = r;
           _seatByAgreement(r, demoMeId);
+          _updateCarpool(id, message.id, demoMeId, r.id);
         }
-        _updateCarpool(id, message.id, ride != null ? other.userId : demoMeId);
       });
     }
     return message;
@@ -1877,7 +1905,7 @@ class DemoBackend
     if (message.senderId == demoMeId) throw const ApiException('own_carpool', '', statusCode: 409);
     if (carpool.isOffer) {
       _seatByAgreement(_ride(carpool.rideId!), demoMeId);
-      return _updateCarpool(id, messageId, demoMeId);
+      return _updateCarpool(id, messageId, demoMeId, carpool.rideId!);
     }
     final mine = _rides.values
         .where(
@@ -1892,7 +1920,7 @@ class DemoBackend
         .firstOrNull;
     if (mine == null) throw const ApiException('no_ride_that_day', '', statusCode: 409);
     _seatByAgreement(mine, message.senderId);
-    return _updateCarpool(id, messageId, message.senderId);
+    return _updateCarpool(id, messageId, message.senderId, mine.id);
   }
 
   void _conversation(

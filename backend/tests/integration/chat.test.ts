@@ -268,6 +268,26 @@ describe('messages privés et groupes', () => {
     // Les messages relus portent la proposition et qui est monté.
     const messages = (await call('Hugo', 'GET', `/conversations/${id}/messages`)).json<{ messages: Carpool[] }>().messages;
     expect(messages.find((m) => m.id === asked.id)!.carpool.joined.map((j) => j.firstName)).toEqual(['Chloé']);
+    // Créer son propre trajet depuis la conversation : Léa conduit jeudi à 8 h 15 ; Hugo monte.
+    const created = await call('Léa', 'POST', `/conversations/${id}/carpool`, {
+      kind: 'offer',
+      create: { day: '2026-10-22', direction: 'to_campus', time: '08:15' },
+    });
+    expect(created.statusCode).toBe(201);
+    const fresh = created.json<Carpool>();
+    expect(fresh.carpool).toMatchObject({ kind: 'offer', day: '2026-10-22' });
+    expect(fresh.carpool.time).toBe('2026-10-22T06:15:00.000Z');
+    const newRide = fresh.carpool.rideId!;
+    expect(await seat('Léa', newRide)).toBe('accepted');
+    const joined = await call('Hugo', 'POST', `/conversations/${id}/messages/${fresh.id}/carpool/accept`);
+    expect(joined.json<{ carpool: { joined: { rideId: string }[] } }>().carpool.joined[0]!.rideId).toBe(newRide);
+    expect(await seat('Hugo', newRide)).toBe('accepted');
+    // Déjà engagée sur ce créneau : pas un second trajet.
+    expect(code(await call('Léa', 'POST', '/rides', { day: '2026-10-22', direction: 'to_campus', time: '09:00' }))).toBe('already_committed');
+    // Une demande peut porter une heure.
+    const timed = await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-23', direction: 'from_campus', time: '17:30' });
+    expect(timed.json<Carpool>().carpool.time).toBe('2026-10-23T15:30:00.000Z');
+
     // Pas dans un chat de trajet ; jamais pour un jour passé.
     expect(code(await call('Léa', 'POST', `/conversations/${chatId}/carpool`, { kind: 'offer', rideId }))).toBe('carpool_not_here');
     expect((await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-01', direction: 'to_campus' })).statusCode).toBe(400);

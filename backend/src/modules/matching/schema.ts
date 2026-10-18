@@ -72,3 +72,9 @@ export const inviteParams = z.object({ id: z.uuid(), userId: z.uuid() });
 const cancelTier = z.enum(['early', 'medium', 'late']);
 export const cancellationResponse = z.strictObject({ role: z.enum(['driver', 'passenger']), tier: cancelTier });
 export const cancelResponse = z.strictObject({ tier: cancelTier });
+
+export const createRideBody = z.object({
+  day: z.iso.date(),
+  direction,
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+});

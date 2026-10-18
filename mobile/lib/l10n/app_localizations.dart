@@ -3578,23 +3578,11 @@ abstract class AppLocalizations {
   /// **'Je cherche'**
   String get carpoolILook;
 
-  /// No description provided for @carpoolNoRide.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucun trajet à conduire ces deux semaines. Accepte d\'abord un trajet comme conducteur.'**
-  String get carpoolNoRide;
-
   /// No description provided for @carpoolSeats.
   ///
   /// In fr, this message translates to:
   /// **'{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}'**
   String carpoolSeats(int count);
-
-  /// No description provided for @carpoolPickDay.
-  ///
-  /// In fr, this message translates to:
-  /// **'Choisir le jour'**
-  String get carpoolPickDay;
 
   /// No description provided for @carpoolToCampus.
   ///
@@ -3769,6 +3757,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tu reçois'**
   String get calcTotalReceived;
+
+  /// No description provided for @carpoolArriveAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrivée au campus'**
+  String get carpoolArriveAt;
+
+  /// No description provided for @carpoolLeaveAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Départ du campus'**
+  String get carpoolLeaveAt;
+
+  /// No description provided for @carpoolReturnAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour, départ du campus'**
+  String get carpoolReturnAt;
+
+  /// No description provided for @carpoolWithReturn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Programmer le retour'**
+  String get carpoolWithReturn;
+
+  /// No description provided for @carpoolPublishDrive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposer ce trajet'**
+  String get carpoolPublishDrive;
+
+  /// No description provided for @carpoolExisting.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ou un trajet déjà prévu'**
+  String get carpoolExisting;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

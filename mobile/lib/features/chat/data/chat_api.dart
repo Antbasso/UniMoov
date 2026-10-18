@@ -23,9 +23,17 @@ abstract interface class ChatApi {
   Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId});
   Future<ChatMessage> send(String id, String body);
 
-  /// Proposition de covoiturage : offre sur un trajet que je conduis (`rideId`), ou demande
-  /// pour un jour et un sens.
-  Future<ChatMessage> postCarpool(String id, {String? rideId, DateTime? day, bool toCampus = true});
+  /// Proposition de covoiturage : offre sur un trajet que je conduis (`rideId`), offre sur un
+  /// trajet créé pour l'occasion (`create` : jour, sens, heure « HH:MM »), ou demande (jour,
+  /// sens, heure facultative).
+  Future<ChatMessage> postCarpool(
+    String id, {
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+    String? time,
+    bool create = false,
+  });
 
   /// Accepter une proposition : je monte (offre) ou je prends la personne (demande).
   Future<ChatMessage> acceptCarpool(String id, String messageId);
@@ -117,16 +125,23 @@ class DioChatApi implements ChatApi {
     String? rideId,
     DateTime? day,
     bool toCampus = true,
+    String? time,
+    bool create = false,
   }) => guardApi(() async {
+    final slot = {
+      'day': day == null ? null : DateFormat('yyyy-MM-dd').format(day),
+      'direction': toCampus ? 'to_campus' : 'from_campus',
+    };
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/conversations/$id/carpool',
       data: rideId != null
           ? {'kind': 'offer', 'rideId': rideId}
-          : {
-              'kind': 'request',
-              'day': DateFormat('yyyy-MM-dd').format(day!),
-              'direction': toCampus ? 'to_campus' : 'from_campus',
-            },
+          : create
+          ? {
+              'kind': 'offer',
+              'create': {...slot, 'time': time},
+            }
+          : {'kind': 'request', ...slot, 'time': ?time},
     );
     return ChatMessage.fromJson(response.data!);
   });

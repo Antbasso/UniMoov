@@ -2,7 +2,7 @@ import { AppError } from '../../shared/errors.js';
 import type { Notifier } from '../../shared/notifications/notifier.js';
 import type { SettingsService } from '../settings/service.js';
 import type { UserHub } from './hub.js';
-import { parisDateOf } from '../../shared/time.js';
+import { parisDateOf, parisToUtc } from '../../shared/time.js';
 import type { CarpoolInfo, ChatRepo, ConversationKind, ConversationRow, DbOrTx, MessageRow } from './repo.js';
 
 const DAY_MS = 86_400_000;
@@ -19,6 +19,12 @@ export interface MessageView {
 
 /** Rejoindre une voiture par accord (matching) : passager accepté directement. */
 export type JoinByAgreement = (rideId: string, passengerId: string) => Promise<void>;
+
+/** Créer un trajet que je conduis (matching), renvoie son identifiant. */
+export type CreateRide = (
+  driverId: string,
+  input: { day: string; direction: 'to_campus' | 'from_campus'; time: string },
+) => Promise<string>;
 
 export interface ConversationView {
   id: string;
@@ -56,6 +62,7 @@ export class ChatService {
     private readonly notifier: Notifier,
     private readonly clock: () => Date,
     private readonly join: JoinByAgreement = () => Promise.reject(new Error('Covoiturage de groupe non branché')),
+    private readonly createRide: CreateRide = () => Promise.reject(new Error('Création de trajet non branchée')),
   ) {}
 
   private archived(c: ConversationRow): boolean {
@@ -181,20 +188,31 @@ export class ChatService {
   async postCarpool(
     userId: string,
     conversationId: string,
-    input: { kind: 'offer'; rideId: string } | { kind: 'request'; day: string; direction: 'to_campus' | 'from_campus' },
+    input:
+      | { kind: 'offer'; rideId: string }
+      | { kind: 'offer'; create: { day: string; direction: 'to_campus' | 'from_campus'; time: string } }
+      | { kind: 'request'; day: string; direction: 'to_campus' | 'from_campus'; time?: string | undefined },
   ): Promise<MessageView> {
     const c = await this.member(userId, conversationId);
     if (c.kind === 'ride') throw new AppError(409, 'carpool_not_here', 'Propose un trajet dans un groupe ou une conversation privée');
     if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
     const today = parisDateOf(this.clock());
-    let carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string };
+    let carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string; time?: Date | null };
     if (input.kind === 'offer') {
-      const ride = await this.repo.drivenOpenRide(userId, { rideId: input.rideId }, today);
+      // Trajet créé pour l'occasion (je conduis ce jour-là, à cette heure), puis proposé.
+      const rideId = 'create' in input ? await this.createRide(userId, input.create) : input.rideId;
+      const ride = await this.repo.drivenOpenRide(userId, { rideId }, today);
       if (!ride) throw new AppError(409, 'ride_unavailable', 'Ce trajet ne peut plus être proposé');
       carpool = { kind: 'offer', rideId: ride.id, day: ride.day, direction: ride.direction };
     } else {
       if (input.day < today) throw new AppError(400, 'validation_error', 'Choisis un jour à venir');
-      carpool = { kind: 'request', rideId: null, day: input.day, direction: input.direction };
+      carpool = {
+        kind: 'request',
+        rideId: null,
+        day: input.day,
+        direction: input.direction,
+        time: input.time ? parisToUtc(input.day, input.time) : null,
+      };
     }
     const sens = carpool.direction === 'to_campus' ? 'aller' : 'retour';
     const body = carpool.kind === 'offer' ? `Je propose un trajet (${sens}, ${carpool.day}).` : `Je cherche un trajet (${sens}, ${carpool.day}).`;

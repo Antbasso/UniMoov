@@ -5,6 +5,7 @@ import 'package:unimoov/core/router/redirect.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/chat/domain/chat.dart';
+import 'package:unimoov/features/profile/domain/me.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/chat_fakes.dart';
@@ -101,6 +102,12 @@ void main() {
         rideStatus: 'confirmed',
       ),
     );
+    // Avec une voiture : je peux aussi proposer de conduire.
+    backend.me.vehicle = const Vehicle(
+      consumptionLPer100km: 5.5,
+      defaultSeats: 3,
+      maxDetourMinutes: 10,
+    );
     await open(tester, AppRoutes.conversation('conv-group'));
     expect(find.text('Trajet proposé · Nathan'), findsOneWidget);
     await tapText(tester, 'Je monte');
@@ -108,14 +115,23 @@ void main() {
     expect(find.textContaining("c'est réservé"), findsOneWidget);
     expect(find.text('Je monte'), findsNothing);
 
-    // Proposer mon trajet du soir (je conduis) : la carte s'affiche dans le fil.
+    // Créer mon trajet depuis la conversation : je conduis, aller à 8 h, retour programmé.
     await tester.tap(find.byTooltip('Proposer un covoiturage'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(of: find.byType(BottomSheet), matching: find.byType(ListTile)),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Trajet proposé'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('vendredi 16 octobre'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Programmer le retour'));
+    await tapText(tester, 'Programmer le retour');
+    await tester.ensureVisible(find.text('Proposer ce trajet'));
+    await tapText(tester, 'Proposer ce trajet');
+    expect(backend.carpoolPosts.map((p) => (p.toCampus, p.time, p.create)), [
+      (true, '08:00', true),
+      (false, '17:00', true),
+    ]);
+    expect(backend.carpoolPosts.first.day, DateTime(2026, 10, 16));
+    // Les deux cartes s'affichent ; la mienne ouvre le trajet créé.
+    expect(find.text('Trajet proposé'), findsNWidgets(2));
+    expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
   });
 
   testWidgets('accueil : pastille des non lus, liste des conversations', (tester) async {

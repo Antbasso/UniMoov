@@ -6,6 +6,7 @@ import {
   alternativesResponse,
   cancellationResponse,
   cancelResponse,
+  createRideBody,
   idParams,
   inviteParams,
   proposal,
@@ -28,6 +29,13 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
     }
     return { week: request.query.week, proposals: await service.listProposals(request.userId, request.query.week) };
   });
+
+  // Trajet créé à la main par un conducteur (jour, sens, heure), qu'il accepte d'office.
+  app.post(
+    '/rides',
+    { schema: { body: createRideBody, response: { 201: proposal } }, config: { rateLimit: { max: 20, timeWindow: '1 hour' } } },
+    async (request, reply) => reply.code(201).send(await service.createRide(request.userId, request.body)),
+  );
 
   app.post('/proposals/:id/accept', { schema: { params: idParams, response: { 200: proposal } } }, (request) =>
     service.accept(request.userId, request.params.id),

@@ -19,14 +19,18 @@ export const message = z.strictObject({
       day: z.iso.date(),
       direction,
       time: z.date().nullable(),
-      joined: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string() })),
+      joined: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string(), rideId: z.uuid() })),
     })
     .nullable(),
 });
 
-export const carpoolBody = z.discriminatedUnion('kind', [
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+/** Offre sur un trajet existant (`rideId`) ou créé pour l'occasion (`create`) ; demande avec heure facultative. */
+export const carpoolBody = z.union([
   z.object({ kind: z.literal('offer'), rideId: z.uuid() }),
-  z.object({ kind: z.literal('request'), day: z.iso.date(), direction }),
+  z.object({ kind: z.literal('offer'), create: z.object({ day: z.iso.date(), direction, time: hhmm }) }),
+  z.object({ kind: z.literal('request'), day: z.iso.date(), direction, time: hhmm.optional() }),
 ]);
 export const messageParams = z.object({ id: z.uuid(), messageId: z.uuid() });
 

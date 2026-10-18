@@ -268,8 +268,21 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     if (ref.mounted) _append(message);
   }
 
-  Future<void> postCarpool({String? rideId, DateTime? day, bool toCampus = true}) async {
-    final message = await _api.postCarpool(id, rideId: rideId, day: day, toCampus: toCampus);
+  Future<void> postCarpool({
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+    String? time,
+    bool create = false,
+  }) async {
+    final message = await _api.postCarpool(
+      id,
+      rideId: rideId,
+      day: day,
+      toCampus: toCampus,
+      time: time,
+      create: create,
+    );
     if (ref.mounted) _append(message);
   }
 
