@@ -43,6 +43,8 @@ export const patchMeBody = z
   .refine((body) => Object.keys(body).length > 0, 'Aucun champ à modifier');
 
 export const addressBody = z.object({ address: z.string().trim().min(5).max(200) });
+export const addressQuery = z.object({ q: z.string().trim().min(3).max(200) });
+export const addressSuggestions = z.object({ suggestions: z.array(z.object({ label: z.string() })) });
 
 export const preferencesBody = z
   .object({ roleMode, defaultNavApp: navApp.nullable() })

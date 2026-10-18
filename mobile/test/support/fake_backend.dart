@@ -40,6 +40,7 @@ class FakeBackend
         AccountApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
+  static const knownLabel = '12 Rue de la Paix 74000 Annecy';
 
   final Map<String, _Account> _accounts = {};
   final Map<String, String> _refreshToEmail = {};
@@ -141,11 +142,20 @@ class FakeBackend
   @override
   Future<Me> setAddress(String address) async {
     _maybeFail();
-    if (address != knownAddress) {
+    if (address != knownAddress && address != knownLabel) {
       throw const ApiException('address_not_found', '', statusCode: 422);
     }
     _me.home = const Home(address: '12 Rue de la Paix 74000 Annecy', lat: 45.9, lon: 6.12);
     return _me.toMe();
+  }
+
+  final List<String> addressQueries = [];
+
+  @override
+  Future<List<String>> suggestAddresses(String query) async {
+    _maybeFail();
+    addressQueries.add(query);
+    return query.toLowerCase().contains('paix') ? [knownLabel] : [];
   }
 
   @override

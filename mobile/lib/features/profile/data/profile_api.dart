@@ -11,6 +11,9 @@ abstract interface class ProfileApi {
   Future<Me> getMe();
   Future<Me> updateNames({String? firstName, String? lastName});
   Future<Me> setAddress(String address);
+
+  /// Adresses existantes proposées pendant la saisie (Base Adresse Nationale).
+  Future<List<String>> suggestAddresses(String query);
   Future<Me> setVehicle(Vehicle vehicle);
   Future<void> removeVehicle();
   Future<Me> setRoleMode(RoleMode mode);
@@ -40,6 +43,18 @@ class DioProfileApi implements ProfileApi {
   @override
   Future<Me> setAddress(String address) =>
       _me$(() => _dio.put('$_me/address', data: {'address': address}));
+
+  @override
+  Future<List<String>> suggestAddresses(String query) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/addresses',
+      queryParameters: {'q': query},
+    );
+    return [
+      for (final s in response.data!['suggestions'] as List<dynamic>)
+        (s as Map<String, dynamic>)['label'] as String,
+    ];
+  });
 
   @override
   Future<Me> setVehicle(Vehicle vehicle) =>

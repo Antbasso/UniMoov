@@ -485,12 +485,23 @@ class DemoBackend
   @override
   Future<Me> setAddress(String address) async {
     await _wait();
-    if (address.trim().length < 3) {
-      throw const ApiException('address_not_found', '', statusCode: 422);
-    }
-    // Géocodage fictif : centre d'Annecy, à 3 km du campus.
-    _me.home = Home(address: address.trim(), lat: 45.8992, lon: 6.1294);
+    // Géocodage fictif : seules les adresses de la démo existent.
+    final match = demoAddresses
+        .where((a) => demoNormalize(a.$1) == demoNormalize(address))
+        .firstOrNull;
+    if (match == null) throw const ApiException('address_not_found', '', statusCode: 422);
+    _me.home = Home(address: match.$1, lat: match.$2, lon: match.$3);
     return _me.toMe(_today);
+  }
+
+  @override
+  Future<List<String>> suggestAddresses(String query) async {
+    await _wait();
+    final words = demoNormalize(query).split(' ');
+    return [
+      for (final (label, _, _) in demoAddresses)
+        if (words.every(demoNormalize(label).contains)) label,
+    ];
   }
 
   @override

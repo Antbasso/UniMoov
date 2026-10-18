@@ -156,6 +156,9 @@
   "addressTitle": "Où habites-tu ?",
   "addressBody": "Ton adresse sert à trouver des trajets près de chez toi. Avant un trajet confirmé à deux, les autres ne voient qu'un secteur approximatif.",
   "addressLabel": "Adresse",
+  "addressPickHelp": "Commence à taper, puis choisis ton adresse dans la liste.",
+  "addressPickRequired": "Choisis une adresse dans la liste proposée.",
+  "addressNoSuggestion": "Aucune adresse trouvée : vérifie le numéro et la commune.",
   "addressPlaceholder": "12 rue de la Paix, Annecy",
   "addressFound": "Adresse enregistrée : {address}",
   "@addressFound": {

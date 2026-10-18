@@ -14,6 +14,11 @@ export class CachedGeocodingProvider implements GeocodingProvider {
     private readonly now: () => number = Date.now,
   ) {}
 
+  /** Autocomplétion : pas de cache (saisie en cours, requêtes toutes différentes). */
+  suggest(query: string, limit: number): Promise<GeocodedAddress[]> {
+    return this.inner.suggest(query, limit);
+  }
+
   async geocode(query: string): Promise<GeocodedAddress | null> {
     const key = query.trim().toLowerCase().replace(/\s+/g, ' ');
     const hit = this.cache.get(key);

@@ -596,6 +596,24 @@ abstract class AppLocalizations {
   /// **'Adresse'**
   String get addressLabel;
 
+  /// No description provided for @addressPickHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commence à taper, puis choisis ton adresse dans la liste.'**
+  String get addressPickHelp;
+
+  /// No description provided for @addressPickRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une adresse dans la liste proposée.'**
+  String get addressPickRequired;
+
+  /// No description provided for @addressNoSuggestion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune adresse trouvée : vérifie le numéro et la commune.'**
+  String get addressNoSuggestion;
+
   /// No description provided for @addressPlaceholder.
   ///
   /// In fr, this message translates to:

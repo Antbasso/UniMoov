@@ -39,7 +39,14 @@ void main() {
     // Onboarding, étape 1 : adresse enregistrée.
     expect(find.text('Étape 1 sur 4'), findsOneWidget);
     expect(find.text('Où habites-tu ?'), findsOneWidget);
-    await tester.enterText(fieldLabeled('Adresse'), FakeBackend.knownAddress);
+    // Adresse tapée sans choisir : refusée ; on choisit dans les propositions.
+    await tester.enterText(fieldLabeled('Adresse'), '12 rue de la paix');
+    await tapText(tester, 'Continuer');
+    expect(find.textContaining('Choisis une adresse dans la liste proposée.'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(backend.addressQueries, ['12 rue de la paix']);
+    await tapText(tester, FakeBackend.knownLabel);
     await tapText(tester, 'Continuer');
 
     // Étape 2 : passée.

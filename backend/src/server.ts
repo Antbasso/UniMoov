@@ -21,7 +21,8 @@ const database = createDatabase(config.DATABASE_URL, { onIdleError: (error) => l
 const geocoding =
   config.GEOCODING_PROVIDER === 'fake'
     ? new FakeGeocodingProvider()
-    : new CachedGeocodingProvider(new BanGeocodingProvider(config.GEOCODING_URL));
+    : // Résultats proches du campus du pilote d'abord (Annecy).
+      new CachedGeocodingProvider(new BanGeocodingProvider(config.GEOCODING_URL, fetch, { lat: 45.9195, lon: 6.158 }));
 
 // Clé du compte de service lue au démarrage, hors du dépôt (chemin dans .env).
 const push =

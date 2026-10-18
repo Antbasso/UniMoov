@@ -209,3 +209,30 @@ List<(double, double)> decodePolyline(String encoded) {
   }
   return points;
 }
+
+/// Adresses fictives proposées pendant la saisie (démo) : chacune tombe sur un lieu des tracés
+/// précalculés.
+const demoAddresses = <(String, double, double)>[
+  ('12 Rue de la Paix 74000 Annecy', 45.8992, 6.1294),
+  ('1 Place de l’Hôtel de Ville 74600 Annecy', 45.8865, 6.089),
+  ('8 Avenue de Cran 74960 Annecy', 45.905, 6.103),
+  ('15 Route de Frangy 74960 Annecy', 45.918, 6.096),
+  ('4 Rue du Pré Paillard 74370 Annecy', 45.942, 6.142),
+];
+
+/// Minuscules, sans accents ni ponctuation : comparaison tolérante d'une saisie.
+String demoNormalize(String text) {
+  const from = 'àâäéèêëîïôöùûüç’\'';
+  const to = 'aaaeeeeiioouuuc  ';
+  final lower = text.toLowerCase();
+  final buffer = StringBuffer();
+  for (final ch in lower.split('')) {
+    final i = from.indexOf(ch);
+    buffer.write(i >= 0 ? to[i] : ch);
+  }
+  return buffer
+      .toString()
+      .replaceAll(RegExp('[^a-z0-9 ]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}

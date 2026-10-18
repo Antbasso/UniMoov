@@ -2,6 +2,8 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import {
   addressBody,
+  addressQuery,
+  addressSuggestions,
   idParams,
   meResponse,
   onboardingBody,
@@ -24,6 +26,13 @@ export const profileRoutes: FastifyPluginAsyncZod<{ service: ProfileService }> =
 
   app.patch('/me', { config: { rateLimit: { max: 20, timeWindow: '1 hour' } }, schema: { body: patchMeBody, response: { 200: meResponse } } }, (request) =>
     service.updateNames(request.userId, request.body),
+  );
+
+  // Autocomplétion de l'adresse (un appel par frappe, après une pause côté app).
+  app.get(
+    '/addresses',
+    { config: { rateLimit: { max: 120, timeWindow: '1 hour' } }, schema: { querystring: addressQuery, response: { 200: addressSuggestions } } },
+    async (request) => ({ suggestions: await service.suggestAddresses(request.query.q) }),
   );
 
   app.put('/me/address', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } }, schema: { body: addressBody, response: { 200: meResponse } } }, (request) =>

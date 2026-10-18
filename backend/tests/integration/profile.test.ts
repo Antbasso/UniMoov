@@ -32,6 +32,16 @@ describe('adresse', () => {
     expect(response.json<{ home: { sector: string } }>().home.sector).toMatch(/^\d+:\d+$/);
   });
 
+  it('propose des adresses pendant la saisie ; l’adresse choisie est enregistrée telle quelle', async () => {
+    const response = await call(lea, 'GET', `/addresses?q=${encodeURIComponent('rue de la paix')}`);
+    expect(response.statusCode).toBe(200);
+    const { suggestions } = response.json<{ suggestions: { label: string }[] }>();
+    expect(suggestions).toEqual([{ label: '12 Rue de la Paix 74000 Annecy' }]);
+    const saved = await call(lea, 'PUT', '/me/address', { address: suggestions[0]!.label });
+    expect(saved.json<{ home: { address: string } }>().home.address).toBe('12 Rue de la Paix 74000 Annecy');
+    expect((await call(lea, 'GET', '/addresses?q=ab')).statusCode).toBe(400);
+  });
+
   it('adresse introuvable : 422', async () => {
     const response = await call(lea, 'PUT', '/me/address', { address: 'nulle part 99999' });
     expect(response.statusCode).toBe(422);

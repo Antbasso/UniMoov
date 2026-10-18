@@ -80,6 +80,21 @@ export class ProfileService {
     return this.getMe(userId);
   }
 
+  /**
+   * Adresses proposées pendant la saisie (cahier §1) : l'utilisateur choisit une adresse qui
+   * existe. Seuls les libellés partent vers le client.
+   */
+  async suggestAddresses(query: string): Promise<{ label: string }[]> {
+    try {
+      return (await this.geocoding.suggest(query, 5)).map(({ label }) => ({ label }));
+    } catch (error) {
+      if (error instanceof GeocodingUnavailableError) {
+        throw new AppError(503, 'geocoding_unavailable', 'Recherche d’adresse indisponible pour l’instant');
+      }
+      throw error;
+    }
+  }
+
   /** Géocode côté serveur et calcule le secteur : le client n'envoie que le texte. */
   async setAddress(userId: string, address: string): Promise<MeResponse> {
     let result;

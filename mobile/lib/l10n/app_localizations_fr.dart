@@ -296,6 +296,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addressLabel => 'Adresse';
 
   @override
+  String get addressPickHelp => 'Commence à taper, puis choisis ton adresse dans la liste.';
+
+  @override
+  String get addressPickRequired => 'Choisis une adresse dans la liste proposée.';
+
+  @override
+  String get addressNoSuggestion => 'Aucune adresse trouvée : vérifie le numéro et la commune.';
+
+  @override
   String get addressPlaceholder => '12 rue de la Paix, Annecy';
 
   @override

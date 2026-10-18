@@ -8,6 +8,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/me.dart';
 import '../domain/vehicle_input.dart';
+import 'address_suggestions.dart';
 import 'me_controller.dart';
 
 /// Habillage commun : étape d'onboarding (avec « Passer ») ou modification depuis le profil.
@@ -79,16 +80,32 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
   late final _address = TextEditingController(text: widget.me.home?.address ?? '');
   bool _showFieldErrors = false;
 
+  /// Adresse choisie dans les propositions (elle existe vraiment), ou l'adresse actuelle.
+  late String? _selected = widget.me.home?.address;
+
   @override
   void dispose() {
     _address.dispose();
     super.dispose();
   }
 
+  void _onChanged(String text) {
+    if (text.trim() != _selected) setState(() => _selected = null);
+    ref.read(addressSuggestionsProvider.notifier).search(text);
+  }
+
+  void _choose(String label) {
+    _address.text = label;
+    setState(() => _selected = label);
+    ref.read(addressSuggestionsProvider.notifier).clear();
+    FocusScope.of(context).unfocus();
+  }
+
   void _submit() {
     setState(() => _showFieldErrors = true);
     final text = _address.text.trim();
-    if (text.length < 5) return;
+    // Seule une adresse proposée (donc existante) est acceptée.
+    if (text.length < 5 || _selected != text) return;
     run(() async {
       // Adresse inchangée : rien à géocoder.
       if (text != widget.me.home?.address) {
@@ -115,8 +132,17 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
           placeholder: l10n.addressPlaceholder,
           keyboardType: TextInputType.streetAddress,
           autofillHints: const [AutofillHints.fullStreetAddress],
-          error: _showFieldErrors && _address.text.trim().length < 5 ? l10n.fieldRequired : null,
+          onChanged: _onChanged,
+          help: l10n.addressPickHelp,
+          error: !_showFieldErrors
+              ? null
+              : _address.text.trim().length < 5
+              ? l10n.fieldRequired
+              : _selected != _address.text.trim()
+              ? l10n.addressPickRequired
+              : null,
         ),
+        _Suggestions(onChoose: _choose),
         if (home != null) ...[
           const SizedBox(height: UmSpace.s3),
           Align(
@@ -130,6 +156,56 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
         ],
         ...errorFor(l10n),
       ],
+    );
+  }
+}
+
+/// Propositions sous le champ : chargement, aucune adresse, erreur, liste à toucher.
+class _Suggestions extends ConsumerWidget {
+  const _Suggestions({required this.onChoose});
+
+  final ValueChanged<String> onChoose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    final state = ref.watch(addressSuggestionsProvider);
+    if (state == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: UmSpace.s2),
+      child: switch (state) {
+        AsyncData(:final value) when value.isEmpty => Text(
+          l10n.addressNoSuggestion,
+          style: UmText.bodySm.copyWith(color: c.inkMuted),
+        ),
+        AsyncData(:final value) => Material(
+          color: c.surfaceRaised,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(UmRadius.md),
+            side: BorderSide(color: c.border),
+          ),
+          child: Column(
+            children: [
+              for (final label in value)
+                ListTile(
+                  minTileHeight: UmSize.tapTarget,
+                  leading: Icon(Icons.place_outlined, color: c.brandStrong),
+                  title: Text(label, style: UmText.body.copyWith(color: c.ink)),
+                  onTap: () => onChoose(label),
+                ),
+            ],
+          ),
+        ),
+        AsyncError(:final error) => UmErrorText(
+          apiErrorMessage(l10n, error is ApiException ? error.code : null),
+        ),
+        _ => Semantics(
+          label: l10n.loading,
+          child: LinearProgressIndicator(color: c.brand),
+        ),
+      },
     );
   }
 }
