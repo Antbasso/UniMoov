@@ -959,6 +959,7 @@ class _Account {
 }
 
 const _driver = PublicPerson(
+  sector: (45.8653, 6.1407),
   userId: 'driver-1',
   firstName: 'Nathan',
   reliabilityScore: 0.9,

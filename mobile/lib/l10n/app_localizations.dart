@@ -61,8 +61,7 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,8 +69,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -1407,6 +1405,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fiabilité {score} sur 5 · détour {minutes} min'**
   String personDetails(String score, int minutes);
+
+  /// No description provided for @personDetailsDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fiabilité {score} sur 5 · fait {minutes} min de détour pour toi'**
+  String personDetailsDriver(String score, int minutes);
+
+  /// No description provided for @sectorShow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir son secteur'**
+  String get sectorShow;
+
+  /// No description provided for @sectorTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Secteur de {name}'**
+  String sectorTitle(String name);
+
+  /// No description provided for @sectorBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Zone approximative : le domicile se trouve quelque part dans le cercle. L\'adresse exacte s\'affiche une fois le trajet confirmé à deux.'**
+  String get sectorBody;
+
+  /// No description provided for @sectorMapLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carte : cercle autour du secteur de {name} et campus'**
+  String sectorMapLabel(String name);
 
   /// No description provided for @privacyNote.
   ///
@@ -3461,8 +3489,7 @@ abstract class AppLocalizations {
   String get requestReject;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -3471,8 +3498,7 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

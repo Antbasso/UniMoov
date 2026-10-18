@@ -439,6 +439,35 @@
   "proposalPassengersIntro": "Tes passagers",
   "proposalNoPassengers": "Personne pour l'instant. Tu recevras une notification si quelqu'un est proposé.",
   "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min",
+  "personDetailsDriver": "Fiabilité {score} sur 5 · fait {minutes} min de détour pour toi",
+  "@personDetailsDriver": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sectorShow": "Voir son secteur",
+  "sectorTitle": "Secteur de {name}",
+  "@sectorTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sectorBody": "Zone approximative : le domicile se trouve quelque part dans le cercle. L'adresse exacte s'affiche une fois le trajet confirmé à deux.",
+  "sectorMapLabel": "Carte : cercle autour du secteur de {name} et campus",
+  "@sectorMapLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "@personDetails": {
     "placeholders": {
       "score": {

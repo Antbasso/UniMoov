@@ -288,6 +288,15 @@ class DemoBackend
   String _lastName(String personId) =>
       personId == demoMeId ? (_account?.lastName ?? '') : demoPeople[personId]!.lastName;
 
+  /// Centre approximatif du secteur (grille d'environ 500 m), comme le serveur.
+  (double, double) _sector(String personId) {
+    final p = _pointOf(personId);
+    return (
+      (p.lat / 0.0045).floor() * 0.0045 + 0.00225,
+      (p.lon / 0.0065).floor() * 0.0065 + 0.00325,
+    );
+  }
+
   double _score(String personId) => personId == demoMeId ? 0.92 : demoPeople[personId]!.score;
 
   /// Points du trajet dans l'ordre : domicile du conducteur, passagers, campus (aller).
@@ -651,6 +660,7 @@ class DemoBackend
     final mine = r.seatOf(demoMeId);
     final driver = demoPeople[r.driverId];
     PublicPerson person(DemoSeat s) => PublicPerson(
+      sector: _sector(s.personId),
       userId: s.personId,
       firstName: _firstName(s.personId),
       reliabilityScore: _score(s.personId),
@@ -673,6 +683,7 @@ class DemoBackend
       driver: driver == null
           ? null
           : PublicPerson(
+              sector: _sector(driver.id),
               userId: driver.id,
               firstName: driver.firstName,
               reliabilityScore: driver.score,

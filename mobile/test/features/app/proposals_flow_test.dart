@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
@@ -61,6 +62,13 @@ void main() {
     expect(find.text('Nathan'), findsOneWidget);
     expect(find.textContaining('Fiabilité 4,5 sur 5'), findsOneWidget);
     expect(find.textContaining('Nom et adresse exacte'), findsOneWidget);
+    // Le détour est celui que fait le conducteur ; son secteur, un cercle sur une carte.
+    expect(find.textContaining('min de détour pour toi'), findsOneWidget);
+    await tapText(tester, 'Voir son secteur');
+    expect(find.text('Secteur de Nathan'), findsOneWidget);
+    expect(find.byType(CircleLayer), findsOneWidget);
+    Navigator.of(tester.element(find.text('Secteur de Nathan'))).pop();
+    await tester.pumpAndSettle();
 
     await tapText(tester, 'Accepter');
     expect(find.text('Tu as accepté. On attend la réponse de l\'autre.'), findsOneWidget);

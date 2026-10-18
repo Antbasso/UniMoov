@@ -77,9 +77,6 @@ class RideMap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.umColors;
-    final background = ref.watch(mapBackgroundProvider).value;
-    // Sans PMTiles (ou en attendant son chargement) : tuiles raster d'OpenStreetMap.
-    final raster = background == null && ref.watch(rasterTilesEnabledProvider);
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
     final points = [...line, for (final s in stops) LatLng(s.lat, s.lon), ?pin];
 
@@ -105,23 +102,7 @@ class RideMap extends ConsumerWidget {
           onTap: onTap == null ? null : (_, point) => onTap!(point),
         ),
         children: [
-          if (raster)
-            TileLayer(
-              urlTemplate: rasterTilesUrl,
-              // Exigé par la politique d'usage des tuiles OSM.
-              userAgentPackageName: 'fr.unimoov.unimoov',
-              maxNativeZoom: 19,
-            ),
-          if (background != null)
-            VectorTileLayer(
-              tileProviders: TileProviders({_source: background.tiles}),
-              // Pas de maximumZoom : au-delà du zoom 14 de l'extrait, les tuiles sont agrandies
-              // au lieu de disparaître (écran du point de rendez-vous, zoom 16).
-              theme: background.theme,
-              // Rendu vectoriel direct : net à tout zoom, sans images intermédiaires annulées
-              // (et signalées comme erreurs) quand on quitte la carte.
-              layerMode: VectorTileLayerMode.vector,
-            ),
+          const BaseMapLayer(),
           if (line.length >= 2)
             PolylineLayer(
               polylines: [
@@ -173,7 +154,7 @@ class RideMap extends ConsumerWidget {
                 ),
             ],
           ),
-          if (background != null || raster) const _Attribution(),
+          const MapAttribution(),
         ],
       ),
     );
@@ -226,12 +207,45 @@ class StopBadge extends StatelessWidget {
 
 /// Mention des données (licence ODbL d'OpenStreetMap), lisible et sans débordement même
 /// avec un texte agrandi.
-class _Attribution extends StatelessWidget {
-  const _Attribution();
+/// Fond de carte : PMTiles vectoriel s'il est configuré, sinon tuiles raster d'OpenStreetMap
+/// (aussi en attendant le chargement du PMTiles), rien dans les tests.
+class BaseMapLayer extends ConsumerWidget {
+  const BaseMapLayer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final background = ref.watch(mapBackgroundProvider).value;
+    if (background != null) {
+      return VectorTileLayer(
+        tileProviders: TileProviders({_source: background.tiles}),
+        // Pas de maximumZoom : au-delà du zoom 14 de l'extrait, les tuiles sont agrandies
+        // au lieu de disparaître (écran du point de rendez-vous, zoom 16).
+        theme: background.theme,
+        // Rendu vectoriel direct : net à tout zoom, sans images intermédiaires annulées
+        // (et signalées comme erreurs) quand on quitte la carte.
+        layerMode: VectorTileLayerMode.vector,
+      );
+    }
+    if (!ref.watch(rasterTilesEnabledProvider)) return const SizedBox.shrink();
+    return TileLayer(
+      urlTemplate: rasterTilesUrl,
+      // Exigé par la politique d'usage des tuiles OSM.
+      userAgentPackageName: 'fr.unimoov.unimoov',
+      maxNativeZoom: 19,
+    );
+  }
+}
+
+/// « © OpenStreetMap », dès qu'un fond de carte est affiché.
+class MapAttribution extends ConsumerWidget {
+  const MapAttribution({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.umColors;
+    final shown =
+        ref.watch(mapBackgroundProvider).value != null || ref.watch(rasterTilesEnabledProvider);
+    if (!shown) return const SizedBox.shrink();
     return Align(
       alignment: Alignment.bottomRight,
       child: Container(

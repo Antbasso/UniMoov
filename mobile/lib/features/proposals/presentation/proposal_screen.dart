@@ -14,6 +14,7 @@ import 'formatting.dart';
 import 'proposals_controller.dart';
 import '../../wallet/presentation/insufficient_funds_dialog.dart';
 import '../../chat/presentation/open_ride_chat.dart';
+import 'sector_sheet.dart';
 
 /// Détail d'une proposition : informations publiques seulement, puis accepter, refuser ou
 /// voir d'autres voitures.
@@ -207,6 +208,7 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
             padding: const EdgeInsets.only(bottom: UmSpace.s3),
             child: PersonCard(
               person: person,
+              isDriver: !proposal.isDriver,
               // Conducteur : une demande de place attend sa réponse.
               actions: proposal.isDriver && person.isRequest
                   ? [
@@ -248,9 +250,17 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
 
 /// Personne avant acceptation : prénom, score, détour, secteur approximatif.
 class PersonCard extends StatelessWidget {
-  const PersonCard({super.key, required this.person, this.actions = const []});
+  const PersonCard({
+    super.key,
+    required this.person,
+    this.isDriver = false,
+    this.actions = const [],
+  });
 
   final PublicPerson person;
+
+  /// Conducteur vu par le passager : le détour est celui qu'il fait pour lui.
+  final bool isDriver;
 
   /// Réponse à une demande de place (conducteur).
   final List<Widget> actions;
@@ -258,13 +268,23 @@ class PersonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final details = l10n.personDetails(person.scoreOutOfFive, person.detourMinutes);
+    final details = isDriver
+        ? l10n.personDetailsDriver(person.scoreOutOfFive, person.detourMinutes)
+        : l10n.personDetails(person.scoreOutOfFive, person.detourMinutes);
+    final all = [
+      ...actions,
+      if (person.sector != null)
+        UmButton(
+          label: l10n.sectorShow,
+          icon: Icons.map_outlined,
+          variant: UmButtonVariant.ghost,
+          onPressed: () => showSectorSheet(context, person),
+        ),
+    ];
     return UmCard(
       title: person.firstName,
       body: person.isRequest ? '${l10n.requestFrom}\n$details' : details,
-      child: actions.isEmpty
-          ? null
-          : Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: actions),
+      child: all.isEmpty ? null : Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: all),
     );
   }
 }

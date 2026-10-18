@@ -18,6 +18,7 @@ class PublicPerson {
     required this.detourMinutes,
     required this.status,
     this.photoUrl,
+    this.sector,
   });
 
   factory PublicPerson.fromJson(Map<String, dynamic> json) => PublicPerson(
@@ -27,6 +28,10 @@ class PublicPerson {
     reliabilityScore: (json['reliabilityScore'] as num).toDouble(),
     detourMinutes: json['detourMinutes'] as int,
     status: json['status'] as String,
+    sector: switch (json['sector']) {
+      {'lat': final num lat, 'lon': final num lon} => (lat.toDouble(), lon.toDouble()),
+      _ => null,
+    },
   );
 
   final String userId;
@@ -35,6 +40,9 @@ class PublicPerson {
   final double reliabilityScore;
   final int detourMinutes;
   final String status;
+
+  /// Centre du secteur (cellule de 500 m), seule position connue avant acceptation mutuelle.
+  final (double, double)? sector;
 
   /// Demande de place à laquelle le conducteur doit répondre.
   bool get isRequest => status == 'requested';
