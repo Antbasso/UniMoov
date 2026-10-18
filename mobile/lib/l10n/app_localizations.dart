@@ -4105,7 +4105,7 @@ abstract class AppLocalizations {
   /// No description provided for @leaderboardTitleMonth.
   ///
   /// In fr, this message translates to:
-  /// **'Classement du campus en {month}'**
+  /// **'Classement · {month}'**
   String leaderboardTitleMonth(String month);
 
   /// No description provided for @leaderboardShowMe.
@@ -4767,6 +4767,48 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Voir le profil'**
   String get chatDirectInfo;
+
+  /// No description provided for @badgeSpinHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais glisser la médaille pour la faire tourner.'**
+  String get badgeSpinHint;
+
+  /// No description provided for @badgeWonTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau badge !'**
+  String get badgeWonTitle;
+
+  /// No description provided for @homeLeaderboardTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement du campus'**
+  String get homeLeaderboardTitle;
+
+  /// No description provided for @homeLeaderboardRank.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu es {rank}e sur {total} ce mois-ci'**
+  String homeLeaderboardRank(int rank, int total);
+
+  /// No description provided for @homeLeaderboardNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais un trajet ce mois-ci pour entrer au classement.'**
+  String get homeLeaderboardNone;
+
+  /// No description provided for @leaderboardSee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le classement'**
+  String get leaderboardSee;
+
+  /// No description provided for @leaderboardPodium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Podium du mois'**
+  String get leaderboardPodium;
 }
 
 class _AppLocalizationsDelegate

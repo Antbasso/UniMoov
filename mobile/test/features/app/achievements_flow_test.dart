@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unimoov/core/router/redirect.dart';
+import 'package:unimoov/core/settings/appearance.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 
@@ -43,14 +44,37 @@ void main() {
       expect(find.text('Encore 55 points pour devenir Pilier du campus'), findsOneWidget);
       expect(find.text('41 kg'), findsOneWidget);
       expect(find.text('Badges (4/8)'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Apparaître avec mon prénom'), 300);
+      // Toucher un badge : la médaille en grand, qui tourne.
+      await tapText(tester, 'Premier trajet');
+      expect(find.text('Fais glisser la médaille pour la faire tourner.'), findsOneWidget);
+      await tester.drag(find.bySemanticsLabel('Premier trajet').last, const Offset(200, 0));
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Fermer');
+      // Classement à part : podium, liste, apparaître sous son prénom.
+      await tester.scrollUntilVisible(find.text('Classement du campus'), 300);
+      await tapText(tester, 'Classement du campus');
+      expect(find.text('Podium du mois'), findsOneWidget);
       expect(find.text('Un étudiant'), findsWidgets);
       expect(backend.me.leaderboardVisible, isFalse);
-      await tester.tap(find.text('Apparaître avec mon prénom'));
-      await tester.pumpAndSettle();
+      await tapText(tester, 'Apparaître avec mon prénom');
       expect(backend.me.leaderboardVisible, isTrue);
     },
   );
+
+  testWidgets('badge gagné depuis la dernière fois : la médaille s’affiche au milieu de l’écran', (
+    tester,
+  ) async {
+    // Le téléphone ne connaissait que « Premier trajet » : les autres sont nouveaux.
+    final prefs = MemoryPrefsStore()..values['badges.seen'] = 'first_ride';
+    await launchApp(tester, backend: backend, storage: storage, prefs: prefs);
+    await tester.pumpAndSettle();
+    expect(find.text('Nouveau badge !'), findsOneWidget);
+    await tapText(tester, 'Fermer');
+    expect(find.text('Nouveau badge !'), findsNothing);
+    expect(prefs.values['badges.seen'], contains('reliable'));
+    // Le classement est mis en avant sur l'accueil.
+    expect(find.text('Classement du campus'), findsOneWidget);
+  });
 
   testWidgets('profil d’une personne : vérifié, à propos, préférences, badges, chiffres, écrire', (
     tester,
@@ -101,6 +125,20 @@ void main() {
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/achievements_light.png'),
     );
+  });
+
+  testWidgets('golden médaille en grand', (tester) async {
+    await open(tester, AppRoutes.achievements);
+    await tapText(tester, 'Fiable');
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/badge_viewer_light.png'),
+    );
+  });
+
+  testWidgets('golden classement', (tester) async {
+    await open(tester, AppRoutes.leaderboard);
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/leaderboard_light.png'));
   });
 
   testWidgets('golden profil public', (tester) async {

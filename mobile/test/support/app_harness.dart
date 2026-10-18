@@ -48,6 +48,7 @@ Future<void> launchApp(
   FakeNavLauncher? launcher,
   PushService? push,
   ExportSharer? sharer,
+  MemoryPrefsStore? prefs,
 }) async {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -87,7 +88,7 @@ Future<void> launchApp(
         navLauncherProvider.overrideWithValue(launcher ?? FakeNavLauncher()),
         // Pas de tuiles réseau dans les tests (goldens stables).
         rasterTilesEnabledProvider.overrideWithValue(false),
-        prefsStoreProvider.overrideWithValue(MemoryPrefsStore()),
+        prefsStoreProvider.overrideWithValue(prefs ?? MemoryPrefsStore()),
         // Date figée : goldens et semaines stables quel que soit le jour du test.
         clockProvider.overrideWithValue(clock ?? () => now ?? testNow),
       ],

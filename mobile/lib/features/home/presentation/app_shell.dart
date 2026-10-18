@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../achievements/presentation/achievements_controller.dart';
+import '../../achievements/presentation/badge_medal.dart';
 import '../../chat/presentation/chat_controller.dart';
 import '../../notifications/presentation/push_controller.dart';
 import '../../proposals/domain/proposal.dart';
@@ -26,6 +28,12 @@ class AppShell extends ConsumerWidget {
     ref.watch(pushRegistrationProvider);
     final unread = ref.watch(unreadCountProvider);
     final active = ref.watch(activeRideProvider).value;
+    // Badge gagné : célébration au milieu de l'écran, où que l'on soit dans l'app.
+    ref.listen(achievementsProvider, (_, next) {
+      if (next.value case final achievements?) {
+        ref.read(badgeCelebrationsProvider).check(context, achievements);
+      }
+    });
 
     void go(int index) => shell.goBranch(index, initialLocation: index == shell.currentIndex);
 

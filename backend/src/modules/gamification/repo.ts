@@ -34,6 +34,7 @@ export class GamificationRepo {
       carried: number;
       shared_m: number;
       five_stars: number;
+      ratings_given: number;
       companions: number;
       best_week: number;
     }>(sql`
@@ -57,6 +58,8 @@ export class GamificationRepo {
         (SELECT coalesce(sum(CASE WHEN role = 'driver' THEN m ELSE onboard_m END), 0)::bigint FROM mine WHERE mine.user_id = u.id) AS shared_m,
         (SELECT count(*)::int FROM ratings rt JOIN rides rr ON rr.id = rt.ride_id
           WHERE rt.rated_id = u.id AND rt.stars = 5 ${rated}) AS five_stars,
+        (SELECT count(*)::int FROM ratings rt JOIN rides rr ON rr.id = rt.ride_id
+          WHERE rt.rater_id = u.id ${rated}) AS ratings_given,
         (SELECT count(DISTINCT o.user_id)::int FROM mine JOIN done o ON o.ride_id = mine.ride_id AND o.user_id <> u.id
           WHERE mine.user_id = u.id) AS companions,
         (SELECT coalesce(max(k), 0)::int FROM (SELECT count(*) AS k FROM mine WHERE mine.user_id = u.id
@@ -72,6 +75,7 @@ export class GamificationRepo {
       ridesAsPassenger: r.as_passenger,
       passengersCarried: r.carried,
       fiveStarRatings: r.five_stars,
+      ratingsGiven: r.ratings_given,
       distinctCompanions: r.companions,
       sharedKm: Number(r.shared_m) / 1000,
       bestWeekRides: r.best_week,

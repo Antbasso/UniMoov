@@ -34,6 +34,7 @@ import '../../features/trust/presentation/dispute_screen.dart';
 import '../../features/trust/presentation/reliability_screen.dart';
 import '../../features/trust/presentation/charter_screen.dart';
 import '../../features/achievements/presentation/achievements_screen.dart';
+import '../../features/achievements/presentation/leaderboard_screen.dart';
 import '../../features/wallet/presentation/payout_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
@@ -180,6 +181,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: AppRoutes.search, builder: (_, _) => const SearchScreen()),
+      GoRoute(path: AppRoutes.leaderboard, builder: (_, _) => const LeaderboardScreen()),
       GoRoute(
         path: '/users/:id',
         builder: (_, state) => PublicProfileScreen(userId: state.pathParameters['id']!),

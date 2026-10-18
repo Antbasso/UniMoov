@@ -578,21 +578,22 @@ class DemoBackend
   @override
   Future<Achievements> achievements() async {
     await _wait();
+    final sociable = _ratingsGiven > 0;
     return Achievements(
-      points: 245,
+      points: 245 + 2 * _ratingsGiven,
       levelKey: 'regular',
       levelMin: 100,
       nextKey: 'pillar',
       nextMin: 300,
-      badges: const [
-        AchievementBadge(key: 'first_ride', goal: 1, progress: 1, earned: true),
-        AchievementBadge(key: 'ten_rides', goal: 10, progress: 10, earned: true),
-        AchievementBadge(key: 'fifty_rides', goal: 50, progress: 18, earned: false),
-        AchievementBadge(key: 'loyal_driver', goal: 10, progress: 4, earned: false),
-        AchievementBadge(key: 'full_week', goal: 5, progress: 5, earned: true),
-        AchievementBadge(key: 'sociable', goal: 10, progress: 7, earned: false),
-        AchievementBadge(key: 'eco', goal: 100, progress: 41, earned: false),
-        AchievementBadge(key: 'reliable', goal: 5, progress: 5, earned: true),
+      badges: [
+        const AchievementBadge(key: 'first_ride', goal: 1, progress: 1, earned: true),
+        const AchievementBadge(key: 'ten_rides', goal: 10, progress: 10, earned: true),
+        const AchievementBadge(key: 'fifty_rides', goal: 50, progress: 18, earned: false),
+        const AchievementBadge(key: 'loyal_driver', goal: 10, progress: 4, earned: false),
+        const AchievementBadge(key: 'full_week', goal: 5, progress: 5, earned: true),
+        AchievementBadge(key: 'sociable', goal: 10, progress: sociable ? 10 : 7, earned: sociable),
+        const AchievementBadge(key: 'eco', goal: 100, progress: 41, earned: false),
+        const AchievementBadge(key: 'reliable', goal: 5, progress: 5, earned: true),
       ],
       rides: 18,
       sharedKm: 212,
@@ -1739,7 +1740,12 @@ class DemoBackend
     final key = '$rideId|$userId';
     if (_given.containsKey(key)) throw const ApiException('already_rated', '', statusCode: 409);
     _given[key] = stars;
+    _ratingsGiven++;
   }
+
+  /// Avis donnés pendant la démo : 2 points chacun, et le badge « Sociable » au premier (pour
+  /// voir l'animation d'un badge gagné).
+  int _ratingsGiven = 0;
 
   @override
   Future<Reliability> reliability() async {

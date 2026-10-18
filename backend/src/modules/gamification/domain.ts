@@ -14,6 +14,8 @@ export interface RideStats {
   passengersCarried: number;
   /** Notes de 5 étoiles reçues. */
   fiveStarRatings: number;
+  /** Avis donnés aux personnes croisées (chaque note compte). */
+  ratingsGiven?: number;
   /** Personnes différentes croisées sur des trajets terminés. */
   distinctCompanions: number;
   /** Kilomètres partagés : à bord pour un passager, kilomètres des passagers pour un conducteur. */
@@ -24,14 +26,17 @@ export interface RideStats {
   reliability: number;
 }
 
-export const POINTS = { perRideDriven: 15, perPassengerCarried: 5, perRideAsPassenger: 10, perFiveStars: 3 } as const;
+export const POINTS = { perRideDriven: 15, perPassengerCarried: 5, perRideAsPassenger: 10, perFiveStars: 3, perRatingGiven: 2 } as const;
 
-export function pointsFor(s: Pick<RideStats, 'ridesDriven' | 'passengersCarried' | 'ridesAsPassenger' | 'fiveStarRatings'>): number {
+export function pointsFor(
+  s: Pick<RideStats, 'ridesDriven' | 'passengersCarried' | 'ridesAsPassenger' | 'fiveStarRatings' | 'ratingsGiven'>,
+): number {
   return (
     s.ridesDriven * POINTS.perRideDriven +
     s.passengersCarried * POINTS.perPassengerCarried +
     s.ridesAsPassenger * POINTS.perRideAsPassenger +
-    s.fiveStarRatings * POINTS.perFiveStars
+    s.fiveStarRatings * POINTS.perFiveStars +
+    (s.ratingsGiven ?? 0) * POINTS.perRatingGiven
   );
 }
 

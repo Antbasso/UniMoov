@@ -33,6 +33,7 @@ abstract final class AppRoutes {
   static const walletPayout = '/wallet/payout';
   static const reliability = '/profile/reliability';
   static const achievements = '/profile/achievements';
+  static const leaderboard = '/leaderboard';
   static const notificationSettings = '/profile/notifications';
   static const deleteAccount = '/profile/delete';
   static const messages = '/messages';

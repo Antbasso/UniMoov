@@ -1405,7 +1405,7 @@
   "badgeReliable": "Fiable",
   "badgeReliableGoal": "Fais 5 trajets avec une fiabilité d'au moins 95 %.",
   "leaderboardTitle": "Classement du campus",
-  "leaderboardTitleMonth": "Classement du campus en {month}",
+  "leaderboardTitleMonth": "Classement · {month}",
   "@leaderboardTitleMonth": {
     "placeholders": {
       "month": {
@@ -1682,5 +1682,22 @@
     }
   },
   "chatRideInfo": "Infos du trajet",
-  "chatDirectInfo": "Voir le profil"
+  "chatDirectInfo": "Voir le profil",
+  "badgeSpinHint": "Fais glisser la médaille pour la faire tourner.",
+  "badgeWonTitle": "Nouveau badge !",
+  "homeLeaderboardTitle": "Classement du campus",
+  "homeLeaderboardRank": "Tu es {rank}e sur {total} ce mois-ci",
+  "@homeLeaderboardRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLeaderboardNone": "Fais un trajet ce mois-ci pour entrer au classement.",
+  "leaderboardSee": "Voir le classement",
+  "leaderboardPodium": "Podium du mois"
 }

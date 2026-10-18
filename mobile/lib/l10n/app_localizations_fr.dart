@@ -2433,7 +2433,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String leaderboardTitleMonth(String month) {
-    return 'Classement du campus en $month';
+    return 'Classement · $month';
   }
 
   @override
@@ -2857,4 +2857,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatDirectInfo => 'Voir le profil';
+
+  @override
+  String get badgeSpinHint => 'Fais glisser la médaille pour la faire tourner.';
+
+  @override
+  String get badgeWonTitle => 'Nouveau badge !';
+
+  @override
+  String get homeLeaderboardTitle => 'Classement du campus';
+
+  @override
+  String homeLeaderboardRank(int rank, int total) {
+    return 'Tu es ${rank}e sur $total ce mois-ci';
+  }
+
+  @override
+  String get homeLeaderboardNone =>
+      'Fais un trajet ce mois-ci pour entrer au classement.';
+
+  @override
+  String get leaderboardSee => 'Voir le classement';
+
+  @override
+  String get leaderboardPodium => 'Podium du mois';
 }

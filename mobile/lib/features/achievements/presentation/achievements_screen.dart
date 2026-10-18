@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../profile/presentation/me_controller.dart';
-import '../../profile/presentation/person_avatar.dart';
 import '../domain/achievements.dart';
 import 'achievement_labels.dart';
 import 'achievements_controller.dart';
+import 'badge_medal.dart';
+import 'leaderboard_screen.dart';
 
 /// « Mes réussites » : niveau et points, impact (CO₂, km, économies), badges, classement du
 /// campus du mois, avec le choix d'y apparaître sous son prénom.
@@ -35,7 +34,7 @@ class AchievementsScreen extends ConsumerWidget {
           const SizedBox(height: UmSpace.s3),
           for (final badge in value.badges) _BadgeRow(badge: badge),
           const SizedBox(height: UmSpace.s6),
-          _LeaderboardSection(visible: value.leaderboardVisible),
+          LeaderboardCard(achievements: value),
         ],
         AsyncError(:final error) => [
           UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
@@ -214,168 +213,54 @@ class _BadgeRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final status = badge.earned ? l10n.badgeEarned : l10n.badgeProgress(badge.progress, badge.goal);
+    // Toucher un badge : la médaille en grand, en 3D.
     return Semantics(
+      button: true,
       label: '${badgeName(l10n, badge.key)}. ${badgeGoal(l10n, badge.key)} $status',
       excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: UmSpace.s3),
-        child: Row(
-          children: [
-            Container(
-              width: UmSize.avatar,
-              height: UmSize.avatar,
-              decoration: BoxDecoration(
-                color: badge.earned ? c.brandStrong : c.surfaceTint,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                badgeIcon(badge.key),
-                size: UmSize.iconMd,
-                color: badge.earned ? c.onBrand : c.inkMuted,
-              ),
-            ),
-            const SizedBox(width: UmSpace.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    badgeName(l10n, badge.key),
-                    style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    badgeGoal(l10n, badge.key),
-                    style: UmText.bodySm.copyWith(color: c.inkMuted),
-                  ),
-                  if (!badge.earned) ...[
-                    const SizedBox(height: UmSpace.s1),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(UmRadius.pill),
-                      child: LinearProgressIndicator(
-                        value: badge.goal == 0 ? 0 : badge.progress / badge.goal,
-                        minHeight: UmSpace.s1,
-                        color: c.brand,
-                        backgroundColor: c.lavender,
-                      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(UmRadius.sm),
+        onTap: () => showBadgeViewer(context, badge),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: UmSpace.s2),
+          child: Row(
+            children: [
+              BadgeMedal(badgeKey: badge.key, earned: badge.earned, size: UmSize.avatarLg),
+              const SizedBox(width: UmSpace.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      badgeName(l10n, badge.key),
+                      style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
                     ),
+                    Text(
+                      badgeGoal(l10n, badge.key),
+                      style: UmText.bodySm.copyWith(color: c.inkMuted),
+                    ),
+                    if (!badge.earned) ...[
+                      const SizedBox(height: UmSpace.s1),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(UmRadius.pill),
+                        child: LinearProgressIndicator(
+                          value: badge.goal == 0 ? 0 : badge.progress / badge.goal,
+                          minHeight: UmSpace.s1,
+                          color: c.brand,
+                          backgroundColor: c.lavender,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(width: UmSpace.s2),
-            // Statut en texte (pas seulement la couleur de la pastille).
-            badge.earned
-                ? UmChip(label: status, icon: Icons.check_rounded, tone: UmChipTone.success)
-                : Text(status, style: UmText.caption.copyWith(color: c.inkMuted)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LeaderboardSection extends ConsumerWidget {
-  const _LeaderboardSection({required this.visible});
-
-  final bool visible;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final c = context.umColors;
-    final board = ref.watch(leaderboardProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        UmSectionTitle(
-          board.value == null
-              ? l10n.leaderboardTitle
-              : l10n.leaderboardTitleMonth(
-                  DateFormat('MMMM', l10n.localeName).format(board.value!.month),
-                ),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: visible,
-          title: Text(l10n.leaderboardShowMe),
-          subtitle: Text(l10n.leaderboardShowMeHelp),
-          onChanged: (value) async {
-            await ref.read(meProvider.notifier).setLeaderboardVisible(value);
-            ref
-              ..invalidate(achievementsProvider)
-              ..invalidate(leaderboardProvider);
-          },
-        ),
-        const SizedBox(height: UmSpace.s2),
-        ...switch (board) {
-          AsyncData(:final value) when value.entries.isEmpty => [
-            Text(l10n.leaderboardEmpty, style: UmText.body.copyWith(color: c.inkMuted)),
-          ],
-          AsyncData(:final value) => [
-            for (final e in value.entries) _LeaderRow(entry: e),
-            if (value.myRank != null && !value.entries.any((e) => e.me))
-              Padding(
-                padding: const EdgeInsets.only(top: UmSpace.s2),
-                child: Text(
-                  l10n.leaderboardMyRank(value.myRank!, value.ranked),
-                  style: UmText.body.copyWith(color: c.brandStrong),
                 ),
               ),
-          ],
-          AsyncError() => [UmErrorText(l10n.leaderboardError)],
-          _ => [const LinearProgressIndicator()],
-        },
-      ],
-    );
-  }
-}
-
-class _LeaderRow extends StatelessWidget {
-  const _LeaderRow({required this.entry});
-
-  final LeaderEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final c = context.umColors;
-    final name = entry.me ? l10n.leaderboardYou : (entry.firstName ?? l10n.leaderboardAnonymous);
-    return Semantics(
-      label: l10n.leaderboardRowSemantic(entry.rank, name, entry.points),
-      excludeSemantics: true,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: UmSpace.s2),
-        padding: const EdgeInsets.symmetric(horizontal: UmSpace.s3, vertical: UmSpace.s2),
-        decoration: BoxDecoration(
-          color: entry.me ? c.lavender : c.surfaceRaised,
-          borderRadius: BorderRadius.circular(UmRadius.sm),
-          border: Border.all(color: entry.me ? c.brandStrong : c.border),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: UmSpace.s6,
-              child: Text('${entry.rank}', style: UmText.h3.copyWith(color: c.brandStrong)),
-            ),
-            PersonAvatar(name: entry.firstName ?? '?', photoUrl: entry.photoUrl),
-            const SizedBox(width: UmSpace.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    levelName(l10n, entry.levelKey),
-                    style: UmText.caption.copyWith(color: c.inkMuted),
-                  ),
-                ],
-              ),
-            ),
-            Text(l10n.pointsShort(entry.points), style: UmText.body.copyWith(color: c.ink)),
-          ],
+              const SizedBox(width: UmSpace.s2),
+              // Statut en texte (pas seulement la couleur de la pastille).
+              badge.earned
+                  ? UmChip(label: status, icon: Icons.check_rounded, tone: UmChipTone.success)
+                  : Text(status, style: UmText.caption.copyWith(color: c.inkMuted)),
+            ],
+          ),
         ),
       ),
     );

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../achievements/presentation/achievements_controller.dart';
+import '../../achievements/presentation/leaderboard_screen.dart';
 import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -84,6 +87,12 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+        // Classement du campus mis en avant : ma place du mois, d'un toucher le podium.
+        if (!me.discoveryMode)
+          if (ref.watch(achievementsProvider).value case final achievements?) ...[
+            const SizedBox(height: UmSpace.s3),
+            LeaderboardCard(achievements: achievements),
+          ],
         const SizedBox(height: UmSpace.s4),
         // Hors mode découverte : le matching a besoin de l'adresse (cahier §1).
         if (!me.discoveryMode) const WeekSection(),

@@ -16,6 +16,8 @@ describe('points et niveaux', () => {
   it('conduire rapporte plus, chaque passager en plus aussi', () => {
     expect(pointsFor({ ridesDriven: 2, passengersCarried: 5, ridesAsPassenger: 3, fiveStarRatings: 4 })).toBe(30 + 25 + 30 + 12);
     expect(pointsFor(none)).toBe(0);
+    // Donner un avis rapporte aussi des points.
+    expect(pointsFor({ ...none, ratingsGiven: 3 })).toBe(6);
   });
 
   it('niveau atteint au minimum exact, prochain niveau donné, aucun après le dernier', () => {
