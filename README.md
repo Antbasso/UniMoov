@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo.png" alt="UniMoov" width="160"></p>
+<p align="center"><img src="assets/Logo_complet.png" alt="UniMoov" width="160"></p>
 
 # UniMoov
 

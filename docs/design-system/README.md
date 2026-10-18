@@ -26,7 +26,7 @@ Uni-Moov est une application de covoiturage étudiant. Sa marque est ronde, viol
 
 ## Logo et images
 
-- Utilise le logo complet `assets/logo.png` sur fond clair, et l'icône seule (`uni-moov-icon.png`, fond transparent, **pas encore fournie dans le dépôt**) quand la place manque. Ne redessine, ne recolore et ne déforme jamais ces fichiers ; règles détaillées dans `logo.md`.
+- Utilise le logo complet `assets/Logo_complet.png` (ou `.svg`) sur fond clair, et le logo compact `assets/Logo_compact.png` (tache et voiture seules, fond transparent) quand la place manque ; l'icône de l'app en est tirée, sur fond blanc. Ne redessine, ne recolore et ne déforme jamais ces fichiers ; règles détaillées dans `logo.md`.
 - L'affiche de sondage (non versionnée dans le dépôt) montre la composition type d'une affiche : logo en tête, titre `display`, sous-titre `h2` en `brand-strong`, carte QR en cadre `lavender` avec sticker manuscrit, trois bénéfices `Benefit`, collines en pied.
 
 ## Composants
