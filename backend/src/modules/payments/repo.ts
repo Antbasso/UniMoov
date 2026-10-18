@@ -154,10 +154,11 @@ export class PaymentsRepo {
     return rows[0]?.at ? new Date(rows[0].at) : null;
   }
 
-  async insertPayout(p: { userId: string; amountCents: number; ibanLast4: string }, tx: Tx): Promise<string> {
+  /** `at` : l'horloge du service, la même que pour la règle « un retrait par semaine ». */
+  async insertPayout(p: { userId: string; amountCents: number; ibanLast4: string; at: Date }, tx: Tx): Promise<string> {
     const { rows } = await tx.execute<{ id: string }>(sql`
-      INSERT INTO payouts (user_id, amount_cents, status, iban_last4)
-      VALUES (${p.userId}, ${p.amountCents}, 'pending', ${p.ibanLast4}) RETURNING id`);
+      INSERT INTO payouts (user_id, amount_cents, status, iban_last4, created_at)
+      VALUES (${p.userId}, ${p.amountCents}, 'pending', ${p.ibanLast4}, ${p.at}) RETURNING id`);
     return rows[0]!.id;
   }
 

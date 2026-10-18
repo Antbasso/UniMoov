@@ -161,7 +161,7 @@ export class WalletService {
       if (last && now.getTime() - last.getTime() < intervalDays * 86_400_000) {
         throw new AppError(429, 'payout_too_soon', 'Un retrait par semaine au plus');
       }
-      const id = await this.repo.insertPayout({ userId, amountCents: input.amountCents, ibanLast4: iban.slice(-4) }, tx);
+      const id = await this.repo.insertPayout({ userId, amountCents: input.amountCents, ibanLast4: iban.slice(-4), at: now }, tx);
       await this.record(key, payoutEntries(userId, input.amountCents), null, tx);
       return id;
     });
