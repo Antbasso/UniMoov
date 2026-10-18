@@ -60,7 +60,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcomeTitle => 'Ton emploi du temps organise aussi tes trajets.';
 
   @override
-  String get welcomeSubtitle => 'Covoiturage domicile-campus pour les étudiants d\'Annecy';
+  String get welcomeSubtitle =>
+      'Covoiturage domicile-campus pour les étudiants d\'Annecy';
 
   @override
   String get welcomeBenefitSchedule => 'Trajets calés sur tes cours';
@@ -128,34 +129,42 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorGeneric => 'Une erreur est survenue. Réessaie.';
 
   @override
-  String get errorNetwork => 'Connexion impossible pour l\'instant. Vérifie ton réseau.';
+  String get errorNetwork =>
+      'Connexion impossible pour l\'instant. Vérifie ton réseau.';
 
   @override
-  String get errorRateLimited => 'Trop de tentatives. Réessaie dans quelques minutes.';
+  String get errorRateLimited =>
+      'Trop de tentatives. Réessaie dans quelques minutes.';
 
   @override
   String get errorValidation => 'Vérifie les informations saisies.';
 
   @override
-  String get errorSessionExpired => 'Ta session a expiré. Connecte-toi à nouveau.';
+  String get errorSessionExpired =>
+      'Ta session a expiré. Connecte-toi à nouveau.';
 
   @override
-  String get errorEmailDomain => 'Utilise ton adresse mail universitaire (univ-smb.fr).';
+  String get errorEmailDomain =>
+      'Utilise ton adresse mail universitaire (univ-smb.fr).';
 
   @override
-  String get errorCodeCooldown => 'Attends une minute avant de redemander un code.';
+  String get errorCodeCooldown =>
+      'Attends une minute avant de redemander un code.';
 
   @override
-  String get errorCodeInvalid => 'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
+  String get errorCodeInvalid =>
+      'Code incorrect ou expiré. Vérifie-le ou demande un nouveau code.';
 
   @override
-  String get errorAccountExists => 'Tu as déjà un compte avec cette adresse. Connecte-toi.';
+  String get errorAccountExists =>
+      'Tu as déjà un compte avec cette adresse. Connecte-toi.';
 
   @override
   String get errorInvalidCredentials => 'Mail ou mot de passe incorrect.';
 
   @override
-  String get errorAddressNotFound => 'Adresse introuvable. Ajoute la ville ou le code postal.';
+  String get errorAddressNotFound =>
+      'Adresse introuvable. Ajoute la ville ou le code postal.';
 
   @override
   String get errorGeocodingUnavailable =>
@@ -278,13 +287,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addressLabel => 'Adresse';
 
   @override
-  String get addressPickHelp => 'Commence à taper, puis choisis ton adresse dans la liste.';
+  String get addressPickHelp =>
+      'Commence à taper, puis choisis ton adresse dans la liste.';
 
   @override
-  String get addressPickRequired => 'Choisis une adresse dans la liste proposée.';
+  String get addressPickRequired =>
+      'Choisis une adresse dans la liste proposée.';
 
   @override
-  String get addressNoSuggestion => 'Aucune adresse trouvée : vérifie le numéro et la commune.';
+  String get addressNoSuggestion =>
+      'Aucune adresse trouvée : vérifie le numéro et la commune.';
 
   @override
   String get addressPlaceholder => '12 rue de la Paix, Annecy';
@@ -298,7 +310,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vehicleTitle => 'As-tu une voiture ?';
 
   @override
-  String get vehicleBody => 'Avec une voiture, tu peux conduire et partager les frais du trajet.';
+  String get vehicleBody =>
+      'Avec une voiture, tu peux conduire et partager les frais du trajet.';
 
   @override
   String get vehicleYes => 'Oui, j\'ai une voiture';
@@ -319,13 +332,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vehicleDetourLabel => 'Détour maximal (minutes)';
 
   @override
-  String get vehicleDetourHelp => 'Uni-Moov ne te propose que des détours plus courts.';
+  String get vehicleDetourHelp =>
+      'Uni-Moov ne te propose que des détours plus courts.';
 
   @override
   String get roleTitle => 'Quel rôle préfères-tu ?';
 
   @override
-  String get roleBody => 'Tu pourras le changer quand tu veux depuis ton profil.';
+  String get roleBody =>
+      'Tu pourras le changer quand tu veux depuis ton profil.';
 
   @override
   String get roleAuto => 'Automatique';
@@ -378,7 +393,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoveryTitle => 'Mode découverte';
 
   @override
-  String get discoveryBody => 'Ajoute ton adresse pour recevoir des propositions de trajets.';
+  String get discoveryBody =>
+      'Ajoute ton adresse pour recevoir des propositions de trajets.';
 
   @override
   String get discoveryAction => 'Compléter mon profil';
@@ -472,7 +488,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseSheetTitle => 'Mettre en pause';
 
   @override
-  String get pauseSheetBody => 'Pas de propositions pendant la pause. Ton score n\'est pas touché.';
+  String get pauseSheetBody =>
+      'Pas de propositions pendant la pause. Ton score n\'est pas touché.';
 
   @override
   String get pauseChooseDates => 'Choisir les dates';
@@ -511,7 +528,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseChooseFirst => 'Choisir la première pause';
 
   @override
-  String get pauseTooLongForPeriod => 'La pause est plus longue que sa fréquence : raccourcis-la.';
+  String get pauseTooLongForPeriod =>
+      'La pause est plus longue que sa fréquence : raccourcis-la.';
 
   @override
   String get pauseSave => 'Enregistrer la pause';
@@ -550,7 +568,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'J\'accepte qu\'Uni-Moov lise cet agenda pour n\'en garder que l\'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.';
 
   @override
-  String get icsConsentRequired => 'Coche la case pour autoriser la lecture de ton agenda.';
+  String get icsConsentRequired =>
+      'Coche la case pour autoriser la lecture de ton agenda.';
 
   @override
   String get manualTitle => 'Tes horaires de la semaine';
@@ -598,7 +617,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get weekday7 => 'Dimanche';
 
   @override
-  String get errorCalendarUrl => 'Ce lien n\'est pas valide. Il doit commencer par https://.';
+  String get errorCalendarUrl =>
+      'Ce lien n\'est pas valide. Il doit commencer par https://.';
 
   @override
   String get errorCalendarUnreachable =>
@@ -618,7 +638,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorProposalCancelled => 'Cette proposition a été annulée.';
 
   @override
-  String get errorRideUnavailable => 'Cette voiture ne peut plus te prendre. Choisis-en une autre.';
+  String get errorRideUnavailable =>
+      'Cette voiture ne peut plus te prendre. Choisis-en une autre.';
 
   @override
   String get errorAlreadyCommitted => 'Tu as déjà un trajet sur ce créneau.';
@@ -630,10 +651,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorAlreadyAnswered => 'Tu as déjà répondu à cette proposition.';
 
   @override
-  String get errorSearchQuota => 'Tu as atteint le nombre de recherches du jour. Réessaie demain.';
+  String get errorSearchQuota =>
+      'Tu as atteint le nombre de recherches du jour. Réessaie demain.';
 
   @override
-  String get errorProfileIncomplete => 'Ajoute ton adresse pour trouver un trajet.';
+  String get errorProfileIncomplete =>
+      'Ajoute ton adresse pour trouver un trajet.';
 
   @override
   String get errorTimeRequired => 'Indique une heure pour ce jour.';
@@ -649,7 +672,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Pas encore de proposition cette semaine. Vérifie ton emploi du temps ou cherche un trajet.';
 
   @override
-  String get weekEmptyNoSchedule => 'Ajoute ton emploi du temps pour recevoir tes propositions.';
+  String get weekEmptyNoSchedule =>
+      'Ajoute ton emploi du temps pour recevoir tes propositions.';
 
   @override
   String get addSchedule => 'Ajouter mon emploi du temps';
@@ -702,7 +726,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get alternativesTitle => 'Autres voitures';
 
   @override
-  String get alternativesEmpty => 'Aucune autre voiture compatible pour ce créneau.';
+  String get alternativesEmpty =>
+      'Aucune autre voiture compatible pour ce créneau.';
 
   @override
   String get choose => 'Choisir';
@@ -726,7 +751,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get searchEmpty => 'Aucune voiture trouvée pour ce créneau.';
 
   @override
-  String get searchHint => 'Choisis un jour et un sens, puis lance la recherche.';
+  String get searchHint =>
+      'Choisis un jour et un sens, puis lance la recherche.';
 
   @override
   String get profileSchedule => 'Emploi du temps';
@@ -737,7 +763,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get scheduleSyncError => 'La dernière mise à jour a échoué. Vérifie ton lien.';
+  String get scheduleSyncError =>
+      'La dernière mise à jour a échoué. Vérifie ton lien.';
 
   @override
   String scheduleManualSummary(int count) {
@@ -824,7 +851,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
 
   @override
-  String get meetingPointMapLabel => 'Carte : touche pour placer le point de rendez-vous';
+  String get meetingPointMapLabel =>
+      'Carte : touche pour placer le point de rendez-vous';
 
   @override
   String get meetingPointLabel => 'Nom du point';
@@ -876,7 +904,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get suggestionsEmpty => 'Personne d\'autre ne cherche de trajet à cette heure-là.';
+  String get suggestionsEmpty =>
+      'Personne d\'autre ne cherche de trajet à cette heure-là.';
 
   @override
   String get suggestionsFull => 'Ta voiture est complète.';
@@ -888,13 +917,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorRideNotConfirmed => 'Ce trajet n\'est pas encore confirmé.';
 
   @override
-  String get errorMeetingPointTooFar => 'Choisis un point plus proche de chez toi.';
+  String get errorMeetingPointTooFar =>
+      'Choisis un point plus proche de chez toi.';
 
   @override
   String get errorRideLocked => 'Ce trajet ne peut plus être modifié.';
 
   @override
-  String get errorSuggestionUnavailable => 'Cette personne n\'est plus disponible.';
+  String get errorSuggestionUnavailable =>
+      'Cette personne n\'est plus disponible.';
 
   @override
   String get errorAcceptFirst => 'Accepte d\'abord ce trajet.';
@@ -942,7 +973,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get presenceValidated => 'Présence validée';
 
   @override
-  String get presenceOnBoard => 'Présence validée : ta part est prélevée à la fin du trajet';
+  String get presenceOnBoard =>
+      'Présence validée : ta part est prélevée à la fin du trajet';
 
   @override
   String get tripArrived =>
@@ -1011,7 +1043,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navOpenFailed => 'Impossible d\'ouvrir l\'application GPS.';
 
   @override
-  String get wazeStopByStop => 'Waze ne prend qu\'une destination : tu iras d\'arrêt en arrêt.';
+  String get wazeStopByStop =>
+      'Waze ne prend qu\'une destination : tu iras d\'arrêt en arrêt.';
 
   @override
   String get pickedUp => 'Monté';
@@ -1065,7 +1098,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get walletTitle => 'Ton portefeuille';
 
   @override
-  String get walletIntro => 'Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.';
+  String get walletIntro =>
+      'Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.';
 
   @override
   String get walletBalance => 'Disponible';
@@ -1192,7 +1226,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get walletPayoutDone => 'Retrait demandé. Le virement arrive sous quelques jours.';
+  String get walletPayoutDone =>
+      'Retrait demandé. Le virement arrive sous quelques jours.';
 
   @override
   String walletPayoutRule(String amount) {
@@ -1200,10 +1235,12 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get walletPayoutAmountInvalid => 'Indique un montant, par exemple 12,50.';
+  String get walletPayoutAmountInvalid =>
+      'Indique un montant, par exemple 12,50.';
 
   @override
-  String get walletPayoutHolderInvalid => 'Indique le nom du titulaire du compte.';
+  String get walletPayoutHolderInvalid =>
+      'Indique le nom du titulaire du compte.';
 
   @override
   String get errorIbanInvalid => 'Cet IBAN n\'est pas valide : vérifie-le.';
@@ -1212,7 +1249,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorPayoutTooSmall => 'Montant de retrait trop faible.';
 
   @override
-  String get errorPayoutTooSoon => 'Un seul retrait par semaine : réessaie plus tard.';
+  String get errorPayoutTooSoon =>
+      'Un seul retrait par semaine : réessaie plus tard.';
 
   @override
   String get errorPayoutFailed => 'Le virement a été refusé.';
@@ -1221,7 +1259,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorInsufficientFunds => 'Solde insuffisant.';
 
   @override
-  String get errorNotOnBoard => 'Ta présence n\'est pas validée : pour renoncer, annule ta place.';
+  String get errorNotOnBoard =>
+      'Ta présence n\'est pas validée : pour renoncer, annule ta place.';
 
   @override
   String get cancelMyPlace => 'Annuler ma place';
@@ -1236,7 +1275,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get cancelTierEarly => 'Tu préviens tôt : ton score baisse un peu.';
 
   @override
-  String get cancelTierMedium => 'Le départ approche : ton score baisse davantage.';
+  String get cancelTierMedium =>
+      'Le départ approche : ton score baisse davantage.';
 
   @override
   String get cancelTierLate => 'Départ imminent : ton score baisse nettement.';
@@ -1259,7 +1299,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ratingTitle => 'Noter le trajet';
 
   @override
-  String get ratingIntro => 'Facultatif. Ta note compte dans le score de fiabilité de la personne.';
+  String get ratingIntro =>
+      'Facultatif. Ta note compte dans le score de fiabilité de la personne.';
 
   @override
   String ratingStar(int stars, String name) {
@@ -1387,7 +1428,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rideProblem => 'Un problème sur ce trajet ?';
 
   @override
-  String get rideAbsent => 'Ta présence n\'a pas été validée : ce trajet compte comme une absence.';
+  String get rideAbsent =>
+      'Ta présence n\'a pas été validée : ce trajet compte comme une absence.';
 
   @override
   String get disputeTitle => 'Un problème sur ce trajet ?';
@@ -1400,7 +1442,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get disputeReasonLabel => 'Motif';
 
   @override
-  String get disputeReasonCancellation => 'Je conteste la pénalité d\'annulation';
+  String get disputeReasonCancellation =>
+      'Je conteste la pénalité d\'annulation';
 
   @override
   String get disputeReasonAbsent => 'Mon absence est une erreur';
@@ -1424,7 +1467,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get disputeYours => 'Tes demandes sur ce trajet';
 
   @override
-  String get disputeWithTeam => 'Transmis à l\'équipe Uni-Moov, réponse par mail.';
+  String get disputeWithTeam =>
+      'Transmis à l\'équipe Uni-Moov, réponse par mail.';
 
   @override
   String get disputeEscalate => 'Je ne suis pas d\'accord';
@@ -1450,7 +1494,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'La pénalité ne correspondait pas aux horodatages : elle est corrigée.';
 
   @override
-  String get explainNoPenalty => 'Aucune pénalité n\'a été appliquée pour ce trajet.';
+  String get explainNoPenalty =>
+      'Aucune pénalité n\'a été appliquée pour ce trajet.';
 
   @override
   String get explainPresenceValidated =>
@@ -1465,10 +1510,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucune validation de présence n\'a été enregistrée : l\'absence est maintenue.';
 
   @override
-  String get explainNotAbsent => 'Aucune absence n\'est enregistrée pour toi sur ce trajet.';
+  String get explainNotAbsent =>
+      'Aucune absence n\'est enregistrée pour toi sur ce trajet.';
 
   @override
-  String get explainNeedsHuman => 'L\'équipe Uni-Moov examine ta demande et te répond par mail.';
+  String get explainNeedsHuman =>
+      'L\'équipe Uni-Moov examine ta demande et te répond par mail.';
 
   @override
   String get reportAction => 'Signaler une personne';
@@ -1508,7 +1555,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorAlreadyRated => 'Tu as déjà noté cette personne.';
 
   @override
-  String get errorNotRateable => 'Tu ne peux pas noter cette personne pour ce trajet.';
+  String get errorNotRateable =>
+      'Tu ne peux pas noter cette personne pour ce trajet.';
 
   @override
   String get errorRatingClosed => 'La notation de ce trajet est fermée.';
@@ -1517,16 +1565,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorRideNotCompleted => 'Ce trajet n\'est pas terminé.';
 
   @override
-  String get errorDisputeExists => 'Tu as déjà signalé ce problème pour ce trajet.';
+  String get errorDisputeExists =>
+      'Tu as déjà signalé ce problème pour ce trajet.';
 
   @override
-  String get errorDisputeClosed => 'Le délai pour signaler un problème sur ce trajet est passé.';
+  String get errorDisputeClosed =>
+      'Le délai pour signaler un problème sur ce trajet est passé.';
 
   @override
-  String get errorDisputeNotApplicable => 'Ce motif ne correspond pas à ce trajet.';
+  String get errorDisputeNotApplicable =>
+      'Ce motif ne correspond pas à ce trajet.';
 
   @override
-  String get errorReportLimit => 'Tu as atteint le nombre de signalements du jour.';
+  String get errorReportLimit =>
+      'Tu as atteint le nombre de signalements du jour.';
 
   @override
   String ratingSend(int stars) {
@@ -1619,7 +1671,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce chat de trajet est archivé : tu peux le relire, plus y écrire.';
 
   @override
-  String get chatNoMessages => 'Aucun message pour l\'instant. Lance la conversation.';
+  String get chatNoMessages =>
+      'Aucun message pour l\'instant. Lance la conversation.';
 
   @override
   String get chatOlder => 'Voir les messages plus anciens';
@@ -1670,7 +1723,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notificationsTitle => 'Notifications';
 
   @override
-  String get notificationsIntro => 'Tout est activé par défaut. Coupe ce dont tu n\'as pas besoin.';
+  String get notificationsIntro =>
+      'Tout est activé par défaut. Coupe ce dont tu n\'as pas besoin.';
 
   @override
   String get notificationsRideReminder => 'Rappel de trajet';
@@ -1682,13 +1736,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notificationsRideUpdate => 'Changements de trajet';
 
   @override
-  String get notificationsRideUpdateHelp => 'Annulation, conducteur qui se désiste.';
+  String get notificationsRideUpdateHelp =>
+      'Annulation, conducteur qui se désiste.';
 
   @override
   String get notificationsMatch => 'Propositions';
 
   @override
-  String get notificationsMatchHelp => 'Ta semaine prête, une place qui se libère.';
+  String get notificationsMatchHelp =>
+      'Ta semaine prête, une place qui se libère.';
 
   @override
   String get notificationsChat => 'Messages';
@@ -1697,7 +1753,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notificationsChatHelp => 'Nouveau message dans une conversation.';
 
   @override
-  String get errorNotAContact => 'Tu ne peux écrire qu\'aux personnes croisées sur un trajet.';
+  String get errorNotAContact =>
+      'Tu ne peux écrire qu\'aux personnes croisées sur un trajet.';
 
   @override
   String get errorConversationArchived => 'Cette conversation est archivée.';
@@ -1749,7 +1806,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteAccountTitle => 'Supprimer ton compte';
 
   @override
-  String get deleteAccountIntro => 'C\'est définitif : ton compte ne pourra pas être récupéré.';
+  String get deleteAccountIntro =>
+      'C\'est définitif : ton compte ne pourra pas être récupéré.';
 
   @override
   String get deleteAccountErased =>
@@ -1760,7 +1818,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.';
 
   @override
-  String get deleteAccountRides => 'tes trajets à venir. Les autres sont prévenus.';
+  String get deleteAccountRides =>
+      'tes trajets à venir. Les autres sont prévenus.';
 
   @override
   String get deleteAccountPassword => 'Ton mot de passe, pour confirmer';
@@ -1782,7 +1841,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton portefeuille n\'est pas vide : récupère ton solde avant de supprimer ton compte.';
 
   @override
-  String get errorRideInProgress => 'Termine ton trajet en cours avant de supprimer ton compte.';
+  String get errorRideInProgress =>
+      'Termine ton trajet en cours avant de supprimer ton compte.';
 
   @override
   String get deleteAccountErasedLead => 'Effacés :';
@@ -1805,7 +1865,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteAccountWriteTeam => 'Écrire à l\'équipe';
 
   @override
-  String get deleteAccountMailSubject => 'Récupérer mon solde avant de supprimer mon compte';
+  String get deleteAccountMailSubject =>
+      'Récupérer mon solde avant de supprimer mon compte';
 
   @override
   String get exportDone => 'Tes données sont prêtes.';
@@ -1932,7 +1993,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Carte du trajet proposé, $count personnes en zones approximatives',
+      other:
+          'Carte du trajet proposé, $count personnes en zones approximatives',
       one: 'Carte du trajet proposé, 1 personne en zone approximative',
       zero: 'Carte du trajet proposé',
     );
@@ -2089,7 +2151,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorOwnCarpool => 'C\'est ta propre proposition.';
 
   @override
-  String get errorCarpoolNotHere => 'Propose un trajet dans un groupe ou une conversation privée.';
+  String get errorCarpoolNotHere =>
+      'Propose un trajet dans un groupe ou une conversation privée.';
 
   @override
   String get themeTitle => 'Thème';
@@ -2368,7 +2431,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgeReliable => 'Fiable';
 
   @override
-  String get badgeReliableGoal => 'Fais 5 trajets avec une fiabilité d\'au moins 95 %.';
+  String get badgeReliableGoal =>
+      'Fais 5 trajets avec une fiabilité d\'au moins 95 %.';
 
   @override
   String get leaderboardTitle => 'Classement du campus';
@@ -2429,7 +2493,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get aboutBio => 'Mini-bio';
 
   @override
-  String get aboutBioHint => 'Mes points de rendez-vous, ce que j\'aime en trajet…';
+  String get aboutBioHint =>
+      'Mes points de rendez-vous, ce que j\'aime en trajet…';
 
   @override
   String aboutInterestsHelp(int count, int max) {
@@ -2591,7 +2656,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get calcRounding => 'Montants arrondis au centime ; le conducteur n\'est jamais perdant.';
+  String get calcRounding =>
+      'Montants arrondis au centime ; le conducteur n\'est jamais perdant.';
 
   @override
   String get charterTitle => 'Charte de bonne conduite';
@@ -2608,7 +2674,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'En créant ton compte, tu t\'engages à respecter la charte de bonne conduite.';
 
   @override
-  String get charterContact => 'Une question ou un signalement : unimoov.support@gmail.com';
+  String get charterContact =>
+      'Une question ou un signalement : unimoov.support@gmail.com';
 
   @override
   String get charter1Title => 'Respect et bienveillance';
@@ -2677,7 +2744,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get icsPaste => 'Coller le lien copié';
 
   @override
-  String get icsClipboardEmpty => 'Rien à coller : copie d\'abord le lien de ton agenda.';
+  String get icsClipboardEmpty =>
+      'Rien à coller : copie d\'abord le lien de ton agenda.';
 
   @override
   String get icsWhere =>
