@@ -23,6 +23,8 @@ export interface RideInfo {
   campus: LatLon & { name: string };
   /** Consommation du véhicule du conducteur (null s'il l'a retiré). */
   consumptionLPer100km: number | null;
+  /** Modèle et couleur de la voiture du conducteur, s'il les a donnés. */
+  vehicle: { model: string | null; color: string | null } | null;
 }
 
 export interface Member {
@@ -84,11 +86,14 @@ export class RidesRepo {
       campus_lat: number;
       campus_lon: number;
       consumption: string | null;
+      vehicle_model: string | null;
+      vehicle_color: string | null;
     }>(sql`
       SELECT r.id, r.driver_id, r.direction, r.day::text, r.target_time, r.status, r.seats_total,
              r.distance_m, r.duration_s, r.route_estimated, r.planned_at, r.started_at,
              c.name AS campus_name, ST_Y(c.location::geometry) AS campus_lat,
-             ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption
+             ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption,
+             v.model AS vehicle_model, v.color AS vehicle_color
       FROM rides r JOIN campuses c ON c.id = r.campus_id
       LEFT JOIN vehicles v ON v.user_id = r.driver_id
       WHERE r.id = ${rideId}
@@ -110,6 +115,7 @@ export class RidesRepo {
       startedAt: r.started_at ? new Date(r.started_at) : null,
       campus: { name: r.campus_name, lat: Number(r.campus_lat), lon: Number(r.campus_lon) },
       consumptionLPer100km: r.consumption === null ? null : Number(r.consumption),
+      vehicle: r.vehicle_model || r.vehicle_color ? { model: r.vehicle_model, color: r.vehicle_color } : null,
     };
   }
 

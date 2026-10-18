@@ -13,7 +13,7 @@ export interface SeedUser {
   lat: number;
   lon: number;
   roleMode: 'auto' | 'always_driver' | 'always_passenger';
-  vehicle?: { consumptionLPer100km: string; defaultSeats: number; maxDetourMinutes: number };
+  vehicle?: { consumptionLPer100km: string; defaultSeats: number; maxDetourMinutes: number; model?: string; color?: string };
   /** Semaine type : jour ISO (1 = lundi) → début et fin de journée (heure de Paris). */
   week: Record<number, [string, string]>;
 }
@@ -30,7 +30,7 @@ export const seedUsers: SeedUser[] = [
   {
     id: id(1), firstName: 'Léa', lastName: 'Martin', email: 'lea.martin@etu.univ-smb.fr',
     homeAddress: 'Centre, 74600 Seynod', lat: 45.8865, lon: 6.089, roleMode: 'auto',
-    vehicle: { consumptionLPer100km: '5.8', defaultSeats: 3, maxDetourMinutes: 10 },
+    vehicle: { consumptionLPer100km: '5.8', defaultSeats: 3, maxDetourMinutes: 10, model: 'Renault Clio', color: 'grise' },
     week: weekdays('08:00', '17:00'),
   },
   {
@@ -46,7 +46,7 @@ export const seedUsers: SeedUser[] = [
   {
     id: id(4), firstName: 'Nathan', lastName: 'Petit', email: 'nathan.petit@etu.univ-smb.fr',
     homeAddress: 'Centre, 74320 Sévrier', lat: 45.864, lon: 6.141, roleMode: 'always_driver',
-    vehicle: { consumptionLPer100km: '6.5', defaultSeats: 4, maxDetourMinutes: 12 },
+    vehicle: { consumptionLPer100km: '6.5', defaultSeats: 4, maxDetourMinutes: 12, model: 'Peugeot 308', color: 'bleue' },
     week: weekdays('08:00', '18:00'),
   },
   {
@@ -57,7 +57,7 @@ export const seedUsers: SeedUser[] = [
   {
     id: id(6), firstName: 'Lucas', lastName: 'Moreau', email: 'lucas.moreau@etu.univ-smb.fr',
     homeAddress: 'Centre, 74150 Rumilly', lat: 45.8667, lon: 5.944, roleMode: 'auto',
-    vehicle: { consumptionLPer100km: '5.2', defaultSeats: 2, maxDetourMinutes: 8 },
+    vehicle: { consumptionLPer100km: '5.2', defaultSeats: 2, maxDetourMinutes: 8, model: 'Toyota Yaris', color: 'blanche' },
     week: weekdays('08:00', '17:00'),
   },
   {

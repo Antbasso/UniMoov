@@ -49,6 +49,7 @@ export interface ProposalView {
   seatsTotal: number;
   seatsTaken: number;
   detourMinutes: number;
+  priceCents: number | null;
   driver: PublicPerson | null;
   passengers: PublicPerson[];
 }
@@ -59,6 +60,7 @@ export interface JoinableRide {
   direction: Direction;
   time: Date;
   seatsLeft: number;
+  priceCents: number | null;
   driver: PublicPerson;
 }
 
@@ -123,7 +125,25 @@ export class MatchingService {
      */
     private readonly requireFunds: (userId: string, rideId: string, detourS: number | null) => Promise<void> = () =>
       Promise.resolve(),
+    /** Prix indicatif d'un trajet pour une personne (`RidesService.quote`). */
+    private readonly quote: (rideId: string, userId: string, joiningDetourS?: number) => Promise<number | null> = () =>
+      Promise.resolve(null),
   ) {}
+
+  /** Ajoute le prix indicatif à une proposition (hors transaction : simple lecture). */
+  async priced(userId: string, view: ProposalView): Promise<ProposalView> {
+    return { ...view, priceCents: await this.quote(view.id, userId).catch(() => null) };
+  }
+
+  /** Prix que paierait le passager dans chaque voiture trouvée (son détour compris). */
+  private async pricedRides(userId: string, rides: JoinableRide[]): Promise<JoinableRide[]> {
+    return Promise.all(
+      rides.map(async (r) => ({
+        ...r,
+        priceCents: await this.quote(r.rideId, userId, r.driver.detourMinutes * 60).catch(() => null),
+      })),
+    );
+  }
 
   private today(): string {
     return parisDateOf(this.clock());
@@ -226,7 +246,7 @@ export class MatchingService {
     const days = weekDays(week);
     const rides = await this.repo.ridesForUser(userId, days[0]!, addDaysIso(days[6]!, 1));
     const participants = await this.repo.participants(rides.map((r) => r.id));
-    return rides.flatMap((ride) => {
+    const views = rides.flatMap((ride) => {
       const view = this.view(
         userId,
         ride,
@@ -234,6 +254,7 @@ export class MatchingService {
       );
       return view ? [view] : [];
     });
+    return Promise.all(views.map((v) => this.priced(userId, v)));
   }
 
   private view(userId: string, ride: RideRow, parts: ParticipantRow[]): ProposalView | null {
@@ -252,6 +273,7 @@ export class MatchingService {
       seatsTotal: ride.seatsTotal,
       seatsTaken: passengers.length,
       detourMinutes: minutes(me.detourS),
+      priceCents: null,
       driver: me.role === 'passenger' ? publicPerson(driver, me.detourS) : null,
       passengers: me.role === 'driver' ? passengers.map((p) => publicPerson(p)) : [],
     };
@@ -336,8 +358,8 @@ export class MatchingService {
 
   /**
    * Réponse du conducteur à une demande de place (passager venu par la recherche ou « voir
-   * d'autres »). Acceptée : le passager est accepté des deux côtés, le trajet peut être
-   * confirmé. Refusée : la paire n'est plus reproposée ce jour-là et on lui cherche une autre voiture.
+   * d'autres »). Acceptée : le passager est accepté des deux côtés, le conducteur aussi
+   * (s'il ne l'était pas) et le trajet est confirmé. Refusée : la paire n'est plus reproposée ce jour-là et on lui cherche une autre voiture.
    */
   async answerRequest(driverId: string, rideId: string, passengerId: string, approve: boolean): Promise<ProposalView> {
     const peek = this.assertOpen(await this.repo.peekRide(rideId));
@@ -354,10 +376,13 @@ export class MatchingService {
         return { ride, confirmed: false };
       }
       await this.repo.setParticipantStatus(rideId, passengerId, 'accepted', tx);
-      const driverAccepted = parts.some((p) => p.role === 'driver' && p.status === 'accepted');
-      if (driverAccepted && ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
-      if (driverAccepted) await this.repo.invalidatePlan(rideId, tx);
-      return { ride, confirmed: driverAccepted };
+      // Accepter un passager vaut acceptation du trajet : il est confirmé tout de suite, sans
+      // seconde validation, et d'autres passagers peuvent encore s'ajouter.
+      const driver = parts.find((p) => p.role === 'driver');
+      if (driver && driver.status === 'proposed') await this.repo.setParticipantStatus(rideId, driverId, 'accepted', tx);
+      if (ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
+      await this.repo.invalidatePlan(rideId, tx);
+      return { ride, confirmed: true };
     });
     await this.notifier.notify([passengerId], { type: 'request_answered', rideId, approved: approve }).catch(() => undefined);
     if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
@@ -525,7 +550,7 @@ export class MatchingService {
     const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
     if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (me.role !== 'passenger') return [];
-    return this.joinable(userId, ride.day, ride.direction, rideId);
+    return this.pricedRides(userId, await this.joinable(userId, ride.day, ride.direction, rideId));
   }
 
   /** Recherche manuelle (cahier §4), limitée par un quota quotidien. */
@@ -535,7 +560,7 @@ export class MatchingService {
     if ((await this.repo.incrementSearch(userId, this.today())) > quota) {
       throw new AppError(429, 'search_quota_exceeded', 'Tu as atteint le nombre de recherches du jour');
     }
-    return this.joinable(userId, query.day, query.direction, null, undefined, query.time);
+    return this.pricedRides(userId, await this.joinable(userId, query.day, query.direction, null, undefined, query.time));
   }
 
   /**
@@ -795,6 +820,7 @@ export class MatchingService {
         direction: ride.direction,
         time: ride.targetTime,
         seatsLeft: ride.seatsTotal - others.length,
+        priceCents: null,
         driver: publicPerson(driver, after - before),
         cost: rankingCost(after - before, [driver.reliability], params.reliabilityWeightSeconds),
       });

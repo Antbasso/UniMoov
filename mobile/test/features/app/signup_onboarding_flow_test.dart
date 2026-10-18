@@ -126,8 +126,16 @@ void main() {
     await tapText(tester, 'Véhicule');
     await tapText(tester, 'Oui, j\'ai une voiture');
     await tester.enterText(fieldLabeled('Consommation (L/100 km)'), '5,8');
+    // Modèle et couleur exigés : les passagers reconnaissent la voiture.
     await tapText(tester, 'Enregistrer');
-    expect(find.text('5,8 L/100 km · 3 places · détour 10 min'), findsOneWidget);
+    expect(find.textContaining('Indique le modèle'), findsOneWidget);
+    await tester.enterText(fieldLabeled('Modèle'), 'Renault Clio');
+    await tapText(tester, 'grise');
+    await tapText(tester, 'Enregistrer');
+    expect(
+      find.text('Renault Clio grise · 5,8 L/100 km · 3 places · détour 10 min'),
+      findsOneWidget,
+    );
 
     // Rôle : un « i » explique le mode automatique (alternance entre conducteurs).
     await tapText(tester, 'Rôle');

@@ -106,6 +106,9 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
       time: formatTime(p.time, l10n.localeName),
       driverFirstName: p.driver?.firstName ?? '',
       seatsLeft: p.seatsLeft,
+      // Passager : ce qu'il paie ; conducteur : ce qu'il reçoit au total (estimations).
+      priceCents: p.priceCents,
+      priceLabel: p.isDriver ? l10n.rideCardReceive : null,
       status: rideStatusOf(p),
       role: p.isDriver ? UmRideRole.driver : UmRideRole.passenger,
       live: _isLive(p),

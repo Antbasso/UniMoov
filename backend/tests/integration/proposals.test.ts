@@ -29,6 +29,7 @@ interface Proposal {
   myStatus: string;
   rideStatus: string;
   detourMinutes: number;
+  priceCents: number | null;
   driver: Person | null;
   passengers: Person[];
 }
@@ -91,6 +92,10 @@ describe('semaine générée sur le jeu de seed', () => {
     expect(monday.role).toBe('driver');
     expect(monday.passengers.map((p) => p.firstName).sort()).toEqual(['Chloé', 'Hugo', 'Inès']);
     expect(monday.detourMinutes).toBeLessThanOrEqual(10); // son seuil de détour
+    // Prix sur l'accueil : ce qu'elle recevrait de ses trois passagers ; chacun voit sa part.
+    const hugo = find(await proposals('Hugo'), MONDAY, 'to_campus')!;
+    expect(monday.priceCents).toBeGreaterThan(0);
+    expect(hugo.priceCents).toBeGreaterThan(0);
   });
 
   it('Inès (absente le vendredi) n’a pas de proposition ce jour-là', async () => {
@@ -284,8 +289,10 @@ describe('recherche manuelle', () => {
   it('sans cours ce jour-là, on peut rejoindre une voiture trouvée par la recherche', async () => {
     // Inès n'a pas de cours le vendredi : elle cherche un aller pour 8 h.
     const search = await call('Inès', 'GET', `/search/rides?day=${FRIDAY}&direction=to_campus&time=08:00`);
-    const rides = search.json<{ rides: { rideId: string; driver: Person }[] }>().rides;
+    const rides = search.json<{ rides: { rideId: string; driver: Person; priceCents: number | null }[] }>().rides;
     expect(rides.length).toBeGreaterThan(0);
+    // Prix affiché au choix de la voiture : ce qu'elle paierait, son détour compris.
+    expect(rides[0]!.priceCents).toBeGreaterThan(0);
     const rideId = rides[0]!.rideId;
     const joined = await call('Inès', 'POST', `/proposals/${rideId}/accept`);
     expect(joined.statusCode).toBe(200);
@@ -305,7 +312,10 @@ describe('recherche manuelle', () => {
     const approved = await call(driverName, 'POST', `/rides/${rideId}/requests/${user('Inès').id}/approve`);
     expect(approved.statusCode).toBe(200);
     expect(ctx.notifier.sent).toContainEqual(expect.objectContaining({ event: { type: 'request_answered', rideId, approved: true } }));
-    expect((await proposals('Inès')).find((p) => p.id === rideId)).toMatchObject({ myStatus: 'accepted' });
+    expect((await proposals('Inès')).find((p) => p.id === rideId)).toMatchObject({ myStatus: 'accepted', rideStatus: 'confirmed' });
+    // Accepter le passager suffit : le trajet est confirmé, le conducteur accepté d'office.
+    expect(approved.json()).toMatchObject({ myStatus: 'accepted', rideStatus: 'confirmed' });
+    expect((await call('Inès', 'GET', `/rides/${rideId}`)).statusCode).toBe(200);
     // Déjà traitée : plus rien à approuver.
     expect((await call(driverName, 'POST', `/rides/${rideId}/requests/${user('Inès').id}/reject`)).statusCode).toBe(404);
   });

@@ -3275,7 +3275,7 @@ abstract class AppLocalizations {
   /// No description provided for @rideSeatsTaken.
   ///
   /// In fr, this message translates to:
-  /// **'{taken}/{total}'**
+  /// **'{taken, plural, =0{Aucun passager} =1{1 passager} other{{taken} passagers}} sur {total} places'**
   String rideSeatsTaken(int taken, int total);
 
   /// No description provided for @homeBalance.
@@ -3793,6 +3793,66 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ou un trajet déjà prévu'**
   String get carpoolExisting;
+
+  /// No description provided for @vehicleModelLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modèle'**
+  String get vehicleModelLabel;
+
+  /// No description provided for @vehicleModelHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renault Clio'**
+  String get vehicleModelHint;
+
+  /// No description provided for @vehicleModelRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique le modèle, pour que tes passagers reconnaissent ta voiture.'**
+  String get vehicleModelRequired;
+
+  /// No description provided for @vehicleColorLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Couleur'**
+  String get vehicleColorLabel;
+
+  /// No description provided for @vehicleColorRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indique la couleur de ta voiture.'**
+  String get vehicleColorRequired;
+
+  /// No description provided for @vehicleColorChoices.
+  ///
+  /// In fr, this message translates to:
+  /// **'blanche,noire,grise,argent,bleue,rouge,verte,beige,marron,jaune,orange'**
+  String get vehicleColorChoices;
+
+  /// No description provided for @rideVehicleSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voiture : {description}'**
+  String rideVehicleSemantic(String description);
+
+  /// No description provided for @rideCardReceive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois'**
+  String get rideCardReceive;
+
+  /// No description provided for @proposalPricePay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Environ {price} pour toi'**
+  String proposalPricePay(String price);
+
+  /// No description provided for @proposalPriceReceive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu reçois environ {price} au total'**
+  String proposalPriceReceive(String price);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

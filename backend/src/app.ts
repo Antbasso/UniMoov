@@ -215,7 +215,6 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         })
       : estimate;
     const ridesRepo = new RidesRepo(modules.db);
-    const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing));
     const wallet = new WalletService(new PaymentsRepo(modules.db), modules.payments, settings);
     const hub = new TrackingHub();
     const trust = new TrustService(new TrustRepo(modules.db), settings, modules.mail, clock);
@@ -229,6 +228,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const notifier: Notifier = extra
       ? { notify: async (userIds, event) => void (await Promise.all([extra.notify(userIds, event), notifications.notify(userIds, event)])) }
       : notifications;
+    const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing), notifier);
     const userHub = new UserHub();
     // Accord dans une conversation : le matching ajoute le passager (déclaré plus bas, appelé
     // seulement pendant une requête).
@@ -267,6 +267,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           throw new AppError(402, 'insufficient_funds', 'Solde insuffisant pour ce trajet : recharge ton portefeuille');
         }
       },
+      (rideId, userId, joiningDetourS) => ridesService.quote(rideId, userId, joiningDetourS),
     );
     const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
       await matchingService.onProfileChanged(userId);

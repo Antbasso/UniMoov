@@ -16,6 +16,7 @@ export function categoryOf(event: NotificationEvent): Category {
     case 'payment_required':
     case 'passenger_left':
     case 'rating_requested':
+    case 'pickup_time_changed':
       return 'ride_update';
     case 'ride_reminder':
       return 'ride_reminder';
@@ -60,6 +61,15 @@ export function pushMessage(event: NotificationEvent): PushMessage {
       return { title: 'Covoiturage confirmé', body: 'Accord trouvé dans ta conversation : le trajet est réservé.', data: { type: event.type, rideId: event.rideId } };
     case 'rating_requested':
       return { title: 'Comment s’est passé ton trajet ?', body: 'Note les personnes avec qui tu as voyagé.', data: { type: event.type, rideId: event.rideId } };
+    case 'pickup_time_changed':
+      return {
+        title: event.earlier ? 'Départ avancé' : 'Départ décalé',
+        body:
+          event.role === 'driver'
+            ? `Ton trajet change de passagers : pars à ${event.time} pour arriver à l’heure.`
+            : `Ton conducteur passe maintenant te prendre à ${event.time}.`,
+        data: { type: event.type, rideId: event.rideId },
+      };
     case 'proposals_ready':
       return { title: 'Ta semaine est prête', body: 'Tes propositions de trajets sont arrivées.', data: { type: event.type, week: event.week } };
     case 'ride_reminder':

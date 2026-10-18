@@ -106,3 +106,25 @@ export function planKey(inputs: {
     .map((s) => `${s.userId}@${at(s.point)}`);
   return [at(inputs.start), at(inputs.end), ...stops].join('|');
 }
+
+/** Écart à partir duquel une nouvelle heure de passage est signalée (en deçà : bruit d'itinéraire). */
+export const PASSAGE_SHIFT_NOTICE_S = 60;
+
+/**
+ * Heures de passage qui bougent d'au moins `PASSAGE_SHIFT_NOTICE_S` entre l'ancien plan et le
+ * nouveau (passager ajouté ou retiré). Seules les personnes déjà planifiées comptent : celle qui
+ * vient d'être ajoutée découvre son heure sur le trajet.
+ */
+export function shiftedPassages(
+  previous: ReadonlyMap<string, Date | null>,
+  next: ReadonlyMap<string, Date>,
+): { userId: string; eta: Date; earlier: boolean }[] {
+  const shifted: { userId: string; eta: Date; earlier: boolean }[] = [];
+  for (const [userId, eta] of next) {
+    const before = previous.get(userId);
+    if (!before) continue;
+    const delta = eta.getTime() - before.getTime();
+    if (Math.abs(delta) >= PASSAGE_SHIFT_NOTICE_S * 1000) shifted.push({ userId, eta, earlier: delta < 0 });
+  }
+  return shifted;
+}

@@ -31,6 +31,13 @@ const demoCode = '123456';
 
 const demoCampus = (label: "Campus d'Annecy (USMB)", lat: 45.9195, lon: 6.158);
 
+/// Voitures des conducteurs fictifs (modèle, couleur), pour les reconnaître.
+const demoCars = <String, ({String model, String color})>{
+  'nathan': (model: 'Peugeot 308', color: 'bleue'),
+  'lea': (model: 'Renault Clio', color: 'grise'),
+  'lucas': (model: 'Toyota Yaris', color: 'blanche'),
+};
+
 const demoPeople = <String, DemoPerson>{
   'nathan': DemoPerson(
     id: 'nathan',

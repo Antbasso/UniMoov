@@ -229,6 +229,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
         _StopRow(
           stop: stop,
           isMe: stop.userId == myId,
+          // La voiture sous le conducteur : on la reconnaît en arrivant au point de rendez-vous.
+          vehicle: stop.kind == StopKind.driver ? ride.vehicleLabel : null,
           onTap: stop.userId == null || stop.userId == myId
               ? null
               : () => context.push(AppRoutes.person(stop.userId!)),
@@ -535,10 +537,19 @@ class _LiveBannerState extends ConsumerState<_LiveBanner> {
 
 /// Un arrêt sur une ligne : pastille (la même que sur la carte), qui, où, ⏱ heure, statut.
 class _StopRow extends StatelessWidget {
-  const _StopRow({required this.stop, required this.isMe, this.actions = const [], this.onTap});
+  const _StopRow({
+    required this.stop,
+    required this.isMe,
+    this.vehicle,
+    this.actions = const [],
+    this.onTap,
+  });
 
   final RideStop stop;
   final bool isMe;
+
+  /// Modèle et couleur de la voiture (ligne du conducteur).
+  final String? vehicle;
   final List<Widget> actions;
 
   /// Profil de la personne (sauf soi-même et le campus).
@@ -576,6 +587,7 @@ class _StopRow extends StatelessWidget {
       container: true,
       label: [
         l10n.rideStopSemantic(stop.order + 1, name, place ?? '', time ?? ''),
+        if (vehicle != null) l10n.rideVehicleSemantic(vehicle!),
         if (status case UmChip(:final label)) label,
       ].join(', '),
       button: onTap != null,
@@ -592,6 +604,12 @@ class _StopRow extends StatelessWidget {
         stats: [
           if (time != null)
             UmStat(icon: Icons.schedule_rounded, value: time, semantic: l10n.rideStopAround(time)),
+          if (vehicle != null)
+            UmStat(
+              icon: Icons.directions_car_filled_outlined,
+              value: vehicle!,
+              semantic: l10n.rideVehicleSemantic(vehicle!),
+            ),
         ],
         status: status,
         actions: actions,

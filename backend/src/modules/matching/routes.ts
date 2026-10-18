@@ -34,11 +34,11 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
   app.post(
     '/rides',
     { schema: { body: createRideBody, response: { 201: proposal } }, config: { rateLimit: { max: 20, timeWindow: '1 hour' } } },
-    async (request, reply) => reply.code(201).send(await service.createRide(request.userId, request.body)),
+    async (request, reply) => reply.code(201).send(await service.priced(request.userId, await service.createRide(request.userId, request.body))),
   );
 
-  app.post('/proposals/:id/accept', { schema: { params: idParams, response: { 200: proposal } } }, (request) =>
-    service.accept(request.userId, request.params.id),
+  app.post('/proposals/:id/accept', { schema: { params: idParams, response: { 200: proposal } } }, async (request) =>
+    service.priced(request.userId, await service.accept(request.userId, request.params.id)),
   );
 
   app.post(
@@ -80,20 +80,22 @@ export const matchingRoutes: FastifyPluginAsyncZod<{ service: MatchingService }>
   app.post(
     '/rides/:id/suggestions/:userId/invite',
     { schema: { params: inviteParams, response: { 200: proposal } } },
-    (request) => service.invite(request.userId, request.params.id, request.params.userId),
+    async (request) => service.priced(request.userId, await service.invite(request.userId, request.params.id, request.params.userId)),
   );
 
   // Conducteur : réponse à une demande de place (passager venu par la recherche).
   app.post(
     '/rides/:id/requests/:userId/approve',
     { schema: { params: inviteParams, response: { 200: proposal } } },
-    (request) => service.answerRequest(request.userId, request.params.id, request.params.userId, true),
+    async (request) =>
+      service.priced(request.userId, await service.answerRequest(request.userId, request.params.id, request.params.userId, true)),
   );
 
   app.post(
     '/rides/:id/requests/:userId/reject',
     { schema: { params: inviteParams, response: { 200: proposal } } },
-    (request) => service.answerRequest(request.userId, request.params.id, request.params.userId, false),
+    async (request) =>
+      service.priced(request.userId, await service.answerRequest(request.userId, request.params.id, request.params.userId, false)),
   );
 
   app.get(

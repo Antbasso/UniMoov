@@ -133,7 +133,13 @@ export class ProfileRepo {
 
   async upsertVehicle(
     userId: string,
-    vehicle: { consumptionLPer100km: string; defaultSeats: number; maxDetourMinutes: number },
+    vehicle: {
+      consumptionLPer100km: string;
+      defaultSeats: number;
+      maxDetourMinutes: number;
+      model: string | null;
+      color: string | null;
+    },
   ): Promise<void> {
     await this.db
       .insert(vehicles)

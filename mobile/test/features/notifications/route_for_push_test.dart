@@ -11,6 +11,7 @@ void main() {
       AppRoutes.conversation(id),
     );
     expect(routeForPush({'type': 'ride_reminder', 'rideId': id}), AppRoutes.ride(id));
+    expect(routeForPush({'type': 'pickup_time_changed', 'rideId': id}), AppRoutes.ride(id));
     expect(routeForPush({'type': 'ride_requested', 'rideId': id}), AppRoutes.home);
     expect(routeForPush({'type': 'passenger_left', 'rideId': id}), AppRoutes.ride(id));
     expect(routeForPush({'type': 'payment_required', 'rideId': id}), AppRoutes.wallet);

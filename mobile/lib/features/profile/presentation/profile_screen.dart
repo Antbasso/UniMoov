@@ -162,11 +162,14 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.profileVehicle,
               value: vehicle == null
                   ? l10n.profileNoVehicle
-                  : l10n.profileVehicleSummary(
-                      VehicleInput.formatConsumption(vehicle.consumptionLPer100km),
-                      vehicle.defaultSeats,
-                      vehicle.maxDetourMinutes,
-                    ),
+                  : [
+                      ?[?vehicle.model, ?vehicle.color].join(' ').trim().nonEmpty,
+                      l10n.profileVehicleSummary(
+                        VehicleInput.formatConsumption(vehicle.consumptionLPer100km),
+                        vehicle.defaultSeats,
+                        vehicle.maxDetourMinutes,
+                      ),
+                    ].join(' · '),
               onTap: () => context.push(AppRoutes.profileVehicle),
             ),
             _Row(
@@ -502,4 +505,8 @@ class _AppearanceGroup extends ConsumerWidget {
       ],
     );
   }
+}
+
+extension on String {
+  String? get nonEmpty => isEmpty ? null : this;
 }

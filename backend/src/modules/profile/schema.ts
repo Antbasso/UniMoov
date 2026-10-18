@@ -11,6 +11,9 @@ export const vehicleSchema = z.object({
   consumptionLPer100km: z.number().min(2).max(20),
   defaultSeats: z.number().int().min(1).max(8),
   maxDetourMinutes: z.number().int().min(0).max(60),
+  /** Modèle et couleur : pour que les passagers reconnaissent la voiture (facultatifs). */
+  model: z.string().trim().min(1).max(40).nullish(),
+  color: z.string().trim().min(1).max(30).nullish(),
 });
 
 export const meResponse = z.object({

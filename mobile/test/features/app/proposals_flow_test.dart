@@ -59,8 +59,8 @@ void main() {
     expect(find.textContaining('près de chez toi'), findsNothing);
     expect(find.byTooltip('Passager'), findsOneWidget);
     expect(find.byTooltip('Tu conduis'), findsOneWidget);
-    expect(find.text('Nathan'), findsOneWidget);
-    expect(find.text('1/3'), findsOneWidget);
+    expect(find.textContaining('Nathan', findRichText: true), findsOneWidget);
+    expect(find.textContaining('1 passager sur 3 places', findRichText: true), findsOneWidget);
 
     await openTrip(tester, index: 0);
     // Un seul écran : la carte tout de suite, la personne dessous, en chiffres.

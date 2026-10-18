@@ -24,7 +24,8 @@ String? routeForPush(Map<String, String> data) {
     'ride_reminder' ||
     'passenger_left' ||
     'rating_requested' ||
-    'carpool_joined' when rideId != null => AppRoutes.ride(rideId),
+    'carpool_joined' ||
+    'pickup_time_changed' when rideId != null => AppRoutes.ride(rideId),
     // Solde insuffisant au départ : place libérée, il faut recharger.
     'payment_required' => AppRoutes.wallet,
     'replacement_proposed' ||

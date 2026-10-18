@@ -72,6 +72,7 @@ class _JoinableListState extends ConsumerState<JoinableList> {
                 time: time,
                 driverFirstName: ride.driver.firstName,
                 seatsLeft: ride.seatsLeft,
+                priceCents: ride.priceCents,
                 status: UmRideStatus.proposed,
                 metaText:
                     '${l10n.rideMeta(time, ride.driver.firstName)} · ${l10n.personDetails(ride.driver.scoreOutOfFive, ride.driver.detourMinutes)}',

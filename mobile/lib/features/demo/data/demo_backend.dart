@@ -54,7 +54,13 @@ class DemoBackend
     if (withAccount) {
       _account = _DemoAccount(demoEmail, 'Camille', 'Durand', demoPassword)
         ..home = const Home(address: 'Centre, 74600 Seynod', lat: 45.8865, lon: 6.089)
-        ..vehicle = const Vehicle(consumptionLPer100km: 5.5, defaultSeats: 3, maxDetourMinutes: 10)
+        ..vehicle = const Vehicle(
+          consumptionLPer100km: 5.5,
+          defaultSeats: 3,
+          maxDetourMinutes: 10,
+          model: 'Fiat 500',
+          color: 'rouge',
+        )
         ..roleMode = RoleMode.auto
         ..steps.addAll({for (final s in OnboardingStep.values) s: StepStatus.done});
       _seedScenario();
@@ -788,6 +794,11 @@ class DemoBackend
       passengers: r.driverIsMe
           ? [for (final s in r.seats.where((s) => s.status != 'declined')) person(s)]
           : const [],
+      // Prix indicatif, comme le serveur : ma part (passagère) ou le total reçu (conductrice).
+      priceCents: switch (_priceOf(r)) {
+        final p when r.driverIsMe => p.youReceive > 0 ? p.youReceive : null,
+        final p => p.youPay,
+      },
     );
   }
 
@@ -869,6 +880,8 @@ class DemoBackend
       throw const ApiException('not_found', '', statusCode: 404);
     }
     seat.status = approve ? 'accepted' : 'declined';
+    // Accepter un passager vaut acceptation du trajet (comme le serveur).
+    if (approve && r.driverStatus == 'proposed') r.driverStatus = 'accepted';
     _settle();
     return _proposal(r);
   }
@@ -901,6 +914,7 @@ class DemoBackend
           direction: r.direction,
           time: r.time,
           seatsLeft: r.seatsTotal - r.activeSeats.length,
+          priceCents: _priceOf(r, persons: r.activeSeats.length + 2).youPay,
           driver: PublicPerson(
             userId: driver.id,
             firstName: driver.firstName,
@@ -995,6 +1009,12 @@ class DemoBackend
       status: r.status,
       isDriver: r.driverIsMe,
       myStatus: r.driverIsMe ? 'accepted' : (mine?.status ?? 'accepted'),
+      vehicle: r.driverIsMe
+          ? (model: _me.vehicle?.model, color: _me.vehicle?.color)
+          : switch (demoCars[r.driverId]) {
+              final car? => (model: car.model, color: car.color),
+              null => null,
+            },
       routeEstimated: false,
       // Passagère : le tracé ne trahit pas le domicile d'un autre passager (cahier §4).
       route: [

@@ -67,6 +67,7 @@ class Proposal {
     required this.detourMinutes,
     required this.driver,
     required this.passengers,
+    this.priceCents,
   });
 
   factory Proposal.fromJson(Map<String, dynamic> json) => Proposal(
@@ -87,6 +88,7 @@ class Proposal {
       for (final p in json['passengers'] as List<dynamic>)
         PublicPerson.fromJson(p as Map<String, dynamic>),
     ],
+    priceCents: json['priceCents'] as int?,
   );
 
   final String id;
@@ -101,6 +103,9 @@ class Proposal {
   final int detourMinutes;
   final PublicPerson? driver;
   final List<PublicPerson> passengers;
+
+  /// Prix indicatif : ce que je paie (passager) ou reçois au total (conducteur).
+  final int? priceCents;
 
   int get seatsLeft => seatsTotal - seatsTaken;
 
@@ -133,6 +138,7 @@ class JoinableRide {
     required this.time,
     required this.seatsLeft,
     required this.driver,
+    this.priceCents,
   });
 
   factory JoinableRide.fromJson(Map<String, dynamic> json) => JoinableRide(
@@ -142,6 +148,7 @@ class JoinableRide {
     time: DateTime.parse(json['time'] as String),
     seatsLeft: json['seatsLeft'] as int,
     driver: PublicPerson.fromJson(json['driver'] as Map<String, dynamic>),
+    priceCents: json['priceCents'] as int?,
   );
 
   final String rideId;
@@ -150,6 +157,9 @@ class JoinableRide {
   final DateTime time;
   final int seatsLeft;
   final PublicPerson driver;
+
+  /// Ce que je paierais dans cette voiture (estimation, mon détour compris).
+  final int? priceCents;
 }
 
 /// Semaine ISO 8601 (`AAAA-Www`) d'une date locale.

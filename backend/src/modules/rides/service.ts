@@ -3,9 +3,10 @@ import { distanceMeters, type LatLon, SECTOR_SIZE_M, sectorOf } from '../../shar
 import { publicSector } from '../matching/service.js';
 import type { RouteResult, RoutingProvider } from '../../shared/routing/routing-provider.js';
 import { estimatePrice, type PriceEstimate, proRataPrice } from '../pricing/domain.js';
-import { parisDateOf } from '../../shared/time.js';
+import type { Notifier } from '../../shared/notifications/notifier.js';
+import { parisDateOf, parisTimeOf } from '../../shared/time.js';
 import type { SettingsService } from '../settings/service.js';
-import { type Direction, onboardDistances, orderStops, passageTimes, planKey } from './domain.js';
+import { type Direction, onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from './domain.js';
 import { type HistoryRow, isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 
 const VISIBLE_STATUSES = new Set(['confirmed', 'in_progress', 'completed']);
@@ -74,6 +75,7 @@ export interface RideView {
   role: 'driver' | 'passenger';
   myStatus: string;
   seatsTotal: number;
+  vehicle: { model: string | null; color: string | null } | null;
   distanceM: number | null;
   durationS: number | null;
   routeEstimated: boolean;
@@ -94,6 +96,7 @@ export class RidesService {
     private readonly clock: () => Date,
     /** Un vrai fournisseur existe : un plan estimé (panne, quota) sera recalculé plus tard. */
     private readonly retryEstimated = false,
+    private readonly notifier?: Notifier,
   ) {}
 
   /** Tracés d'aperçu déjà calculés (mêmes points) : un seul appel d'itinéraire par jeu de points. */
@@ -120,7 +123,8 @@ export class RidesService {
   private async plan(rideId: string): Promise<void> {
     const ride = await this.repo.ride(rideId);
     if (!ride) return;
-    const inputs = planInputs(ride, await this.repo.members(rideId));
+    const members = await this.repo.members(rideId);
+    const inputs = planInputs(ride, members);
     if (!inputs) return;
     const ordered = orderStops(inputs.start, inputs.end, inputs.stops);
     const route = await this.routing.route([inputs.start, ...ordered.map((s) => s.point), inputs.end]);
@@ -129,11 +133,15 @@ export class RidesService {
     const detours = route.estimated ? new Map<string, number>() : await this.realDetours(inputs.start, inputs.end, ordered, route);
     const price = await this.estimate(ride, route.distanceM, inputs.stops.length + 1);
 
-    await this.repo.transaction(async (tx) => {
+    const etas = new Map<string, Date>([
+      [ride.driverId, ride.direction === 'to_campus' ? times[0]! : times.at(-1)!],
+      ...ordered.map((s, i): [string, Date] => [s.userId, times[i + 1]!]),
+    ]);
+    const saved = await this.repo.transaction(async (tx) => {
       const current = await this.repo.ride(rideId, tx, true);
-      if (!current) return;
+      if (!current) return false;
       const now = planInputs(current, await this.repo.members(rideId, tx));
-      if (!now || planKey(now) !== planKey(inputs)) return;
+      if (!now || planKey(now) !== planKey(inputs)) return false;
       await this.repo.savePlan(
         rideId,
         {
@@ -157,7 +165,29 @@ export class RidesService {
         },
         tx,
       );
+      return true;
     });
+    if (saved) await this.noticeShiftedPassages(ride, members, etas).catch(() => undefined);
+  }
+
+  /**
+   * Passager ajouté ou retiré sur un trajet confirmé vers le campus : chacun dont l'heure de
+   * passage bouge (le conducteur part plus tôt, un passager est pris plus tôt) reçoit sa
+   * nouvelle heure. Au retour, l'heure de départ du campus ne change pas.
+   */
+  private async noticeShiftedPassages(ride: RideInfo, members: readonly Member[], etas: ReadonlyMap<string, Date>) {
+    if (!this.notifier || ride.status !== 'confirmed' || ride.direction !== 'to_campus') return;
+    const previous = new Map(members.filter(isAccepted).map((m) => [m.userId, m.eta]));
+    for (const shift of shiftedPassages(previous, etas)) {
+      if (shift.eta <= this.clock()) continue;
+      await this.notifier.notify([shift.userId], {
+        type: 'pickup_time_changed',
+        rideId: ride.id,
+        time: parisTimeOf(shift.eta),
+        earlier: shift.earlier,
+        role: shift.userId === ride.driverId ? 'driver' : 'passenger',
+      });
+    }
   }
 
   /**
@@ -259,6 +289,48 @@ export class RidesService {
     const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
     const detours = members.filter((m) => m.role === 'passenger').reduce((sum, m) => sum + (m.detourS ?? 0) * speed, 0);
     return Math.round(distanceMeters(home, ride.campus) * (await this.settings.get('matching.roadFactor')) + detours);
+  }
+
+  /**
+   * Prix indicatif d'un trajet pour une personne, affiché sur l'accueil et au choix d'une
+   * voiture : ce que paie le passager (part + commission) ou ce que reçoit le conducteur. Trajet
+   * planifié : le partage au prorata réel ; sinon une estimation au partage égal avec les
+   * passagers prévus (et `joiningDetourS` : celui qui regarde, pas encore à bord). Conducteur
+   * sans passager : null (rien à recevoir).
+   */
+  async quote(rideId: string, userId: string, joiningDetourS?: number): Promise<number | null> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride || ride.consumptionLPer100km === null) return null;
+    const members = await this.repo.members(rideId);
+    const me = members.find((m) => m.userId === userId);
+    const driver = me?.role === 'driver';
+    const accepted = members.filter((m) => m.role === 'passenger' && isAccepted(m));
+    if (joiningDetourS === undefined && ride.plannedAt && ride.distanceM !== null && accepted.length > 0) {
+      const shares = await this.shares(ride, ride.distanceM, accepted);
+      if (shares) {
+        if (driver) return shares.driverReceivesCents;
+        const mine = shares.byUser.get(userId);
+        if (mine !== undefined) return mine + shares.commissionCents;
+      }
+    }
+    const planned = members.filter(
+      (m) => m.role === 'passenger' && (isAccepted(m) || m.status === 'proposed' || m.status === 'requested'),
+    );
+    const joining = joiningDetourS !== undefined && !planned.some((m) => m.userId === userId);
+    const passengers = planned.length + (joining ? 1 : 0);
+    if (passengers === 0) return null;
+    let distanceM = ride.distanceM;
+    if (distanceM === null || joining) {
+      const home = members.find((m) => m.role === 'driver')?.home;
+      if (distanceM === null && !home) return null;
+      const speed = ((await this.settings.get('matching.avgSpeedKmh')) * 1000) / 3600;
+      const base = distanceM ?? distanceMeters(home!, ride.campus) * (await this.settings.get('matching.roadFactor'));
+      const detours = (distanceM === null ? planned.reduce((sum, m) => sum + (m.detourS ?? 0), 0) : 0) + (joining ? joiningDetourS : 0);
+      distanceM = Math.round(base + detours * speed);
+    }
+    const estimate = await this.estimate(ride, distanceM, passengers + 1);
+    if (!estimate) return null;
+    return driver ? estimate.driverReceivesCents : estimate.passengerPaysCents;
   }
 
   /** Replan après le départ (passagers retirés faute de solde) : le tracé raccourcit. */
@@ -380,6 +452,7 @@ export class RidesService {
       role: me.role,
       myStatus: me.status,
       seatsTotal: ride.seatsTotal,
+      vehicle: ride.vehicle,
       distanceM: ride.distanceM,
       durationS: ride.durationS,
       routeEstimated: ride.routeEstimated,

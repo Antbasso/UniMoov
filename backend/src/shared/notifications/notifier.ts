@@ -14,6 +14,8 @@ export type NotificationEvent =
   | { type: 'passenger_left'; rideId: string }
   | { type: 'proposals_ready'; week: string }
   | { type: 'ride_reminder'; rideId: string; minutes: number }
+  /** Heure de passage décalée (passager ajouté ou retiré) : la nouvelle heure, `HH:MM` à Paris. */
+  | { type: 'pickup_time_changed'; rideId: string; time: string; earlier: boolean; role: 'driver' | 'passenger' }
   | { type: 'chat_message'; conversationId: string; senderFirstName: string };
 
 export interface Notifier {

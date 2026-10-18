@@ -227,11 +227,13 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
   );
   late final _seats = TextEditingController(text: '${widget.me.vehicle?.defaultSeats ?? 3}');
   late final _detour = TextEditingController(text: '${widget.me.vehicle?.maxDetourMinutes ?? 10}');
+  late final _model = TextEditingController(text: widget.me.vehicle?.model ?? '');
+  late final _color = TextEditingController(text: widget.me.vehicle?.color ?? '');
   bool _showFieldErrors = false;
 
   @override
   void dispose() {
-    for (final c in [_consumption, _seats, _detour]) {
+    for (final c in [_consumption, _seats, _detour, _model, _color]) {
       c.dispose();
     }
     super.dispose();
@@ -250,10 +252,20 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
     final consumption = VehicleInput.consumption(_consumption.text);
     final seats = VehicleInput.seats(_seats.text);
     final detour = VehicleInput.detour(_detour.text);
-    if (consumption == null || seats == null || detour == null) return;
+    final model = VehicleInput.label(_model.text, VehicleInput.modelMax);
+    final color = VehicleInput.label(_color.text, VehicleInput.colorMax);
+    if (consumption == null || seats == null || detour == null || model == null || color == null) {
+      return;
+    }
     run(() async {
       await controller.setVehicle(
-        Vehicle(consumptionLPer100km: consumption, defaultSeats: seats, maxDetourMinutes: detour),
+        Vehicle(
+          consumptionLPer100km: consumption,
+          defaultSeats: seats,
+          maxDetourMinutes: detour,
+          model: model,
+          color: color,
+        ),
       );
       await widget.frame.onDone();
     });
@@ -291,6 +303,42 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
           ),
         ),
         if (_hasCar) ...[
+          const SizedBox(height: UmSpace.s4),
+          // Modèle et couleur d'abord : c'est ce qui permet aux passagers de reconnaître la voiture.
+          UmField(
+            label: l10n.vehicleModelLabel,
+            placeholder: l10n.vehicleModelHint,
+            controller: _model,
+            maxLength: VehicleInput.modelMax,
+            error:
+                _showFieldErrors && VehicleInput.label(_model.text, VehicleInput.modelMax) == null
+                ? l10n.vehicleModelRequired
+                : null,
+          ),
+          const SizedBox(height: UmSpace.s4),
+          UmField(
+            label: l10n.vehicleColorLabel,
+            controller: _color,
+            maxLength: VehicleInput.colorMax,
+            onChanged: (_) => setState(() {}),
+            error:
+                _showFieldErrors && VehicleInput.label(_color.text, VehicleInput.colorMax) == null
+                ? l10n.vehicleColorRequired
+                : null,
+          ),
+          const SizedBox(height: UmSpace.s2),
+          Wrap(
+            spacing: UmSpace.s2,
+            runSpacing: UmSpace.s2,
+            children: [
+              for (final color in l10n.vehicleColorChoices.split(','))
+                ChoiceChip(
+                  label: Text(color),
+                  selected: _color.text.trim().toLowerCase() == color,
+                  onSelected: (_) => setState(() => _color.text = color),
+                ),
+            ],
+          ),
           const SizedBox(height: UmSpace.s4),
           UmField(
             label: l10n.vehicleConsumptionLabel,

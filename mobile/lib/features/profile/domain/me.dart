@@ -37,22 +37,32 @@ class Vehicle {
     required this.consumptionLPer100km,
     required this.defaultSeats,
     required this.maxDetourMinutes,
+    this.model,
+    this.color,
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
     consumptionLPer100km: (json['consumptionLPer100km'] as num).toDouble(),
     defaultSeats: json['defaultSeats'] as int,
     maxDetourMinutes: json['maxDetourMinutes'] as int,
+    model: json['model'] as String?,
+    color: json['color'] as String?,
   );
 
   final double consumptionLPer100km;
   final int defaultSeats;
   final int maxDetourMinutes;
 
-  Map<String, Object> toJson() => {
+  /// Modèle (« Renault Clio ») et couleur (« grise ») : les passagers reconnaissent la voiture.
+  final String? model;
+  final String? color;
+
+  Map<String, Object?> toJson() => {
     'consumptionLPer100km': consumptionLPer100km,
     'defaultSeats': defaultSeats,
     'maxDetourMinutes': maxDetourMinutes,
+    'model': model,
+    'color': color,
   };
 }
 

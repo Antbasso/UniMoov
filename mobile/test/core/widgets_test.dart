@@ -164,8 +164,12 @@ void main() {
       );
       expect(find.textContaining('Seynod', findRichText: true), findsOneWidget);
       expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
-      expect(find.text('Léa'), findsOneWidget);
-      expect(find.text(UmRideCard.formatPrice(240, 'fr')), findsOneWidget);
+      expect(find.textContaining('Léa', findRichText: true), findsOneWidget);
+      expect(
+        find.textContaining(UmRideCard.formatPrice(240, 'fr'), findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel(RegExp('Prix estimé')), findsOneWidget);
       expect(find.text('Annulé'), findsOneWidget);
       await tester.tap(find.text('Choisir'));
       expect(taps, 1);
@@ -195,6 +199,31 @@ void main() {
       expect(find.text('En cours'), findsOneWidget);
       await tester.tap(find.textContaining('Domicile', findRichText: true));
       expect(taps, 1);
+    });
+
+    testWidgets('conducteur : « Tu reçois » devant le prix, lu en une phrase', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            width: 400,
+            child: UmRideCard(
+              from: 'Domicile',
+              to: 'Campus',
+              time: '8 h 15',
+              driverFirstName: '',
+              seatsLeft: 1,
+              priceCents: 480,
+              priceLabel: 'Tu reçois',
+              status: UmRideStatus.confirmed,
+            ),
+          ),
+        ),
+      );
+      expect(find.textContaining('Tu reçois', findRichText: true), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Tu reçois ${UmRideCard.formatPrice(480, 'fr')}'),
+        findsOneWidget,
+      );
     });
 
     test('formate les centimes sans flottant visible', () {

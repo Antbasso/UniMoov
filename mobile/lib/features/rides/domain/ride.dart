@@ -168,6 +168,7 @@ class RideDetails {
     this.distanceM,
     this.durationS,
     this.price,
+    this.vehicle,
   });
 
   factory RideDetails.fromJson(Map<String, dynamic> json) => RideDetails(
@@ -189,6 +190,10 @@ class RideDetails {
       for (final s in json['stops'] as List<dynamic>) RideStop.fromJson(s as Map<String, dynamic>),
     ],
     price: json['price'] == null ? null : RidePrice.fromJson(json['price'] as Map<String, dynamic>),
+    vehicle: switch (json['vehicle']) {
+      {'model': final String? model, 'color': final String? color} => (model: model, color: color),
+      _ => null,
+    },
   );
 
   final String id;
@@ -210,6 +215,15 @@ class RideDetails {
   final List<(double, double)> route;
   final List<RideStop> stops;
   final RidePrice? price;
+
+  /// Voiture du conducteur (modèle, couleur), pour la reconnaître au point de rendez-vous.
+  final ({String? model, String? color})? vehicle;
+
+  /// « Renault Clio grise », ou null si le conducteur n'a rien indiqué.
+  String? get vehicleLabel {
+    final parts = [?vehicle?.model, ?vehicle?.color].where((p) => p.isNotEmpty);
+    return parts.isEmpty ? null : parts.join(' ');
+  }
 
   /// Mon arrêt (passager), pour le point de rendez-vous.
   RideStop? stopOf(String? userId) => stops.where((s) => s.userId == userId).firstOrNull;

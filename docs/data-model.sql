@@ -59,7 +59,9 @@ CREATE TABLE vehicles (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   consumption_l_per_100km numeric(4,1) NOT NULL,
   default_seats smallint NOT NULL CHECK (default_seats BETWEEN 1 AND 8),
-  max_detour_minutes smallint NOT NULL DEFAULT 10
+  max_detour_minutes smallint NOT NULL DEFAULT 10,
+  model text CHECK (char_length(model) BETWEEN 1 AND 40),   -- « Clio 4 », pour reconnaître la voiture
+  color text CHECK (char_length(color) BETWEEN 1 AND 30)    -- « grise »
 );
 CREATE UNIQUE INDEX vehicles_user_id_key ON vehicles (user_id);   -- un véhicule par personne
 

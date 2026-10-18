@@ -27,6 +27,8 @@ export const proposal = z.strictObject({
   seatsTotal: z.number().int(),
   seatsTaken: z.number().int(),
   detourMinutes: z.number().int(),
+  /** Prix indicatif : ce que je paie (passager) ou reçois (conducteur) ; null s'il est inconnu. */
+  priceCents: z.number().int().nullable(),
   driver: publicPerson.nullable(),
   passengers: z.array(publicPerson),
 });
@@ -37,6 +39,8 @@ export const joinableRide = z.strictObject({
   direction,
   time: z.date(),
   seatsLeft: z.number().int(),
+  /** Ce que je paierais en montant dans cette voiture (estimation). */
+  priceCents: z.number().int().nullable(),
   driver: publicPerson,
 });
 

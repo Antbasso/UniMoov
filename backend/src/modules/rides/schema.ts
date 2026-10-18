@@ -54,6 +54,7 @@ export const ride = z.strictObject({
   /** Statut de la personne qui lit : `absent` après une clôture sans validation de présence. */
   myStatus: z.string(),
   seatsTotal: z.number().int(),
+  vehicle: z.object({ model: z.string().nullable(), color: z.string().nullable() }).nullable(),
   distanceM: z.number().int().nullable(),
   durationS: z.number().int().nullable(),
   routeEstimated: z.boolean(),

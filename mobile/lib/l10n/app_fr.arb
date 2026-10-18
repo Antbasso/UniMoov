@@ -1017,7 +1017,7 @@
   "requestApprove": "Accepter",
   "requestReject": "Refuser",
   "homePlace": "Domicile",
-  "rideSeatsTaken": "{taken}/{total}",
+  "rideSeatsTaken": "{taken, plural, =0{Aucun passager} =1{1 passager} other{{taken} passagers}} sur {total} places",
   "@rideSeatsTaken": {
     "placeholders": {
       "taken": {
@@ -1271,5 +1271,36 @@
   "carpoolReturnAt": "Retour, départ du campus",
   "carpoolWithReturn": "Programmer le retour",
   "carpoolPublishDrive": "Proposer ce trajet",
-  "carpoolExisting": "Ou un trajet déjà prévu"
+  "carpoolExisting": "Ou un trajet déjà prévu",
+  "vehicleModelLabel": "Modèle",
+  "vehicleModelHint": "Renault Clio",
+  "vehicleModelRequired": "Indique le modèle, pour que tes passagers reconnaissent ta voiture.",
+  "vehicleColorLabel": "Couleur",
+  "vehicleColorRequired": "Indique la couleur de ta voiture.",
+  "vehicleColorChoices": "blanche,noire,grise,argent,bleue,rouge,verte,beige,marron,jaune,orange",
+  "rideVehicleSemantic": "Voiture : {description}",
+  "@rideVehicleSemantic": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "rideCardReceive": "Tu reçois",
+  "proposalPricePay": "Environ {price} pour toi",
+  "@proposalPricePay": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "proposalPriceReceive": "Tu reçois environ {price} au total",
+  "@proposalPriceReceive": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  }
 }

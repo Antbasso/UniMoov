@@ -37,6 +37,7 @@ interface Ride {
   routeEstimated: boolean;
   route: [number, number][];
   stops: Stop[];
+  vehicle: { model: string | null; color: string | null } | null;
   price: {
     totalCostCents: number;
     persons: number;
@@ -170,8 +171,19 @@ describe('carte d’un trajet confirmé', () => {
   });
 
   it('le passager voit le nom du conducteur et son départ ; entre passagers, prénom seulement', async () => {
+    const sentBefore = ctx.notifier.sent.length;
     expect((await call('Inès', 'POST', `/proposals/${mondayId}/accept`)).statusCode).toBe(200);
     const view = await ride('Hugo', mondayId);
+    // Inès en plus : Léa doit partir plus tôt et le sait ; Inès découvre son heure sur le trajet.
+    const shifted = ctx.notifier.sent
+      .slice(sentBefore)
+      .filter((n) => n.event.type === 'pickup_time_changed' && n.event.rideId === mondayId);
+    expect(shifted).toContainEqual(
+      expect.objectContaining({ userIds: [user('Léa').id], event: expect.objectContaining({ earlier: true, role: 'driver' }) }),
+    );
+    expect(shifted.some((n) => n.userIds.includes(user('Inès').id))).toBe(false);
+    // Le passager reconnaît la voiture : modèle et couleur.
+    expect(view.vehicle).toEqual({ model: 'Renault Clio', color: 'grise' });
     const byName = new Map(view.stops.map((s) => [s.firstName, s]));
     // Le domicile du conducteur ne sert pas au passager : son départ reste approximatif.
     expect(byName.get('Léa')).toMatchObject({ lastName: 'Martin', label: '', approximate: true });

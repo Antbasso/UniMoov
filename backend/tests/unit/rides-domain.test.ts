@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onboardDistances, orderStops, passageTimes, planKey } from '../../src/modules/rides/domain.js';
+import { onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from '../../src/modules/rides/domain.js';
 
 const campus = { lat: 45.9195, lon: 6.158 };
 const seynod = { lat: 45.8865, lon: 6.089 };
@@ -108,5 +108,30 @@ describe('onboardDistances', () => {
   it('sans passager : aucun arrêt', () => {
     expect(onboardDistances('to_campus', [{ distanceM: 9000, durationS: 900 }])).toEqual([]);
     expect(onboardDistances('to_campus', [])).toEqual([]);
+  });
+});
+
+describe('shiftedPassages', () => {
+  const at = (min: number) => new Date(Date.UTC(2026, 9, 19, 6, min));
+
+  it('signale une heure avancée ou retardée d’au moins 1 min', () => {
+    const previous = new Map([['driver', at(30)], ['a', at(40)], ['b', at(45)]]);
+    const next = new Map([['driver', at(24)], ['a', new Date(at(40).getTime() + 59_000)], ['b', at(48)]]);
+    expect(shiftedPassages(previous, next)).toEqual([
+      { userId: 'driver', eta: at(24), earlier: true },
+      { userId: 'b', eta: at(48), earlier: false },
+    ]);
+  });
+
+  it('ignore la personne ajoutée (pas d’heure avant) et un écart de 59 s', () => {
+    const previous = new Map<string, Date | null>([['a', at(40)], ['new', null]]);
+    const next = new Map([['a', new Date(at(40).getTime() - 59_000)], ['new', at(35)], ['other', at(20)]]);
+    expect(shiftedPassages(previous, next)).toEqual([]);
+  });
+
+  it('signale pile 1 min', () => {
+    expect(shiftedPassages(new Map([['a', at(40)]]), new Map([['a', at(39)]]))).toEqual([
+      { userId: 'a', eta: at(39), earlier: true },
+    ]);
   });
 });

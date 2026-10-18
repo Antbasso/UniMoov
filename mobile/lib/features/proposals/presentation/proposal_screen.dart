@@ -202,6 +202,17 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                         status,
                       ],
                     ),
+                    if (proposal.priceCents case final cents?) ...[
+                      const SizedBox(height: UmSpace.s1),
+                      Text(
+                        proposal.isDriver
+                            ? l10n.proposalPriceReceive(
+                                UmRideCard.formatPrice(cents, l10n.localeName),
+                              )
+                            : l10n.proposalPricePay(UmRideCard.formatPrice(cents, l10n.localeName)),
+                        style: UmText.body.copyWith(color: c.brandStrong),
+                      ),
+                    ],
                     const SizedBox(height: UmSpace.s4),
                     if (proposal.isDriver && people.isEmpty)
                       Text(

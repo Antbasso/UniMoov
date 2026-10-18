@@ -26,6 +26,7 @@ class UmRideCard extends StatelessWidget {
     required this.driverFirstName,
     required this.seatsLeft,
     this.priceCents,
+    this.priceLabel,
     required this.status,
     this.metaText,
     this.meta = const [],
@@ -51,6 +52,9 @@ class UmRideCard extends StatelessWidget {
 
   /// Montant en centimes (entier, jamais de flottant) ; absent tant qu'il n'est pas calculé.
   final int? priceCents;
+
+  /// Petit libellé devant le prix (« Tu reçois » côté conducteur) ; sinon le prix seul.
+  final String? priceLabel;
 
   /// Ligne de détail en texte (recherche) ; sinon `meta`, petites icônes et valeurs.
   final String? metaText;
@@ -114,14 +118,22 @@ class UmRideCard extends StatelessWidget {
             spacing: UmSpace.s4,
             runSpacing: UmSpace.s1,
             children: [
+              // Icône et texte dans une même phrase : le texte agrandi passe à la ligne.
               for (final (icon, text) in meta)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: UmSize.iconSm, color: muted),
-                    const SizedBox(width: UmSpace.s1),
-                    Text(text, style: UmText.bodySm.copyWith(color: muted)),
-                  ],
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: UmSpace.s1),
+                          child: Icon(icon, size: UmSize.iconSm, color: muted),
+                        ),
+                      ),
+                      TextSpan(text: text),
+                    ],
+                  ),
+                  style: UmText.bodySm.copyWith(color: muted),
                 ),
             ],
           );
@@ -179,10 +191,28 @@ class UmRideCard extends StatelessWidget {
             Row(
               children: [
                 if (price != null)
-                  Semantics(
-                    label: l10n.ridePriceLabel(price),
-                    excludeSemantics: true,
-                    child: Text(price, style: UmText.h3.copyWith(color: c.brandStrong)),
+                  Flexible(
+                    child: Semantics(
+                      label: priceLabel == null
+                          ? l10n.ridePriceLabel(price)
+                          : '${priceLabel!} $price',
+                      excludeSemantics: true,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            if (priceLabel != null)
+                              TextSpan(
+                                text: '${priceLabel!} ',
+                                style: UmText.bodySm.copyWith(color: muted),
+                              ),
+                            TextSpan(
+                              text: price,
+                              style: UmText.h3.copyWith(color: onGradient ? ink : c.brandStrong),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 const Spacer(),
                 if (actionLabel != null)

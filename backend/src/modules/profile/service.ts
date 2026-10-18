@@ -69,6 +69,8 @@ export class ProfileService {
             consumptionLPer100km: Number(vehicle.consumptionLPer100km),
             defaultSeats: vehicle.defaultSeats,
             maxDetourMinutes: vehicle.maxDetourMinutes,
+            model: vehicle.model,
+            color: vehicle.color,
           }
         : null,
       onboarding: { steps, nextStep, completed: nextStep === null },
@@ -131,13 +133,21 @@ export class ProfileService {
 
   async setVehicle(
     userId: string,
-    vehicle: { consumptionLPer100km: number; defaultSeats: number; maxDetourMinutes: number },
+    vehicle: {
+      consumptionLPer100km: number;
+      defaultSeats: number;
+      maxDetourMinutes: number;
+      model?: string | null | undefined;
+      color?: string | null | undefined;
+    },
   ): Promise<MeResponse> {
     await this.repo.upsertVehicle(userId, {
       // numeric(4,1) : une décimale, passée en texte pour éviter toute erreur d'arrondi.
       consumptionLPer100km: vehicle.consumptionLPer100km.toFixed(1),
       defaultSeats: vehicle.defaultSeats,
       maxDetourMinutes: vehicle.maxDetourMinutes,
+      model: vehicle.model ?? null,
+      color: vehicle.color ?? null,
     });
     await this.onMatchingInputsChanged(userId);
     return this.getMe(userId);

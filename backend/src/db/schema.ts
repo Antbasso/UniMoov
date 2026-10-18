@@ -77,6 +77,8 @@ export const vehicles = pgTable('vehicles', {
   consumptionLPer100km: numeric('consumption_l_per_100km', { precision: 4, scale: 1 }).notNull(),
   defaultSeats: smallint('default_seats').notNull(),
   maxDetourMinutes: smallint('max_detour_minutes').notNull().default(10),
+  model: text('model'),
+  color: text('color'),
 });
 
 export const pauses = pgTable('pauses', {

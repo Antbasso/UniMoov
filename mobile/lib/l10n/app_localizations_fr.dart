@@ -1839,7 +1839,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String rideSeatsTaken(int taken, int total) {
-    return '$taken/$total';
+    String _temp0 = intl.Intl.pluralLogic(
+      taken,
+      locale: localeName,
+      other: '$taken passagers',
+      one: '1 passager',
+      zero: 'Aucun passager',
+    );
+    return '$_temp0 sur $total places';
   }
 
   @override
@@ -2177,4 +2184,42 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get carpoolExisting => 'Ou un trajet déjà prévu';
+
+  @override
+  String get vehicleModelLabel => 'Modèle';
+
+  @override
+  String get vehicleModelHint => 'Renault Clio';
+
+  @override
+  String get vehicleModelRequired =>
+      'Indique le modèle, pour que tes passagers reconnaissent ta voiture.';
+
+  @override
+  String get vehicleColorLabel => 'Couleur';
+
+  @override
+  String get vehicleColorRequired => 'Indique la couleur de ta voiture.';
+
+  @override
+  String get vehicleColorChoices =>
+      'blanche,noire,grise,argent,bleue,rouge,verte,beige,marron,jaune,orange';
+
+  @override
+  String rideVehicleSemantic(String description) {
+    return 'Voiture : $description';
+  }
+
+  @override
+  String get rideCardReceive => 'Tu reçois';
+
+  @override
+  String proposalPricePay(String price) {
+    return 'Environ $price pour toi';
+  }
+
+  @override
+  String proposalPriceReceive(String price) {
+    return 'Tu reçois environ $price au total';
+  }
 }

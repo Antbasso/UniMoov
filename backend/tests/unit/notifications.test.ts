@@ -39,6 +39,19 @@ describe('texte des notifications', () => {
     });
   });
 
+  it('nouvelle heure de passage : conducteur ou passager, avancée ou retardée', () => {
+    const driver = pushMessage({ type: 'pickup_time_changed', rideId: 'r1', time: '07:24', earlier: true, role: 'driver' });
+    expect(driver.title).toBe('Départ avancé');
+    expect(driver.body).toContain('07:24');
+    const passenger = pushMessage({ type: 'pickup_time_changed', rideId: 'r1', time: '07:48', earlier: false, role: 'passenger' });
+    expect(passenger).toEqual({
+      title: 'Départ décalé',
+      body: 'Ton conducteur passe maintenant te prendre à 07:48.',
+      data: { type: 'pickup_time_changed', rideId: 'r1' },
+    });
+    expect(categoryOf({ type: 'pickup_time_changed', rideId: 'r1', time: '07:48', earlier: false, role: 'passenger' })).toBe('ride_update');
+  });
+
   it('ton éditorial : phrases courtes, au plus une exclamation, pas d’emoji', () => {
     for (const e of events) {
       const { title, body } = pushMessage(e);

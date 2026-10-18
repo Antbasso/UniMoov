@@ -113,6 +113,13 @@
       "when": 1792326509442,
       "tag": "0015_carpool_request_time",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792335096317,
+      "tag": "0016_vehicle_look",
+      "breakpoints": true
     }
   ]
 }
