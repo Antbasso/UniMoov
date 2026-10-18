@@ -11,6 +11,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../domain/chat.dart';
+import '../../profile/presentation/person_avatar.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
 import 'new_conversation_sheet.dart';
@@ -54,10 +55,25 @@ class ConversationsScreen extends ConsumerWidget {
             l10n.chatEmpty,
             style: UmText.body.copyWith(color: c.inkMuted),
           ),
+          // Trois sections bien séparées : privé, groupes, chats de trajet (éphémères).
           AsyncValue(:final value?) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final conversation in value)
-                _ConversationRow(conversation: conversation, me: me),
+              for (final (kind, title, note) in [
+                (ConversationKind.direct, l10n.chatSectionDirect, null),
+                (ConversationKind.group, l10n.chatSectionGroups, null),
+                (ConversationKind.ride, l10n.chatSectionRides, l10n.chatSectionRidesNote),
+              ])
+                if (value.where((c) => c.kind == kind).toList() case final list
+                    when list.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: UmSpace.s3, bottom: UmSpace.s1),
+                    child: UmSectionTitle(title),
+                  ),
+                  if (note != null) Text(note, style: UmText.caption.copyWith(color: c.inkMuted)),
+                  for (final conversation in list)
+                    _ConversationRow(conversation: conversation, me: me),
+                ],
             ],
           ),
           _ => Semantics(
@@ -70,6 +86,9 @@ class ConversationsScreen extends ConsumerWidget {
   }
 }
 
+/// Une conversation sur une ligne, comme une messagerie : photo, nom et heure, aperçu et
+/// pastille de non-lus à droite. Toujours deux lignes d'une ligne chacune : toutes les cellules
+/// ont la même hauteur, le texte trop long se termine par « … ».
 class _ConversationRow extends ConsumerWidget {
   const _ConversationRow({required this.conversation, required this.me});
 
@@ -93,94 +112,127 @@ class _ConversationRow extends ConsumerWidget {
     final preview = last == null
         ? conversationMembers(l10n, conversation, me)
         : (last.senderId == me ? l10n.chatYouSaid(lastText!) : lastText!);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: UmSpace.s3),
-      child: Semantics(
-        button: true,
-        label: [
-          title,
-          if (conversation.unread > 0) l10n.chatUnread(conversation.unread),
-          if (conversation.archived) l10n.chatArchived,
-          preview,
-        ].join('. '),
-        excludeSemantics: true,
-        // L'effet de pression et l'anneau de focus passent au-dessus de la carte opaque.
-        child: Stack(
-          children: [
-            UmCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        switch (conversation.kind) {
-                          ConversationKind.ride => Icons.directions_car_outlined,
-                          ConversationKind.group => Icons.groups_outlined,
-                          ConversationKind.direct => Icons.person_outline_rounded,
-                        },
-                        size: UmSize.iconMd,
-                        color: c.brandStrong,
-                      ),
-                      const SizedBox(width: UmSpace.s2),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: UmText.body.copyWith(
-                            color: c.ink,
-                            fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (last != null)
-                        Text(
-                          formatMessageWhen(l10n, last.createdAt, now),
-                          style: UmText.caption.copyWith(
-                            color: unread ? c.brandStrong : c.inkMuted,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: UmSpace.s1),
-                  Text(
-                    preview,
-                    style: UmText.bodySm.copyWith(color: unread ? c.ink : c.inkMuted),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (conversation.unread > 0 || conversation.archived) ...[
-                    const SizedBox(height: UmSpace.s2),
-                    Wrap(
-                      spacing: UmSpace.s2,
+    final leading = ConversationAvatar(conversation: conversation, me: me);
+    return Semantics(
+      button: true,
+      label: [
+        title,
+        if (unread) l10n.chatUnread(conversation.unread),
+        if (conversation.archived) l10n.chatArchived,
+        preview,
+      ].join('. '),
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(UmRadius.sm),
+        // Chargement lancé dès que le doigt se pose, avant l'ouverture.
+        onTapDown: (_) => ref.read(conversationProvider(conversation.id)),
+        onTap: () => context.push(AppRoutes.conversation(conversation.id)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: UmSpace.s2),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: UmSpace.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
                       children: [
-                        if (conversation.unread > 0)
-                          UmChip(
-                            label: l10n.chatUnread(conversation.unread),
-                            icon: Icons.mark_chat_unread_outlined,
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: UmText.body.copyWith(
+                              color: c.ink,
+                              fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
+                            ),
                           ),
-                        if (conversation.archived)
-                          UmChip(label: l10n.chatArchived, icon: Icons.inventory_2_outlined),
+                        ),
+                        if (last != null) ...[
+                          const SizedBox(width: UmSpace.s2),
+                          Text(
+                            formatMessageWhen(l10n, last.createdAt, now),
+                            style: UmText.caption.copyWith(
+                              color: unread ? c.brandStrong : c.inkMuted,
+                              fontWeight: unread ? FontWeight.w700 : null,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: UmSpace.s1),
+                    Row(
+                      children: [
+                        if (conversation.archived) ...[
+                          Icon(Icons.inventory_2_outlined, size: UmSize.iconSm, color: c.inkMuted),
+                          const SizedBox(width: UmSpace.s1),
+                        ],
+                        Expanded(
+                          child: Text(
+                            preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: UmText.bodySm.copyWith(color: unread ? c.ink : c.inkMuted),
+                          ),
+                        ),
+                        if (unread) ...[
+                          const SizedBox(width: UmSpace.s2),
+                          // Pastille à droite, sous l'heure, dans la même hauteur de ligne.
+                          Container(
+                            constraints: const BoxConstraints(minWidth: UmSpace.s5),
+                            padding: const EdgeInsets.symmetric(horizontal: UmSpace.s2),
+                            decoration: BoxDecoration(
+                              color: c.brand,
+                              borderRadius: BorderRadius.circular(UmRadius.pill),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              conversation.unread > 99 ? '99+' : '${conversation.unread}',
+                              style: UmText.caption.copyWith(
+                                color: c.onBrand,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
-                ],
-              ),
-            ),
-            Positioned.fill(
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(UmRadius.lg),
-                  // Chargement lancé dès que le doigt se pose, avant l'ouverture.
-                  onTapDown: (_) => ref.read(conversationProvider(conversation.id)),
-                  onTap: () => context.push(AppRoutes.conversation(conversation.id)),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Photo d'une conversation : celle de l'autre personne en privé, une icône pour un groupe ou
+/// un trajet.
+class ConversationAvatar extends StatelessWidget {
+  const ConversationAvatar({super.key, required this.conversation, required this.me});
+
+  final Conversation conversation;
+  final String? me;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    final other = conversation.kind == ConversationKind.direct
+        ? conversation.others(me).firstOrNull
+        : null;
+    if (other != null) return PersonAvatar(name: other.firstName, photoUrl: other.photoUrl);
+    return CircleAvatar(
+      radius: UmSize.avatar / 2,
+      backgroundColor: c.lavender,
+      child: Icon(
+        conversation.kind == ConversationKind.ride
+            ? Icons.directions_car_rounded
+            : Icons.groups_rounded,
+        color: c.brandStrong,
       ),
     );
   }

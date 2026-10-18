@@ -1642,5 +1642,45 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chatSectionDirect": "Messages privés",
+  "chatSectionGroups": "Groupes",
+  "chatSectionRides": "Trajets",
+  "chatSectionRidesNote": "Chats éphémères : créés avec le trajet, en lecture seule après, puis supprimés.",
+  "chatCopied": "Message copié.",
+  "chatReactMore": "Tous les emojis",
+  "chatCopy": "Copier",
+  "chatGroupInfo": "Infos du groupe",
+  "chatGroupRename": "Nom du groupe",
+  "chatGroupRenameAction": "Renommer",
+  "chatGroupMembers": "{count, plural, =1{1 membre} other{{count} membres}}",
+  "@chatGroupMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatGroupAdd": "Ajouter des personnes",
+  "chatGroupAddNone": "Toutes les personnes croisées sur un trajet sont déjà dans le groupe.",
+  "chatGroupRemove": "Retirer {name} du groupe",
+  "@chatGroupRemove": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupCreator": "Créateur",
+  "chatGroupYou": "Toi",
+  "chatGroupSeeProfile": "Voir le profil de {name}",
+  "@chatGroupSeeProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatRideInfo": "Infos du trajet",
+  "chatDirectInfo": "Voir le profil"
 }

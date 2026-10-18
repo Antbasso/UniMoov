@@ -2089,6 +2089,8 @@ class DemoBackend
       unread: unread,
       members: [_member(demoMeId), for (final o in others) _member(o)],
       lastMessage: list.lastOrNull,
+      // Groupes de la démo créés par Camille : elle peut tout gérer.
+      createdBy: kind == ConversationKind.group ? demoMeId : null,
     );
   }
 
@@ -2167,6 +2169,38 @@ class DemoBackend
 
   /// Photos envoyées dans les conversations, par adresse.
   final Map<String, Uint8List> _chatPhotos = {};
+
+  @override
+  Future<Conversation> renameGroup(String id, String title) async {
+    await _wait();
+    return _conversations[id] = _conversations[id]!.copyWith(title: title);
+  }
+
+  @override
+  Future<Conversation> addMembers(String id, List<String> userIds) async {
+    await _wait();
+    final c = _conversations[id]!;
+    return _conversations[id] = c.copyWith(
+      members: [
+        ...c.members,
+        for (final u in userIds)
+          if (!c.members.any((m) => m.userId == u)) _member(u),
+      ],
+    );
+  }
+
+  @override
+  Future<Conversation> removeMember(String id, String userId) async {
+    await _wait();
+    final c = _conversations[id]!;
+    if (c.createdBy != demoMeId) throw const ApiException('forbidden', '', statusCode: 403);
+    return _conversations[id] = c.copyWith(
+      members: [
+        for (final m in c.members)
+          if (m.userId != userId) m,
+      ],
+    );
+  }
 
   @override
   Future<ChatMessage> sendPhoto(

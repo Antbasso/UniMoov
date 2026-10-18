@@ -2786,4 +2786,75 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get chatSectionDirect => 'Messages privés';
+
+  @override
+  String get chatSectionGroups => 'Groupes';
+
+  @override
+  String get chatSectionRides => 'Trajets';
+
+  @override
+  String get chatSectionRidesNote =>
+      'Chats éphémères : créés avec le trajet, en lecture seule après, puis supprimés.';
+
+  @override
+  String get chatCopied => 'Message copié.';
+
+  @override
+  String get chatReactMore => 'Tous les emojis';
+
+  @override
+  String get chatCopy => 'Copier';
+
+  @override
+  String get chatGroupInfo => 'Infos du groupe';
+
+  @override
+  String get chatGroupRename => 'Nom du groupe';
+
+  @override
+  String get chatGroupRenameAction => 'Renommer';
+
+  @override
+  String chatGroupMembers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatGroupAdd => 'Ajouter des personnes';
+
+  @override
+  String get chatGroupAddNone =>
+      'Toutes les personnes croisées sur un trajet sont déjà dans le groupe.';
+
+  @override
+  String chatGroupRemove(String name) {
+    return 'Retirer $name du groupe';
+  }
+
+  @override
+  String get chatGroupCreator => 'Créateur';
+
+  @override
+  String get chatGroupYou => 'Toi';
+
+  @override
+  String chatGroupSeeProfile(String name) {
+    return 'Voir le profil de $name';
+  }
+
+  @override
+  String get chatRideInfo => 'Infos du trajet';
+
+  @override
+  String get chatDirectInfo => 'Voir le profil';
 }

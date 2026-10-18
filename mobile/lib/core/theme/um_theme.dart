@@ -58,6 +58,18 @@ abstract final class UmText {
 extension UmThemeContext on BuildContext {
   UmColorTokens get umColors => Theme.of(this).extension<UmColors>()!.tokens;
   List<BoxShadow> get umShadowSoft => Theme.of(this).extension<UmColors>()!.shadowSoft;
+
+  /// Couleur propre à une personne (prénom dans un groupe), stable d'une ouverture à l'autre :
+  /// une teinte tirée de son identifiant, à une luminosité qui garde le contraste 4.5:1 sur
+  /// les bulles en clair (foncée) comme en sombre (claire).
+  Color umPersonColor(String id) {
+    var hash = 0;
+    for (final unit in id.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7fffffff;
+    }
+    final dark = Theme.of(this).brightness == Brightness.dark;
+    return HSLColor.fromAHSL(1, (hash % 360).toDouble(), 0.65, dark ? 0.72 : 0.34).toColor();
+  }
 }
 
 /// Construit le ThemeData Material à partir des tokens.

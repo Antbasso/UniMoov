@@ -25,7 +25,7 @@ async function login(firstName: string): Promise<Tokens> {
   return t;
 }
 
-async function call(firstName: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: object) {
+async function call(firstName: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: object) {
   return ctx.app.inject({
     method,
     url: `/api/v1${url}`,
@@ -38,6 +38,7 @@ const code = (response: { json: <T>() => T }) => response.json<{ error: { code: 
 interface Conversation {
   id: string;
   kind: string;
+  title?: string | null;
   ride: { day: string; direction: string } | null;
   archived: boolean;
   members: Record<string, unknown>[];
@@ -207,7 +208,11 @@ describe('réactions et photos', () => {
       { userId: user('Hugo').id, emoji: '😂' },
       { userId: user('Inès').id, emoji: '❤️' },
     ]);
-    expect((await call('Inès', 'PUT', url, { emoji: '🤡' })).statusCode).toBe(400);
+    // Tous les emojis du clavier (teintes, drapeaux, familles), mais rien d'autre.
+    for (const emoji of ['🤡', '👍🏽', '🇫🇷', '👨‍👩‍👧']) expect((await call('Hugo', 'PUT', url, { emoji })).statusCode).toBe(200);
+    expect((await call('Hugo', 'DELETE', url)).statusCode).toBe(200);
+    for (const emoji of ['ok', '<b>', '👍 ok']) expect((await call('Inès', 'PUT', url, { emoji })).statusCode).toBe(400);
+    expect((await call('Hugo', 'PUT', url, { emoji: '😂' })).statusCode).toBe(200);
     expect((await call('Nathan', 'PUT', url, { emoji: '👍' })).statusCode).toBe(404);
     const removed = await call('Hugo', 'DELETE', url);
     expect(removed.json<{ reactions: unknown[] }>().reactions).toEqual([{ userId: user('Inès').id, emoji: '❤️' }]);
@@ -277,6 +282,24 @@ describe('messages privés et groupes', () => {
     expect((await call('Inès', 'DELETE', `/conversations/${id}/members/me`)).statusCode).toBe(204);
     expect((await call('Inès', 'GET', `/conversations/${id}`)).statusCode).toBe(404);
     expect(code(await call('Hugo', 'DELETE', `/conversations/${chatId}/members/me`))).toBe('cannot_leave');
+  });
+
+  it('gérer un groupe : renommer, ajouter une personne croisée, retirer (créateur seulement)', async () => {
+    const group = await call('Hugo', 'POST', '/conversations', { kind: 'group', title: 'Aller du lundi', memberIds: [user('Léa').id] });
+    const id = group.json<Conversation & { createdBy: string }>().id;
+    expect(group.json<{ createdBy: string }>().createdBy).toBe(user('Hugo').id);
+    const renamed = await call('Léa', 'PATCH', `/conversations/${id}`, { title: 'Covoit du lundi' });
+    expect(renamed.json<Conversation>().title).toBe('Covoit du lundi');
+    // Nathan n'a jamais croisé Hugo : refusé ; Inès oui.
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/members`, { memberIds: [user('Nathan').id] }))).toBe('not_a_contact');
+    const added = await call('Hugo', 'POST', `/conversations/${id}/members`, { memberIds: [user('Inès').id] });
+    expect(added.json<Conversation>().members.map((m) => m.firstName).sort()).toEqual(['Hugo', 'Inès', 'Léa']);
+    // Seul le créateur retire quelqu'un ; un intrus ne voit rien ; un privé ne se gère pas.
+    expect((await call('Léa', 'DELETE', `/conversations/${id}/members/${user('Inès').id}`)).statusCode).toBe(403);
+    const removed = await call('Hugo', 'DELETE', `/conversations/${id}/members/${user('Inès').id}`);
+    expect(removed.json<Conversation>().members.map((m) => m.firstName).sort()).toEqual(['Hugo', 'Léa']);
+    expect((await call('Nathan', 'PATCH', `/conversations/${id}`, { title: 'x' })).statusCode).toBe(404);
+    expect(code(await call('Hugo', 'PATCH', `/conversations/${chatId}`, { title: 'x' }))).toBe('not_a_group');
   });
 
   it('covoiturage de groupe : offre du conducteur, demande d’un passager, acceptées d’un toucher', async () => {

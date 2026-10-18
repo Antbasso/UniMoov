@@ -20,6 +20,7 @@ import 'carpool_widgets.dart';
 import 'message_bubble.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
+import 'conversations_screen.dart';
 
 /// Conversation : messages en direct, envoi ; chat de trajet archivé en lecture seule (§6).
 class ConversationScreen extends ConsumerWidget {
@@ -184,35 +185,6 @@ class _ConversationState extends ConsumerState<_Conversation> {
     }
   }
 
-  Future<void> _leave() async {
-    final router = GoRouter.of(context);
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.chatLeaveTitle),
-        content: Text(l10n.chatLeaveBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.chatLeaveCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.chatLeaveConfirm),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref.read(conversationProvider(_id).notifier).leave();
-      router.pop();
-    } on ApiException catch (error) {
-      if (mounted) setState(() => _errorCode = error.code);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -222,41 +194,67 @@ class _ConversationState extends ConsumerState<_Conversation> {
     final conversation = widget.state.conversation;
     final messages = widget.state.messages;
     final showSender = conversation.kind != ConversationKind.direct;
-    String nameOf(String userId) =>
-        conversation.members.where((m) => m.userId == userId).firstOrNull?.firstName ??
-        l10n.chatFormerMember;
+    ChatMember? memberOf(String userId) =>
+        conversation.members.where((m) => m.userId == userId).firstOrNull;
+    String nameOf(String userId) => memberOf(userId)?.firstName ?? l10n.chatFormerMember;
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                conversationTitle(l10n, conversation, me),
-                style: UmText.h3.copyWith(color: c.ink),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        // Toucher l'en-tête, comme dans une messagerie : infos du groupe (ou du trajet), ou le
+        // profil de la personne en privé.
+        title: Semantics(
+          button: true,
+          hint: conversation.kind == ConversationKind.direct
+              ? l10n.chatDirectInfo
+              : (conversation.kind == ConversationKind.group
+                    ? l10n.chatGroupInfo
+                    : l10n.chatRideInfo),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(UmRadius.sm),
+            onTap: () {
+              final person = conversation.kind == ConversationKind.direct
+                  ? conversation.others(me).firstOrNull
+                  : null;
+              context.push(
+                person != null
+                    ? AppRoutes.person(person.userId)
+                    : AppRoutes.conversationInfo(conversation.id),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: UmSpace.s1),
+              child: Row(
+                children: [
+                  ConversationAvatar(conversation: conversation, me: me),
+                  const SizedBox(width: UmSpace.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            conversationTitle(l10n, conversation, me),
+                            style: UmText.h3.copyWith(color: c.ink),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          conversationMembers(l10n, conversation, me),
+                          style: UmText.bodySm.copyWith(color: c.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              conversationMembers(l10n, conversation, me),
-              style: UmText.bodySm.copyWith(color: c.inkMuted),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
-        actions: [
-          if (conversation.kind == ConversationKind.group)
-            IconButton(
-              tooltip: l10n.chatLeave,
-              icon: Icon(Icons.group_remove_outlined, color: c.brandStrong),
-              onPressed: _leave,
-            ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -309,14 +307,45 @@ class _ConversationState extends ConsumerState<_Conversation> {
                         final position = messages.length - 1 - index;
                         final message = messages[position];
                         final mine = message.senderId == me;
-                        final sender = showSender && !mine ? nameOf(message.senderId) : null;
+                        // Série : messages consécutifs du même auteur, le même jour. Prénom en
+                        // tête de série, photo à côté du dernier message (comme une messagerie).
+                        bool sameRun(ChatMessage? other) =>
+                            other != null &&
+                            other.senderId == message.senderId &&
+                            other.carpool == null &&
+                            sameDay(other.createdAt, message.createdAt);
+                        final previous = position > 0 ? messages[position - 1] : null;
+                        final next = position < messages.length - 1 ? messages[position + 1] : null;
+                        final firstOfRun = !sameRun(previous);
+                        final lastOfRun = !sameRun(next);
+                        final author = memberOf(message.senderId);
+                        final sender = showSender && !mine && firstOfRun
+                            ? (author?.firstName ?? l10n.chatFormerMember)
+                            : null;
                         final Widget bubble = message.carpool != null
-                            ? CarpoolCard(message: message, mine: mine, myId: me, sender: sender)
+                            ? CarpoolCard(
+                                message: message,
+                                mine: mine,
+                                myId: me,
+                                sender: showSender && !mine ? nameOf(message.senderId) : null,
+                              )
                             : MessageBubble(
                                 message: message,
                                 mine: mine,
                                 myId: me,
                                 sender: sender,
+                                senderColor: context.umPersonColor(message.senderId),
+                                avatarSlot: showSender,
+                                avatar: showSender && !mine && lastOfRun
+                                    ? GestureDetector(
+                                        onTap: () =>
+                                            context.push(AppRoutes.person(message.senderId)),
+                                        child: PersonAvatar(
+                                          name: author?.firstName ?? '?',
+                                          photoUrl: author?.photoUrl,
+                                        ),
+                                      )
+                                    : null,
                                 onReact: conversation.archived || me == null
                                     ? null
                                     : (emoji) => _react(message.id, me, emoji),

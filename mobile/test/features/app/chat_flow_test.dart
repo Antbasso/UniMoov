@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unimoov/core/router/redirect.dart';
@@ -149,7 +150,9 @@ void main() {
     await tester.tap(find.byTooltip('Messages, 1 non lu'));
     await tester.pumpAndSettle();
     expect(find.text('Chat du trajet'), findsOneWidget);
-    expect(find.text('1 non lu'), findsOneWidget);
+    // Sections : privé, groupes, trajets ; pastille de non-lus à droite.
+    expect(find.text('Trajets'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Chat du trajet. 1 non lu')), findsOneWidget);
     expect(find.text('Petit retard, 5 min.'), findsOneWidget);
     // Ouverture : la conversation vient de la liste, seuls les messages sont chargés.
     await tapText(tester, 'Petit retard, 5 min.');
@@ -200,6 +203,29 @@ void main() {
     expect(backend.reactionsSent.last.$2, isNull);
     expect(pill, findsNothing);
 
+    // Appui long, comme dans une messagerie : réactions rapides, tous les emojis, copier.
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+      call,
+    ) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.longPress(find.text('Je pars à 7 h 40.'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Tous les emojis'), findsOneWidget);
+    await tapText(tester, 'Copier');
+    expect(find.text('Message copié.'), findsOneWidget);
+    expect(copied, 'Je pars à 7 h 40.');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
     // Photo : le texte en cours devient sa légende.
     await tester.enterText(find.widgetWithText(TextField, 'Écris un message'), 'Je suis là');
     await tester.tap(find.byTooltip('Joindre une photo ou un trajet'));
@@ -247,8 +273,17 @@ void main() {
     await tester.pump();
     await tapText(tester, 'Créer le groupe');
     expect(find.text('Seynod le lundi'), findsOneWidget);
-    await tester.tap(find.byTooltip('Quitter le groupe'));
+    // L'en-tête ouvre les infos du groupe : renommer, ajouter, membres, quitter.
+    await tapText(tester, 'Seynod le lundi');
+    expect(find.text('Infos du groupe'), findsOneWidget);
+    await tester.tap(find.byTooltip('Nom du groupe'));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Covoit du lundi');
+    await tapText(tester, 'Renommer');
+    expect(find.text('Covoit du lundi'), findsOneWidget);
+    expect(backend.groupActions.last.$2, 'rename:Covoit du lundi');
+    await tester.ensureVisible(find.text('Quitter le groupe'));
+    await tapText(tester, 'Quitter le groupe');
     expect(find.text('Quitter le groupe ?'), findsOneWidget);
     await tapText(tester, 'Quitter');
     expect(

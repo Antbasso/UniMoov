@@ -4653,6 +4653,120 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 semaine} other{{count} semaines}}'**
   String pauseDurationWeeks(int count);
+
+  /// No description provided for @chatSectionDirect.
+  ///
+  /// In fr, this message translates to:
+  /// **'Messages privés'**
+  String get chatSectionDirect;
+
+  /// No description provided for @chatSectionGroups.
+  ///
+  /// In fr, this message translates to:
+  /// **'Groupes'**
+  String get chatSectionGroups;
+
+  /// No description provided for @chatSectionRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajets'**
+  String get chatSectionRides;
+
+  /// No description provided for @chatSectionRidesNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chats éphémères : créés avec le trajet, en lecture seule après, puis supprimés.'**
+  String get chatSectionRidesNote;
+
+  /// No description provided for @chatCopied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Message copié.'**
+  String get chatCopied;
+
+  /// No description provided for @chatReactMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les emojis'**
+  String get chatReactMore;
+
+  /// No description provided for @chatCopy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier'**
+  String get chatCopy;
+
+  /// No description provided for @chatGroupInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos du groupe'**
+  String get chatGroupInfo;
+
+  /// No description provided for @chatGroupRename.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du groupe'**
+  String get chatGroupRename;
+
+  /// No description provided for @chatGroupRenameAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer'**
+  String get chatGroupRenameAction;
+
+  /// No description provided for @chatGroupMembers.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 membre} other{{count} membres}}'**
+  String chatGroupMembers(int count);
+
+  /// No description provided for @chatGroupAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter des personnes'**
+  String get chatGroupAdd;
+
+  /// No description provided for @chatGroupAddNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes les personnes croisées sur un trajet sont déjà dans le groupe.'**
+  String get chatGroupAddNone;
+
+  /// No description provided for @chatGroupRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {name} du groupe'**
+  String chatGroupRemove(String name);
+
+  /// No description provided for @chatGroupCreator.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créateur'**
+  String get chatGroupCreator;
+
+  /// No description provided for @chatGroupYou.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi'**
+  String get chatGroupYou;
+
+  /// No description provided for @chatGroupSeeProfile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le profil de {name}'**
+  String chatGroupSeeProfile(String name);
+
+  /// No description provided for @chatRideInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos du trajet'**
+  String get chatRideInfo;
+
+  /// No description provided for @chatDirectInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le profil'**
+  String get chatDirectInfo;
 }
 
 class _AppLocalizationsDelegate

@@ -337,6 +337,25 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     await _api.leave(id);
     if (ref.mounted) ref.invalidate(conversationsProvider);
   }
+
+  /// Groupe modifié (nom, membres) : la conversation affichée et la liste se mettent à jour.
+  Future<void> _manage(Future<Conversation> Function() action) async {
+    final updated = await action();
+    final current = state.value;
+    if (!ref.mounted || current == null) return;
+    state = AsyncData(
+      ConversationState(
+        conversation: updated.copyWith(lastMessage: current.conversation.lastMessage),
+        messages: current.messages,
+        hasMore: current.hasMore,
+      ),
+    );
+    ref.invalidate(conversationsProvider);
+  }
+
+  Future<void> rename(String title) => _manage(() => _api.renameGroup(id, title));
+  Future<void> addMembers(List<String> userIds) => _manage(() => _api.addMembers(id, userIds));
+  Future<void> removeMember(String userId) => _manage(() => _api.removeMember(id, userId));
 }
 
 final conversationProvider = AsyncNotifierProvider.autoDispose

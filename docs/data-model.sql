@@ -309,7 +309,7 @@ ALTER TABLE messages ADD CONSTRAINT messages_body_length
 CREATE TABLE message_reactions (        -- une réaction par personne et par message
   message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  emoji text NOT NULL CHECK (emoji IN ('👍', '❤️', '😂', '😮', '😢', '🙏')),
+  emoji text NOT NULL CHECK (char_length(emoji) BETWEEN 1 AND 16),   -- un emoji (vérifié par l'API)
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (message_id, user_id)
 );

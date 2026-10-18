@@ -13,6 +13,8 @@ export interface ConversationRow {
   archivedAt: Date | null;
   deleteAfter: Date | null;
   lastMessageAt: Date | null;
+  /** Créateur du groupe : seul à pouvoir en retirer quelqu'un. */
+  createdBy: string | null;
 }
 
 export interface MemberRow {
@@ -62,6 +64,7 @@ const toConversation = (r: Record<string, unknown>): ConversationRow => ({
   archivedAt: date(r.archived_at),
   deleteAfter: date(r.delete_after),
   lastMessageAt: date(r.last_message_at),
+  createdBy: (r.created_by as string | null) ?? null,
 });
 const toMessage = (r: Record<string, unknown>): MessageRow => ({
   id: r.id as string,
@@ -188,6 +191,10 @@ export class ChatRepo {
     for (const userId of userIds) {
       await db.execute(sql`DELETE FROM conversation_members WHERE conversation_id = ${conversationId} AND user_id = ${userId}`);
     }
+  }
+
+  async rename(conversationId: string, title: string, db: DbOrTx = this.db): Promise<void> {
+    await db.execute(sql`UPDATE conversations SET title = ${title} WHERE id = ${conversationId}`);
   }
 
   async byDirectKey(key: string, db: DbOrTx = this.db): Promise<string | null> {

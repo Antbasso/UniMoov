@@ -40,6 +40,7 @@ export interface ConversationView {
   ride: { day: string; direction: 'to_campus' | 'from_campus' } | null;
   /** Lecture seule : chat de trajet archivé. */
   archived: boolean;
+  createdBy: string | null;
   /** Prénom et photo seulement : le nom de famille reste entre conducteur et passagers (§4). */
   members: { userId: string; firstName: string; photoUrl: string | null }[];
   unread: number;
@@ -84,6 +85,7 @@ export class ChatService {
       rideId: c.rideId,
       ride: c.kind === 'ride' && c.rideId ? await this.repo.rideInfo(c.rideId) : null,
       archived: this.archived(c),
+      createdBy: c.kind === 'group' ? c.createdBy : null,
       members: (await this.repo.members(c.id)).map(({ userId, firstName, photoUrl }) => ({ userId, firstName, photoUrl })),
       unread: c.unread ?? 0,
       lastMessage: c.lastMessage ? messageView(c.lastMessage) : null,
@@ -137,6 +139,45 @@ export class ChatService {
     }
     const id = await this.repo.create({ kind: 'group', title, createdBy: userId, at: now }, [userId, ...others]);
     return this.get(userId, id);
+  }
+
+  /** Groupe dont je suis membre (404 sinon), modifiable (409 pour un privé ou un trajet). */
+  private async group(userId: string, conversationId: string): Promise<ConversationRow> {
+    const c = await this.member(userId, conversationId);
+    if (c.kind !== 'group') throw new AppError(409, 'not_a_group', 'Seul un groupe se gère');
+    return c;
+  }
+
+  /** Renommer le groupe (tout membre, comme dans une messagerie). */
+  async rename(userId: string, conversationId: string, title: string): Promise<ConversationView> {
+    await this.group(userId, conversationId);
+    await this.repo.rename(conversationId, title.trim());
+    return this.get(userId, conversationId);
+  }
+
+  /** Ajouter des personnes au groupe : seulement celles que j'ai croisées sur un trajet. */
+  async addMembers(userId: string, conversationId: string, memberIds: string[]): Promise<ConversationView> {
+    await this.group(userId, conversationId);
+    const current = new Set((await this.repo.members(conversationId)).map((m) => m.userId));
+    const added = [...new Set(memberIds)].filter((id) => !current.has(id));
+    if (added.length === 0) return this.get(userId, conversationId);
+    if (!(await this.repo.sharedRideWithAll(userId, added))) {
+      throw new AppError(403, 'not_a_contact', "Tu ne peux ajouter que des personnes croisées sur un trajet");
+    }
+    if (current.size + added.length > (await this.settings.get('chat.maxGroupMembers'))) {
+      throw new AppError(422, 'group_too_large', 'Ce groupe compte trop de personnes');
+    }
+    await this.repo.addMembers(conversationId, added, this.clock());
+    return this.get(userId, conversationId);
+  }
+
+  /** Retirer quelqu'un du groupe : réservé au créateur (chacun peut quitter de lui-même). */
+  async removeMember(userId: string, conversationId: string, memberId: string): Promise<ConversationView> {
+    const c = await this.group(userId, conversationId);
+    if (memberId === userId) throw new AppError(409, 'use_leave', 'Pour partir, quitte le groupe');
+    if (c.createdBy !== userId) throw new AppError(403, 'forbidden', 'Seul le créateur du groupe peut retirer quelqu’un');
+    await this.repo.removeMembers(conversationId, [memberId]);
+    return this.get(userId, conversationId);
   }
 
   /** Quitter un groupe ; un groupe vide est supprimé avec ses messages. */

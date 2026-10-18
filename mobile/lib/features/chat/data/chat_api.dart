@@ -47,6 +47,11 @@ abstract interface class ChatApi {
   Future<ChatMessage> acceptCarpool(String id, String messageId);
   Future<void> markRead(String id);
   Future<void> leave(String id);
+
+  /// Groupe : renommer, ajouter des personnes croisées, retirer quelqu'un (créateur).
+  Future<Conversation> renameGroup(String id, String title);
+  Future<Conversation> addMembers(String id, List<String> userIds);
+  Future<Conversation> removeMember(String id, String userId);
 }
 
 class DioChatApi implements ChatApi {
@@ -197,6 +202,22 @@ class DioChatApi implements ChatApi {
   @override
   Future<void> leave(String id) =>
       guardApi(() => _dio.delete<void>('/api/v1/conversations/$id/members/me'));
+
+  @override
+  Future<Conversation> renameGroup(String id, String title) =>
+      _one(_dio.patch<Map<String, dynamic>>('/api/v1/conversations/$id', data: {'title': title}));
+
+  @override
+  Future<Conversation> addMembers(String id, List<String> userIds) => _one(
+    _dio.post<Map<String, dynamic>>(
+      '/api/v1/conversations/$id/members',
+      data: {'memberIds': userIds},
+    ),
+  );
+
+  @override
+  Future<Conversation> removeMember(String id, String userId) =>
+      _one(_dio.delete<Map<String, dynamic>>('/api/v1/conversations/$id/members/$userId'));
 }
 
 final chatApiProvider = Provider<ChatApi>(

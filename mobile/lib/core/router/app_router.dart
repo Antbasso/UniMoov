@@ -6,6 +6,7 @@ import '../../features/account/presentation/delete_account_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/session_controller.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/chat/presentation/conversation_info_screen.dart';
 import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/chat/presentation/conversations_screen.dart';
 import '../../features/home/presentation/app_shell.dart';
@@ -85,6 +86,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: ':id',
                     parentNavigatorKey: _rootKey,
                     builder: (_, state) => ConversationScreen(id: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'info',
+                        parentNavigatorKey: _rootKey,
+                        builder: (_, state) =>
+                            ConversationInfoScreen(id: state.pathParameters['id']!),
+                      ),
+                    ],
                   ),
                 ],
               ),

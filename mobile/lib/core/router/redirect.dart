@@ -38,6 +38,7 @@ abstract final class AppRoutes {
   static const messages = '/messages';
   static const charter = '/charter';
   static String conversation(String id) => '/messages/$id';
+  static String conversationInfo(String id) => '/messages/$id/info';
 
   /// Litige sur un trajet ; route à part, car un passager qui a annulé n'a plus accès au trajet.
   static String dispute(String rideId, {DisputeReason? reason}) => Uri(

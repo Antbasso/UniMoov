@@ -149,6 +149,7 @@ class Conversation {
     this.rideDay,
     this.rideToCampus,
     this.lastMessage,
+    this.createdBy,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
@@ -171,10 +172,14 @@ class Conversation {
     lastMessage: json['lastMessage'] == null
         ? null
         : ChatMessage.fromJson(json['lastMessage'] as Map<String, dynamic>),
+    createdBy: json['createdBy'] as String?,
   );
 
   final String id;
   final ConversationKind kind;
+
+  /// Créateur d'un groupe : le seul qui peut en retirer quelqu'un.
+  final String? createdBy;
   final String? title;
   final String? rideId;
 
@@ -191,16 +196,22 @@ class Conversation {
   /// Les autres membres (pour le titre d'une conversation privée).
   List<ChatMember> others(String? me) => members.where((m) => m.userId != me).toList();
 
-  Conversation copyWith({int? unread, ChatMessage? lastMessage}) => Conversation(
+  Conversation copyWith({
+    int? unread,
+    ChatMessage? lastMessage,
+    String? title,
+    List<ChatMember>? members,
+  }) => Conversation(
     id: id,
     kind: kind,
-    title: title,
+    title: title ?? this.title,
     rideId: rideId,
     rideDay: rideDay,
     rideToCampus: rideToCampus,
     archived: archived,
     unread: unread ?? this.unread,
-    members: members,
+    members: members ?? this.members,
     lastMessage: lastMessage ?? this.lastMessage,
+    createdBy: createdBy,
   );
 }

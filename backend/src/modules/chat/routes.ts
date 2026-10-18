@@ -13,8 +13,11 @@ import {
   messageParams,
   messagesResponse,
   carpoolBody,
+  addMembersBody,
+  memberParams,
   photoQuery,
   reactionBody,
+  renameBody,
   sendBody,
 } from './schema.js';
 import { PHOTO_MAX_BYTES } from '../../shared/images.js';
@@ -182,6 +185,25 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
     await service.markRead(request.userId, request.params.id);
     return reply.code(204).send(null);
   });
+
+  // Gestion d'un groupe : nom, ajout de personnes croisées, retrait par le créateur.
+  api.patch(
+    '/conversations/:id',
+    { schema: { params: conversationParams, body: renameBody, response: { 200: conversation } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.rename(request.userId, request.params.id, request.body.title),
+  );
+
+  api.post(
+    '/conversations/:id/members',
+    { schema: { params: conversationParams, body: addMembersBody, response: { 200: conversation } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.addMembers(request.userId, request.params.id, request.body.memberIds),
+  );
+
+  api.delete(
+    '/conversations/:id/members/:userId',
+    { schema: { params: memberParams, response: { 200: conversation } } },
+    (request) => service.removeMember(request.userId, request.params.id, request.params.userId),
+  );
 
   api.delete(
     '/conversations/:id/members/me',

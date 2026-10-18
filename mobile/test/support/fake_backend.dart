@@ -968,6 +968,42 @@ class FakeBackend
     return message;
   }
 
+  /// Gestion des groupes faite depuis l'app : (conversation, action).
+  final List<(String, String)> groupActions = [];
+
+  @override
+  Future<Conversation> renameGroup(String id, String title) async {
+    _maybeFail();
+    groupActions.add((id, 'rename:$title'));
+    return conversationsById[id] = conversationsById[id]!.copyWith(title: title);
+  }
+
+  @override
+  Future<Conversation> addMembers(String id, List<String> userIds) async {
+    _maybeFail();
+    groupActions.add((id, 'add:${userIds.join(',')}'));
+    final c = conversationsById[id]!;
+    return conversationsById[id] = c.copyWith(
+      members: [
+        ...c.members,
+        for (final u in userIds) ChatMember(userId: u, firstName: u),
+      ],
+    );
+  }
+
+  @override
+  Future<Conversation> removeMember(String id, String userId) async {
+    _maybeFail();
+    groupActions.add((id, 'remove:$userId'));
+    final c = conversationsById[id]!;
+    return conversationsById[id] = c.copyWith(
+      members: [
+        for (final m in c.members)
+          if (m.userId != userId) m,
+      ],
+    );
+  }
+
   /// Photos envoyées dans les conversations : (conversation, légende, octets).
   final List<(String, String, Uint8List)> chatPhotos = [];
 
