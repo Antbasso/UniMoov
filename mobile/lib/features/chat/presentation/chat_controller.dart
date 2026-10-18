@@ -222,10 +222,18 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     }
   }
 
+  /// Nouveau message, ou message déjà affiché mis à jour (« Chloé monte » sur une proposition).
   void _append(ChatMessage message) {
     final current = state.value;
-    if (current == null || current.messages.any((m) => m.id == message.id)) return;
-    state = AsyncData(current.copyWith(messages: [...current.messages, message]));
+    if (current == null) return;
+    final known = current.messages.any((m) => m.id == message.id);
+    state = AsyncData(
+      current.copyWith(
+        messages: known
+            ? [for (final m in current.messages) m.id == message.id ? message : m]
+            : [...current.messages, message],
+      ),
+    );
   }
 
   void _received(ChatMessage message) {
@@ -235,6 +243,16 @@ class ConversationController extends AsyncNotifier<ConversationState> {
 
   Future<void> send(String body) async {
     final message = await _api.send(id, body);
+    if (ref.mounted) _append(message);
+  }
+
+  Future<void> postCarpool({String? rideId, DateTime? day, bool toCampus = true}) async {
+    final message = await _api.postCarpool(id, rideId: rideId, day: day, toCampus: toCampus);
+    if (ref.mounted) _append(message);
+  }
+
+  Future<void> acceptCarpool(String messageId) async {
+    final message = await _api.acceptCarpool(id, messageId);
     if (ref.mounted) _append(message);
   }
 

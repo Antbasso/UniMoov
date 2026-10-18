@@ -60,6 +60,58 @@ void main() {
     }
   }
 
+  testWidgets('groupe : accepter une proposition de covoiturage, puis proposer mon trajet', (
+    tester,
+  ) async {
+    backend.conversationsById['conv-group'] = const Conversation(
+      id: 'conv-group',
+      kind: ConversationKind.group,
+      title: 'Covoit Seynod',
+      archived: false,
+      unread: 0,
+      members: [ChatMember(userId: me, firstName: 'Léa'), nathan, hugo],
+    );
+    backend.messagesById['conv-group'] = [
+      ChatMessage(
+        id: 'offer-1',
+        conversationId: 'conv-group',
+        senderId: 'driver-1',
+        body: 'Je propose un trajet.',
+        createdAt: DateTime.utc(2026, 10, 15, 6, 10),
+        carpool: Carpool(
+          isOffer: true,
+          rideId: 'ride-9',
+          day: DateTime(2026, 10, 22),
+          toCampus: true,
+          time: DateTime.utc(2026, 10, 22, 6),
+        ),
+      ),
+    ];
+    // Un trajet que je conduis vendredi, à proposer au groupe.
+    backend.weeks['2026-W42']!.add(
+      proposalFixture(
+        id: 'ride-7',
+        day: DateTime(2026, 10, 16),
+        isDriver: true,
+        myStatus: 'accepted',
+        rideStatus: 'confirmed',
+      ),
+    );
+    await open(tester, AppRoutes.conversation('conv-group'));
+    expect(find.text('Trajet proposé · Nathan'), findsOneWidget);
+    await tapText(tester, 'Je monte');
+    expect(backend.carpoolAccepted, [('conv-group', 'offer-1')]);
+    expect(find.textContaining("c'est réservé"), findsOneWidget);
+    expect(find.text('Je monte'), findsNothing);
+
+    // Proposer mon trajet du soir (je conduis) : la carte s'affiche dans le fil.
+    await tester.tap(find.byTooltip('Proposer un covoiturage'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(BottomSheet), matching: find.byType(ListTile)));
+    await tester.pumpAndSettle();
+    expect(find.text('Trajet proposé'), findsOneWidget);
+  });
+
   testWidgets('accueil : pastille des non lus, liste des conversations', (tester) async {
     await open(tester, AppRoutes.home);
     expect(find.byTooltip('Messages'), findsOneWidget);

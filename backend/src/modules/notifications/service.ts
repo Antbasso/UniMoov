@@ -10,10 +10,12 @@ export function categoryOf(event: NotificationEvent): Category {
     case 'proposals_ready':
     case 'ride_requested':
     case 'request_answered':
+    case 'carpool_joined':
       return 'match';
     case 'ride_cancelled':
     case 'payment_required':
     case 'passenger_left':
+    case 'rating_requested':
       return 'ride_update';
     case 'ride_reminder':
       return 'ride_reminder';
@@ -54,6 +56,10 @@ export function pushMessage(event: NotificationEvent): PushMessage {
       return event.approved
         ? { title: 'Place acceptée', body: 'Ton conducteur a accepté ta demande.', data: { type: event.type, rideId: event.rideId } }
         : { title: 'Demande refusée', body: 'Le conducteur ne peut pas te prendre. On te cherche une autre voiture.', data: { type: event.type, rideId: event.rideId } };
+    case 'carpool_joined':
+      return { title: 'Covoiturage confirmé', body: 'Accord trouvé dans ta conversation : le trajet est réservé.', data: { type: event.type, rideId: event.rideId } };
+    case 'rating_requested':
+      return { title: 'Comment s’est passé ton trajet ?', body: 'Note les personnes avec qui tu as voyagé.', data: { type: event.type, rideId: event.rideId } };
     case 'proposals_ready':
       return { title: 'Ta semaine est prête', body: 'Tes propositions de trajets sont arrivées.', data: { type: event.type, week: event.week } };
     case 'ride_reminder':

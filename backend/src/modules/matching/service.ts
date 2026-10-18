@@ -547,6 +547,61 @@ export class MatchingService {
     return this.suggestionsFor(ride);
   }
 
+  /**
+   * Accord dans une conversation (proposition de trajet ou demande publiée dans un groupe) : le
+   * conducteur et le passager ont tous deux dit oui, le passager est donc accepté directement.
+   * Mêmes contrôles qu'une place demandée (trajet ouvert, place libre, solde, pas déjà engagé ce
+   * jour-là), sans limite de détour : le conducteur a choisi de prendre cette personne.
+   */
+  async joinByAgreement(rideId: string, passengerId: string): Promise<void> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const detourS = await this.agreedDetour(rideId, passengerId);
+    await this.requireFunds(passengerId, rideId, detourS);
+    const result = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      if (ride.driverId === passengerId) throw new AppError(409, 'own_ride', "C'est ta propre voiture");
+      const parts = await this.repo.participants([rideId], tx);
+      if (parts.find((p) => p.role === 'driver')?.status !== 'accepted') {
+        throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+      }
+      const me = parts.find((p) => p.userId === passengerId);
+      if (me?.status === 'accepted') return null; // déjà à bord : rien à refaire
+      const taken = parts.filter((p) => p.role === 'passenger' && ACTIVE(p) && p.userId !== passengerId).length;
+      if (taken >= ride.seatsTotal) throw new AppError(409, 'ride_full', 'Cette voiture est complète');
+      for (const other of await this.repo.otherActiveRides(passengerId, ride.day, ride.direction, rideId, tx)) {
+        const theirs = (await this.repo.participants([other.ride_id], tx)).find((p) => p.userId === passengerId)!;
+        if (theirs.role === 'driver') throw new AppError(409, 'already_driving', 'Tu conduis déjà ce jour-là');
+        if (theirs.status === 'accepted') throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
+        await this.repo.setParticipantStatus(other.ride_id, passengerId, 'declined', tx);
+      }
+      await this.repo.addPassenger(rideId, passengerId, detourS, tx, 'accepted');
+      if (ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
+      await this.repo.invalidatePlan(rideId, tx);
+      return { driverId: ride.driverId };
+    });
+    if (!result) return;
+    await this.onRideChanged(rideId).catch(() => undefined);
+    await this.notifier.notify([result.driverId, passengerId], { type: 'carpool_joined', rideId }).catch(() => undefined);
+  }
+
+  /** Détour ajouté par ce passager au trajet (estimé, comme pour les suggestions). */
+  private async agreedDetour(rideId: string, passengerId: string): Promise<number> {
+    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    const passengers = (await this.repo.participants([rideId])).filter(
+      (p) => p.role === 'passenger' && ACTIVE(p) && p.userId !== passengerId,
+    );
+    const homes = await this.repo.homesAndVehicles([ride.driverId, passengerId, ...passengers.map((p) => p.userId)]);
+    const driver = homes.get(ride.driverId);
+    const mine = homes.get(passengerId);
+    if (!mine) throw new AppError(409, 'profile_incomplete', 'Ajoute ton adresse pour trouver un trajet');
+    if (!driver) throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+    const params = await this.params(await this.repo.campusLocation(ride.campusId));
+    const others = passengers.map((p) => homes.get(p.userId)).filter((h): h is NonNullable<typeof h> => Boolean(h));
+    const home = { lat: driver.lat, lon: driver.lon };
+    return Math.round(detourSeconds(home, [...others, mine], params) - detourSeconds(home, others, params));
+  }
+
   /** Le conducteur propose une place : le passager reçoit une proposition à accepter. */
   async invite(userId: string, rideId: string, passengerId: string): Promise<ProposalView> {
     const peek = this.assertOpen(await this.repo.peekRide(rideId));

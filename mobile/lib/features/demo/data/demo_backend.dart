@@ -1712,6 +1712,161 @@ class DemoBackend
       title: 'Covoit’ Seynod',
       messages: [('hugo', 'Quelqu’un pour vendredi soir ?', 60 * 26)],
     );
+    // Proposition de covoiturage dans le groupe : Nathan conduit dans trois jours, une place.
+    final day = _today.add(const Duration(days: 3));
+    final offer = DemoRide(
+      id: 'demo-group-offer',
+      day: day,
+      direction: Direction.toCampus,
+      time: _at(day, 9),
+      driverId: 'nathan',
+      driverStatus: 'accepted',
+      seats: [],
+    );
+    _rides[offer.id] = offer;
+    _messages['conv-group']!.add(
+      ChatMessage(
+        id: 'msg-group-offer',
+        conversationId: 'conv-group',
+        senderId: 'nathan',
+        body: 'Je propose un trajet.',
+        createdAt: _now.subtract(const Duration(minutes: 30)).toUtc(),
+        carpool: Carpool(
+          isOffer: true,
+          rideId: offer.id,
+          day: day,
+          toCampus: true,
+          time: offer.time.toUtc(),
+        ),
+      ),
+    );
+    _conversations['conv-group'] = _conversations['conv-group']!.copyWith(
+      lastMessage: _messages['conv-group']!.last,
+    );
+  }
+
+  /// Remplace un message (proposition acceptée) et le diffuse.
+  ChatMessage _updateCarpool(String conversationId, String messageId, String joinerId) {
+    final list = _messages[conversationId]!;
+    final i = list.indexWhere((m) => m.id == messageId);
+    final m = list[i];
+    final c = m.carpool!;
+    final updated = ChatMessage(
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      body: m.body,
+      createdAt: m.createdAt,
+      carpool: Carpool(
+        isOffer: c.isOffer,
+        rideId: c.rideId,
+        day: c.day,
+        toCampus: c.toCampus,
+        time: c.time,
+        joined: [...c.joined, _member(joinerId)],
+      ),
+    );
+    list[i] = updated;
+    for (final s in _sockets.where((s) => !s.closed)) {
+      s.controller.add(updated);
+    }
+    return updated;
+  }
+
+  /// Place acceptée par accord (les deux ont dit oui) ; le trajet est confirmé.
+  void _seatByAgreement(DemoRide r, String passengerId) {
+    final seat = r.seatOf(passengerId);
+    if (seat != null) {
+      seat.status = 'accepted';
+    } else {
+      r.seats.add(DemoSeat(passengerId, 'accepted', detourMinutes: 4));
+    }
+    if (r.status == 'proposed') r.status = 'confirmed';
+  }
+
+  @override
+  Future<ChatMessage> postCarpool(
+    String id, {
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+  }) async {
+    await _wait();
+    final conversation = _conversations[id];
+    if (conversation == null) throw const ApiException('not_found', '', statusCode: 404);
+    if (conversation.kind == ConversationKind.ride) {
+      throw const ApiException('carpool_not_here', '', statusCode: 409);
+    }
+    final ride = rideId == null ? null : _ride(rideId);
+    final message = ChatMessage(
+      id: _id('msg'),
+      conversationId: id,
+      senderId: demoMeId,
+      body: ride != null ? 'Je propose un trajet.' : 'Je cherche un trajet.',
+      createdAt: _now.toUtc(),
+      carpool: Carpool(
+        isOffer: ride != null,
+        rideId: ride?.id,
+        day: ride?.day ?? day!,
+        toCampus: ride == null ? toCampus : ride.direction == Direction.toCampus,
+        time: ride?.time.toUtc(),
+      ),
+    );
+    _messages.putIfAbsent(id, () => []).add(message);
+    _conversations[id] = conversation.copyWith(lastMessage: message);
+    // Un membre accepte quelques secondes plus tard.
+    final other = conversation.members.where((m) => m.userId != demoMeId).firstOrNull;
+    if (other != null) {
+      Timer(const Duration(seconds: 4), () {
+        if (ride != null) {
+          _seatByAgreement(ride, other.userId);
+        } else {
+          final d = message.carpool!.day;
+          final r = DemoRide(
+            id: _id('ride'),
+            day: DateTime(d.year, d.month, d.day),
+            direction: toCampus ? Direction.toCampus : Direction.fromCampus,
+            time: _at(d, toCampus ? 8 : 17),
+            driverId: other.userId,
+            driverStatus: 'accepted',
+            seats: [],
+          );
+          _rides[r.id] = r;
+          _seatByAgreement(r, demoMeId);
+        }
+        _updateCarpool(id, message.id, ride != null ? other.userId : demoMeId);
+      });
+    }
+    return message;
+  }
+
+  @override
+  Future<ChatMessage> acceptCarpool(String id, String messageId) async {
+    await _wait();
+    final message = _messages[id]?.where((m) => m.id == messageId).firstOrNull;
+    final carpool = message?.carpool;
+    if (message == null || carpool == null) {
+      throw const ApiException('not_found', '', statusCode: 404);
+    }
+    if (message.senderId == demoMeId) throw const ApiException('own_carpool', '', statusCode: 409);
+    if (carpool.isOffer) {
+      _seatByAgreement(_ride(carpool.rideId!), demoMeId);
+      return _updateCarpool(id, messageId, demoMeId);
+    }
+    final mine = _rides.values
+        .where(
+          (r) =>
+              r.driverIsMe &&
+              r.status != 'cancelled' &&
+              r.day.year == carpool.day.year &&
+              r.day.month == carpool.day.month &&
+              r.day.day == carpool.day.day &&
+              (r.direction == Direction.toCampus) == carpool.toCampus,
+        )
+        .firstOrNull;
+    if (mine == null) throw const ApiException('no_ride_that_day', '', statusCode: 409);
+    _seatByAgreement(mine, message.senderId);
+    return _updateCarpool(id, messageId, message.senderId);
   }
 
   void _conversation(

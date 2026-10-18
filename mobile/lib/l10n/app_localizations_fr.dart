@@ -2050,4 +2050,71 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorPhotoInvalid => 'Choisis une photo JPEG ou PNG.';
+
+  @override
+  String get carpoolTitle => 'Proposer un covoiturage';
+
+  @override
+  String get carpoolIDrive => 'Je conduis';
+
+  @override
+  String get carpoolILook => 'Je cherche';
+
+  @override
+  String get carpoolNoRide =>
+      'Aucun trajet à conduire ces deux semaines. Accepte d\'abord un trajet comme conducteur.';
+
+  @override
+  String carpoolSeats(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count places libres',
+      one: '1 place libre',
+      zero: 'Complet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get carpoolPickDay => 'Choisir le jour';
+
+  @override
+  String get carpoolToCampus => 'Aller';
+
+  @override
+  String get carpoolFromCampus => 'Retour';
+
+  @override
+  String get carpoolAsk => 'Publier ma demande';
+
+  @override
+  String get carpoolOffer => 'Trajet proposé';
+
+  @override
+  String get carpoolRequest => 'Cherche un trajet';
+
+  @override
+  String get carpoolJoin => 'Je monte';
+
+  @override
+  String get carpoolTake => 'Je te prends';
+
+  @override
+  String carpoolJoined(String names) {
+    return '$names : c\'est réservé';
+  }
+
+  @override
+  String get carpoolDone => 'C\'est réservé : le trajet est dans ta semaine.';
+
+  @override
+  String get errorNoRideThatDay =>
+      'Tu ne conduis pas ce jour-là. Accepte d\'abord un trajet comme conducteur.';
+
+  @override
+  String get errorOwnCarpool => 'C\'est ta propre proposition.';
+
+  @override
+  String get errorCarpoolNotHere => 'Propose un trajet dans un groupe ou une conversation privée.';
 }

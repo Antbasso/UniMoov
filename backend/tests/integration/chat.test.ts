@@ -229,6 +229,49 @@ describe('messages privés et groupes', () => {
     expect((await call('Inès', 'GET', `/conversations/${id}`)).statusCode).toBe(404);
     expect(code(await call('Hugo', 'DELETE', `/conversations/${chatId}/members/me`))).toBe('cannot_leave');
   });
+
+  it('covoiturage de groupe : offre du conducteur, demande d’un passager, acceptées d’un toucher', async () => {
+    const group = await call('Léa', 'POST', '/conversations', {
+      kind: 'group',
+      title: 'Covoit Seynod',
+      memberIds: [user('Chloé').id, user('Hugo').id],
+    });
+    const id = group.json<Conversation>().id;
+    interface Carpool { id: string; body: string; carpool: { kind: string; rideId: string | null; day: string; time: string | null; joined: { firstName: string }[] } }
+    const seat = async (name: string, ride: string) =>
+      (await ctx.database.pool.query<{ status: string }>(`SELECT status FROM ride_participants WHERE ride_id = $1 AND user_id = $2`, [ride, user(name).id])).rows[0]?.status;
+
+    // Offre : Léa partage son trajet du lundi (elle le conduit) ; Chloé monte d'un toucher.
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/carpool`, { kind: 'offer', rideId }))).toBe('ride_unavailable');
+    const offer = await call('Léa', 'POST', `/conversations/${id}/carpool`, { kind: 'offer', rideId });
+    expect(offer.statusCode).toBe(201);
+    const posted = offer.json<Carpool>();
+    expect(posted.carpool).toMatchObject({ kind: 'offer', rideId, day: '2026-10-19', joined: [] });
+    expect(posted.carpool.time).not.toBeNull();
+    expect(code(await call('Léa', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`))).toBe('own_carpool');
+    const accepted = await call('Chloé', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`);
+    expect(accepted.statusCode).toBe(200);
+    expect(accepted.json<Carpool>().carpool.joined.map((j) => j.firstName)).toEqual(['Chloé']);
+    expect(await seat('Chloé', rideId)).toBe('accepted');
+    expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id, user('Chloé').id], event: { type: 'carpool_joined', rideId } });
+    // Rejoué : sans effet.
+    expect((await call('Chloé', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`)).statusCode).toBe(200);
+
+    // Demande : Chloé cherche une voiture mardi ; Hugo ne conduit pas, Léa (qui conduit) la prend.
+    const request = await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-20', direction: 'to_campus' });
+    expect(request.statusCode).toBe(201);
+    const asked = request.json<Carpool>();
+    expect(asked.carpool).toMatchObject({ kind: 'request', rideId: null, day: '2026-10-20' });
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/messages/${asked.id}/carpool/accept`))).toBe('no_ride_that_day');
+    expect((await call('Léa', 'POST', `/conversations/${id}/messages/${asked.id}/carpool/accept`)).statusCode).toBe(200);
+    expect(await seat('Chloé', tuesdayId)).toBe('accepted');
+    // Les messages relus portent la proposition et qui est monté.
+    const messages = (await call('Hugo', 'GET', `/conversations/${id}/messages`)).json<{ messages: Carpool[] }>().messages;
+    expect(messages.find((m) => m.id === asked.id)!.carpool.joined.map((j) => j.firstName)).toEqual(['Chloé']);
+    // Pas dans un chat de trajet ; jamais pour un jour passé.
+    expect(code(await call('Léa', 'POST', `/conversations/${chatId}/carpool`, { kind: 'offer', rideId }))).toBe('carpool_not_here');
+    expect((await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-01', direction: 'to_campus' })).statusCode).toBe(400);
+  });
 });
 
 describe('rétention du chat de trajet (cahier §6)', () => {

@@ -8,6 +8,8 @@ export type NotificationEvent =
   | { type: 'replacement_proposed'; rideId: string }
   | { type: 'ride_requested'; rideId: string }
   | { type: 'request_answered'; rideId: string; approved: boolean }
+  | { type: 'carpool_joined'; rideId: string }
+  | { type: 'rating_requested'; rideId: string }
   | { type: 'payment_required'; rideId: string }
   | { type: 'passenger_left'; rideId: string }
   | { type: 'proposals_ready'; week: string }

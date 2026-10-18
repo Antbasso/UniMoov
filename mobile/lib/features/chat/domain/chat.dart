@@ -15,6 +15,42 @@ class ChatMember {
   final String? photoUrl;
 }
 
+/// Proposition de covoiturage dans une conversation : un conducteur offre un trajet, ou un
+/// passager en cherche un ; les autres l'acceptent d'un toucher.
+class Carpool {
+  const Carpool({
+    required this.isOffer,
+    required this.day,
+    required this.toCampus,
+    this.rideId,
+    this.time,
+    this.joined = const [],
+  });
+
+  factory Carpool.fromJson(Map<String, dynamic> json) => Carpool(
+    isOffer: json['kind'] == 'offer',
+    rideId: json['rideId'] as String?,
+    day: DateTime.parse(json['day'] as String),
+    toCampus: json['direction'] == 'to_campus',
+    time: json['time'] == null ? null : DateTime.parse(json['time'] as String),
+    joined: [
+      for (final j in json['joined'] as List<dynamic>)
+        ChatMember.fromJson({...j as Map<String, dynamic>, 'photoUrl': null}),
+    ],
+  );
+
+  final bool isOffer;
+  final String? rideId;
+  final DateTime day;
+  final bool toCampus;
+
+  /// Heure du trajet proposé (offre).
+  final DateTime? time;
+
+  /// Personnes montées grâce à ce message.
+  final List<ChatMember> joined;
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -22,6 +58,7 @@ class ChatMessage {
     required this.senderId,
     required this.body,
     required this.createdAt,
+    this.carpool,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -30,6 +67,9 @@ class ChatMessage {
     senderId: json['senderId'] as String,
     body: json['body'] as String,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    carpool: json['carpool'] == null
+        ? null
+        : Carpool.fromJson(json['carpool'] as Map<String, dynamic>),
   );
 
   final String id;
@@ -37,6 +77,7 @@ class ChatMessage {
   final String senderId;
   final String body;
   final DateTime createdAt;
+  final Carpool? carpool;
 }
 
 class Conversation {

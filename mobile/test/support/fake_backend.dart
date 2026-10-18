@@ -42,7 +42,7 @@ class FakeBackend
   static const knownAddress = '12 rue de la Paix, Annecy';
   static const knownLabel = '12 Rue de la Paix 74000 Annecy';
 
-  final Map<String, _Account> _accounts = {};
+  final Map<String, FakeAccount> _accounts = {};
   final Map<String, String> _refreshToEmail = {};
   String? _currentEmail;
   int _tokenCounter = 0;
@@ -65,9 +65,9 @@ class FakeBackend
   }
 
   /// Compte connecté (vérifications des tests).
-  _Account get me => _me;
+  FakeAccount get me => _me;
 
-  _Account get _me {
+  FakeAccount get _me {
     final account = _accounts[_currentEmail];
     if (account == null) throw const ApiException('unauthorized', '', statusCode: 401);
     return account;
@@ -99,7 +99,7 @@ class FakeBackend
     if (_accounts.containsKey(universityEmail)) {
       throw const ApiException('account_exists', '', statusCode: 409);
     }
-    _accounts[universityEmail] = _Account(universityEmail, firstName, lastName, password);
+    _accounts[universityEmail] = FakeAccount(universityEmail, firstName, lastName, password);
     return _issue(universityEmail);
   }
 
@@ -894,6 +894,64 @@ class FakeBackend
     return message;
   }
 
+  /// Propositions de covoiturage acceptées : (conversation, message).
+  final List<(String, String)> carpoolAccepted = [];
+
+  @override
+  Future<ChatMessage> postCarpool(
+    String id, {
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+  }) async {
+    _maybeFail();
+    final c = conversationsById[id]!;
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: id,
+      senderId: idOf(_me.email),
+      body: rideId != null ? 'Je propose un trajet.' : 'Je cherche un trajet.',
+      createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      carpool: Carpool(
+        isOffer: rideId != null,
+        rideId: rideId,
+        day: day ?? DateTime(2026, 10, 19),
+        toCampus: toCampus,
+        time: rideId == null ? null : DateTime.utc(2026, 10, 19, 6),
+      ),
+    );
+    messagesById.putIfAbsent(id, () => []).add(message);
+    conversationsById[id] = c.copyWith(lastMessage: message);
+    return message;
+  }
+
+  @override
+  Future<ChatMessage> acceptCarpool(String id, String messageId) async {
+    _maybeFail();
+    carpoolAccepted.add((id, messageId));
+    final list = messagesById[id]!;
+    final i = list.indexWhere((m) => m.id == messageId);
+    final m = list[i];
+    final c = m.carpool!;
+    final updated = ChatMessage(
+      id: m.id,
+      conversationId: id,
+      senderId: m.senderId,
+      body: m.body,
+      createdAt: m.createdAt,
+      carpool: Carpool(
+        isOffer: c.isOffer,
+        rideId: c.rideId,
+        day: c.day,
+        toCampus: c.toCampus,
+        time: c.time,
+        joined: [...c.joined, ChatMember(userId: idOf(_me.email), firstName: _me.firstName)],
+      ),
+    );
+    list[i] = updated;
+    return updated;
+  }
+
   @override
   Future<void> markRead(String id) async {
     readConversations.add(id);
@@ -990,7 +1048,7 @@ class FakeBackend
     Map<OnboardingStep, StepStatus>? steps,
     bool withHome = false,
   }) {
-    _accounts[email] = _Account(email, firstName, 'Martin', 'motdepasse-solide')
+    _accounts[email] = FakeAccount(email, firstName, 'Martin', 'motdepasse-solide')
       ..steps.addAll(steps ?? {})
       ..home = withHome
           ? const Home(address: '12 Rue de la Paix 74000 Annecy', lat: 45.9, lon: 6.12)
@@ -998,8 +1056,8 @@ class FakeBackend
   }
 }
 
-class _Account {
-  _Account(this.email, this.firstName, this.lastName, this.password);
+class FakeAccount {
+  FakeAccount(this.email, this.firstName, this.lastName, this.password);
 
   final String email;
   String firstName;

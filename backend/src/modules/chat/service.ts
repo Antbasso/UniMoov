@@ -2,7 +2,8 @@ import { AppError } from '../../shared/errors.js';
 import type { Notifier } from '../../shared/notifications/notifier.js';
 import type { SettingsService } from '../settings/service.js';
 import type { UserHub } from './hub.js';
-import type { ChatRepo, ConversationKind, ConversationRow, DbOrTx, MessageRow } from './repo.js';
+import { parisDateOf } from '../../shared/time.js';
+import type { CarpoolInfo, ChatRepo, ConversationKind, ConversationRow, DbOrTx, MessageRow } from './repo.js';
 
 const DAY_MS = 86_400_000;
 
@@ -12,7 +13,12 @@ export interface MessageView {
   senderId: string;
   body: string;
   createdAt: Date;
+  /** Proposition de covoiturage (offre d'un conducteur ou demande d'un passager). */
+  carpool: CarpoolInfo | null;
 }
+
+/** Rejoindre une voiture par accord (matching) : passager accepté directement. */
+export type JoinByAgreement = (rideId: string, passengerId: string) => Promise<void>;
 
 export interface ConversationView {
   id: string;
@@ -35,6 +41,7 @@ const messageView = (m: MessageRow): MessageView => ({
   senderId: m.senderId,
   body: m.body,
   createdAt: m.createdAt,
+  carpool: m.carpool,
 });
 
 /**
@@ -48,6 +55,7 @@ export class ChatService {
     private readonly settings: SettingsService,
     private readonly notifier: Notifier,
     private readonly clock: () => Date,
+    private readonly join: JoinByAgreement = () => Promise.reject(new Error('Covoiturage de groupe non branché')),
   ) {}
 
   private archived(c: ConversationRow): boolean {
@@ -146,18 +154,87 @@ export class ChatService {
       if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
       return this.repo.insertMessage(conversationId, userId, text, this.clock(), tx);
     });
+    return this.publish(userId, conversationId, message);
+  }
+
+  /** Envoi en direct aux membres connectés, en push aux autres (préférence « chat »). */
+  private async publish(userId: string, conversationId: string, message: MessageRow, push = true): Promise<MessageView> {
     const members = await this.repo.members(conversationId);
     const view = messageView(message);
     this.hub.send(members.map((m) => m.userId), { type: 'message', message: view });
     const sender = members.find((m) => m.userId === userId);
     const offline = members.filter((m) => m.userId !== userId && !this.hub.isOnline(m.userId)).map((m) => m.userId);
-    if (offline.length > 0) {
+    if (push && offline.length > 0) {
       // En tâche de fond : un FCM lent ne retarde pas la réponse (sinon renvoi et doublon).
       void this.notifier
         .notify(offline, { type: 'chat_message', conversationId, senderFirstName: sender?.firstName ?? '' })
         .catch(() => undefined);
     }
     return view;
+  }
+
+  /**
+   * Proposition de covoiturage dans une conversation créée à la main (groupe ou privé) :
+   * offre (« je conduis, qui monte ? », sur un trajet que je conduis) ou demande (« je
+   * cherche une voiture ce jour-là »). Le texte est écrit par le serveur.
+   */
+  async postCarpool(
+    userId: string,
+    conversationId: string,
+    input: { kind: 'offer'; rideId: string } | { kind: 'request'; day: string; direction: 'to_campus' | 'from_campus' },
+  ): Promise<MessageView> {
+    const c = await this.member(userId, conversationId);
+    if (c.kind === 'ride') throw new AppError(409, 'carpool_not_here', 'Propose un trajet dans un groupe ou une conversation privée');
+    if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
+    const today = parisDateOf(this.clock());
+    let carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string };
+    if (input.kind === 'offer') {
+      const ride = await this.repo.drivenOpenRide(userId, { rideId: input.rideId }, today);
+      if (!ride) throw new AppError(409, 'ride_unavailable', 'Ce trajet ne peut plus être proposé');
+      carpool = { kind: 'offer', rideId: ride.id, day: ride.day, direction: ride.direction };
+    } else {
+      if (input.day < today) throw new AppError(400, 'validation_error', 'Choisis un jour à venir');
+      carpool = { kind: 'request', rideId: null, day: input.day, direction: input.direction };
+    }
+    const sens = carpool.direction === 'to_campus' ? 'aller' : 'retour';
+    const body = carpool.kind === 'offer' ? `Je propose un trajet (${sens}, ${carpool.day}).` : `Je cherche un trajet (${sens}, ${carpool.day}).`;
+    const message = await this.repo.transaction(async (tx) => {
+      const locked = await this.repo.conversation(conversationId, tx, true);
+      if (!locked || this.archived(locked)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
+      return this.repo.insertMessage(conversationId, userId, body, this.clock(), tx, carpool);
+    });
+    return this.publish(userId, conversationId, message);
+  }
+
+  /**
+   * Accepter une proposition : offre, je monte dans la voiture proposée ; demande, je prends la
+   * personne dans la voiture que je conduis ce jour-là. Les deux ont dit oui : place acceptée.
+   */
+  async acceptCarpool(userId: string, conversationId: string, messageId: string): Promise<MessageView> {
+    const c = await this.member(userId, conversationId);
+    if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
+    const message = await this.repo.message(conversationId, messageId);
+    const carpool = message?.carpool;
+    if (!message || !carpool) throw new AppError(404, 'not_found', 'Ressource introuvable');
+    if (message.senderId === userId) throw new AppError(409, 'own_carpool', "C'est ta propre proposition");
+    const today = parisDateOf(this.clock());
+    if (carpool.day < today) throw new AppError(409, 'ride_unavailable', 'Ce trajet est passé');
+    let rideId: string;
+    let passengerId: string;
+    if (carpool.kind === 'offer') {
+      if (!carpool.rideId) throw new AppError(409, 'ride_unavailable', 'Ce trajet ne peut plus te prendre');
+      rideId = carpool.rideId;
+      passengerId = userId;
+    } else {
+      const ride = await this.repo.drivenOpenRide(userId, { day: carpool.day, direction: carpool.direction }, today);
+      if (!ride) throw new AppError(409, 'no_ride_that_day', 'Tu ne conduis pas ce jour-là');
+      rideId = ride.id;
+      passengerId = message.senderId;
+    }
+    await this.join(rideId, passengerId);
+    await this.repo.addCarpoolJoin(messageId, passengerId, rideId);
+    // Mise à jour du message chez tous (« Léa monte »), sans nouveau push.
+    return this.publish(userId, conversationId, (await this.repo.message(conversationId, messageId))!, false);
   }
 
   /**

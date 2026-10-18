@@ -22,13 +22,31 @@ export interface MemberRow {
   lastReadAt: Date | null;
 }
 
+export interface CarpoolInfo {
+  kind: 'offer' | 'request';
+  /** Trajet proposé (offre) ; null pour une demande. */
+  rideId: string | null;
+  day: string;
+  direction: 'to_campus' | 'from_campus';
+  /** Heure du trajet proposé (offre). */
+  time: Date | null;
+  /** Personnes montées grâce à ce message. */
+  joined: { userId: string; firstName: string }[];
+}
+
 export interface MessageRow {
   id: string;
   conversationId: string;
   senderId: string;
   body: string;
   createdAt: Date;
+  carpool: CarpoolInfo | null;
 }
+
+/** Colonnes d'un message, avec sa proposition de covoiturage s'il en porte une. */
+const MESSAGE_COLUMNS = sql`m.*, cr.target_time AS carpool_time,
+  (SELECT coalesce(json_agg(json_build_object('userId', u.id, 'firstName', u.first_name) ORDER BY j.created_at), '[]'::json)
+     FROM carpool_joins j JOIN users u ON u.id = j.user_id WHERE j.message_id = m.id) AS carpool_joined`;
 
 const date = (v: unknown) => (v ? new Date(v as string) : null);
 const toConversation = (r: Record<string, unknown>): ConversationRow => ({
@@ -46,6 +64,16 @@ const toMessage = (r: Record<string, unknown>): MessageRow => ({
   senderId: r.sender_id as string,
   body: r.body as string,
   createdAt: new Date(r.created_at as string),
+  carpool: r.carpool_kind
+    ? {
+        kind: r.carpool_kind as CarpoolInfo['kind'],
+        rideId: (r.carpool_ride_id as string | null) ?? null,
+        day: typeof r.carpool_day === 'string' ? r.carpool_day.slice(0, 10) : new Date(r.carpool_day as Date).toISOString().slice(0, 10),
+        direction: r.carpool_direction as CarpoolInfo['direction'],
+        time: date(r.carpool_time),
+        joined: (r.carpool_joined as CarpoolInfo['joined'] | undefined) ?? [],
+      }
+    : null,
 });
 
 /** Conversations, membres et messages (tables de `docs/data-model.sql`). */
@@ -94,7 +122,7 @@ export class ChatRepo {
       ...toConversation(r),
       unread: Number(r.unread),
       lastMessage: r.l_id
-        ? { id: r.l_id as string, conversationId: r.id as string, senderId: r.l_sender as string, body: r.l_body as string, createdAt: new Date(r.l_created as string) }
+        ? { id: r.l_id as string, conversationId: r.id as string, senderId: r.l_sender as string, body: r.l_body as string, createdAt: new Date(r.l_created as string), carpool: null }
         : null,
     }));
   }
@@ -156,24 +184,66 @@ export class ChatRepo {
     return rows[0] ? toConversation(rows[0]) : null;
   }
 
-  async insertMessage(conversationId: string, senderId: string, body: string, at: Date, db: DbOrTx = this.db): Promise<MessageRow> {
-    const { rows } = await db.execute(sql`
-      INSERT INTO messages (conversation_id, sender_id, body, created_at) VALUES (${conversationId}, ${senderId}, ${body}, ${at})
-      RETURNING *`);
+  async insertMessage(
+    conversationId: string,
+    senderId: string,
+    body: string,
+    at: Date,
+    db: DbOrTx = this.db,
+    carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string } | null = null,
+  ): Promise<MessageRow> {
+    const { rows } = await db.execute<{ id: string }>(sql`
+      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction)
+      VALUES (${conversationId}, ${senderId}, ${body}, ${at}, ${carpool?.kind ?? null}, ${carpool?.rideId ?? null},
+              ${carpool?.day ?? null}, ${carpool?.direction ?? null})
+      RETURNING id`);
     await db.execute(sql`UPDATE conversations SET last_message_at = ${at} WHERE id = ${conversationId}`);
     // Ses propres messages sont lus.
     await this.markRead(conversationId, senderId, at, db);
-    return toMessage(rows[0]!);
+    return (await this.message(conversationId, rows[0]!.id, db))!;
+  }
+
+  async message(conversationId: string, messageId: string, db: DbOrTx = this.db): Promise<MessageRow | undefined> {
+    const { rows } = await db.execute(sql`
+      SELECT ${MESSAGE_COLUMNS} FROM messages m LEFT JOIN rides cr ON cr.id = m.carpool_ride_id
+      WHERE m.conversation_id = ${conversationId} AND m.id = ${messageId}`);
+    return rows[0] ? toMessage(rows[0]) : undefined;
+  }
+
+  async addCarpoolJoin(messageId: string, userId: string, rideId: string, db: DbOrTx = this.db): Promise<void> {
+    await db.execute(sql`
+      INSERT INTO carpool_joins (message_id, user_id, ride_id) VALUES (${messageId}, ${userId}, ${rideId})
+      ON CONFLICT DO NOTHING`);
+  }
+
+  /**
+   * Trajet ouvert (proposé ou confirmé, pas encore parti) que cette personne conduit et a
+   * accepté, à partir d'aujourd'hui : par identifiant (offre) ou par jour et sens (demande).
+   */
+  async drivenOpenRide(
+    driverId: string,
+    where: { rideId: string } | { day: string; direction: string },
+    today: string,
+  ): Promise<{ id: string; day: string; direction: 'to_campus' | 'from_campus' } | undefined> {
+    const filter = 'rideId' in where ? sql`r.id = ${where.rideId}` : sql`r.day = ${where.day} AND r.direction = ${where.direction}`;
+    const { rows } = await this.db.execute<{ id: string; day: string; direction: 'to_campus' | 'from_campus' }>(sql`
+      SELECT r.id, r.day::text AS day, r.direction FROM rides r
+      JOIN ride_participants p ON p.ride_id = r.id AND p.user_id = ${driverId} AND p.role = 'driver' AND p.status = 'accepted'
+      WHERE ${filter} AND r.status IN ('proposed', 'confirmed') AND r.day >= ${today}
+      ORDER BY r.target_time LIMIT 1`);
+    return rows[0];
   }
 
   /** Curseur (date, identifiant) : aucun message sauté à horodatage égal. */
   async messages(conversationId: string, before: { at: Date; id: string | null } | null, limit: number): Promise<MessageRow[]> {
     const { rows } = await this.db.execute(
       before
-        ? sql`SELECT * FROM messages WHERE conversation_id = ${conversationId}
-                AND (created_at, id) < (${before.at}, ${before.id ?? 'ffffffff-ffff-ffff-ffff-ffffffffffff'}::uuid)
-              ORDER BY created_at DESC, id DESC LIMIT ${limit}`
-        : sql`SELECT * FROM messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC, id DESC LIMIT ${limit}`,
+        ? sql`SELECT ${MESSAGE_COLUMNS} FROM messages m LEFT JOIN rides cr ON cr.id = m.carpool_ride_id
+              WHERE m.conversation_id = ${conversationId}
+                AND (m.created_at, m.id) < (${before.at}, ${before.id ?? 'ffffffff-ffff-ffff-ffff-ffffffffffff'}::uuid)
+              ORDER BY m.created_at DESC, m.id DESC LIMIT ${limit}`
+        : sql`SELECT ${MESSAGE_COLUMNS} FROM messages m LEFT JOIN rides cr ON cr.id = m.carpool_ride_id
+              WHERE m.conversation_id = ${conversationId} ORDER BY m.created_at DESC, m.id DESC LIMIT ${limit}`,
     );
     return rows.map(toMessage);
   }

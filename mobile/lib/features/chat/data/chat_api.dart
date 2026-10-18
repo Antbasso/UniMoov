@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
@@ -21,6 +22,13 @@ abstract interface class ChatApi {
   /// Messages du plus récent au plus ancien ; `before` pour remonter.
   Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId});
   Future<ChatMessage> send(String id, String body);
+
+  /// Proposition de covoiturage : offre sur un trajet que je conduis (`rideId`), ou demande
+  /// pour un jour et un sens.
+  Future<ChatMessage> postCarpool(String id, {String? rideId, DateTime? day, bool toCampus = true});
+
+  /// Accepter une proposition : je monte (offre) ou je prends la personne (demande).
+  Future<ChatMessage> acceptCarpool(String id, String messageId);
   Future<void> markRead(String id);
   Future<void> leave(String id);
 }
@@ -99,6 +107,34 @@ class DioChatApi implements ChatApi {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/conversations/$id/messages',
       data: {'body': body},
+    );
+    return ChatMessage.fromJson(response.data!);
+  });
+
+  @override
+  Future<ChatMessage> postCarpool(
+    String id, {
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+  }) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/conversations/$id/carpool',
+      data: rideId != null
+          ? {'kind': 'offer', 'rideId': rideId}
+          : {
+              'kind': 'request',
+              'day': DateFormat('yyyy-MM-dd').format(day!),
+              'direction': toCampus ? 'to_campus' : 'from_campus',
+            },
+    );
+    return ChatMessage.fromJson(response.data!);
+  });
+
+  @override
+  Future<ChatMessage> acceptCarpool(String id, String messageId) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/conversations/$id/messages/$messageId/carpool/accept',
     );
     return ChatMessage.fromJson(response.data!);
   });

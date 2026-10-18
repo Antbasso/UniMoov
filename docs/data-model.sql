@@ -284,9 +284,22 @@ CREATE TABLE messages (
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id uuid NOT NULL REFERENCES users(id),
   body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- proposition de covoiturage (groupe ou privé) : offre d'un trajet, ou demande jour + sens
+  carpool_kind text CHECK (carpool_kind IN ('offer', 'request')),
+  carpool_ride_id uuid REFERENCES rides(id) ON DELETE SET NULL,
+  carpool_day date,
+  carpool_direction text CHECK (carpool_direction IN ('to_campus', 'from_campus'))
 );
 CREATE INDEX messages_conv_idx ON messages (conversation_id, created_at);
+
+CREATE TABLE carpool_joins (            -- qui a accepté quelle proposition, dans quelle voiture
+  message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, user_id)
+);
 
 CREATE TABLE ratings (
   ride_id uuid NOT NULL REFERENCES rides(id),

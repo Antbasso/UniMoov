@@ -14,6 +14,7 @@ import '../../rides/presentation/trip_widgets.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../domain/chat.dart';
+import 'carpool_widgets.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
 
@@ -234,11 +235,10 @@ class _ConversationState extends ConsumerState<_Conversation> {
                         final position = messages.length - 1 - index;
                         final message = messages[position];
                         final mine = message.senderId == me;
-                        final bubble = _Bubble(
-                          message: message,
-                          mine: mine,
-                          sender: showSender && !mine ? nameOf(message.senderId) : null,
-                        );
+                        final sender = showSender && !mine ? nameOf(message.senderId) : null;
+                        final Widget bubble = message.carpool != null
+                            ? CarpoolCard(message: message, mine: mine, myId: me, sender: sender)
+                            : _Bubble(message: message, mine: mine, sender: sender);
                         // Liste inversée : le séparateur de jour vient au-dessus du premier message du jour.
                         final firstOfDay =
                             position == 0 ||
@@ -284,6 +284,16 @@ class _ConversationState extends ConsumerState<_Conversation> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    // Groupe ou privé : proposer un trajet ou en chercher un, accepté d'un toucher.
+                    if (conversation.kind != ConversationKind.ride)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: UmSpace.s5),
+                        child: IconButton(
+                          tooltip: l10n.carpoolTitle,
+                          icon: Icon(Icons.directions_car_outlined, color: c.brandStrong),
+                          onPressed: () => showCarpoolSheet(context, conversation.id),
+                        ),
+                      ),
                     Expanded(
                       child: UmField(
                         label: l10n.chatMessageLabel,

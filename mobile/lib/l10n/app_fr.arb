@@ -1196,5 +1196,37 @@
   "photoRemove": "Retirer la photo",
   "photoSaved": "Photo enregistrée.",
   "photoUnavailable": "Impossible d'ouvrir tes photos. Vérifie l'autorisation dans les réglages.",
-  "errorPhotoInvalid": "Choisis une photo JPEG ou PNG."
+  "errorPhotoInvalid": "Choisis une photo JPEG ou PNG.",
+  "carpoolTitle": "Proposer un covoiturage",
+  "carpoolIDrive": "Je conduis",
+  "carpoolILook": "Je cherche",
+  "carpoolNoRide": "Aucun trajet à conduire ces deux semaines. Accepte d'abord un trajet comme conducteur.",
+  "carpoolSeats": "{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}",
+  "@carpoolSeats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "carpoolPickDay": "Choisir le jour",
+  "carpoolToCampus": "Aller",
+  "carpoolFromCampus": "Retour",
+  "carpoolAsk": "Publier ma demande",
+  "carpoolOffer": "Trajet proposé",
+  "carpoolRequest": "Cherche un trajet",
+  "carpoolJoin": "Je monte",
+  "carpoolTake": "Je te prends",
+  "carpoolJoined": "{names} : c'est réservé",
+  "@carpoolJoined": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "carpoolDone": "C'est réservé : le trajet est dans ta semaine.",
+  "errorNoRideThatDay": "Tu ne conduis pas ce jour-là. Accepte d'abord un trajet comme conducteur.",
+  "errorOwnCarpool": "C'est ta propre proposition.",
+  "errorCarpoolNotHere": "Propose un trajet dans un groupe ou une conversation privée."
 }

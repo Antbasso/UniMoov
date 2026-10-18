@@ -10,7 +10,9 @@ import {
   createBody,
   message,
   messagesQuery,
+  messageParams,
   messagesResponse,
+  carpoolBody,
   sendBody,
 } from './schema.js';
 import type { ChatService } from './service.js';
@@ -75,6 +77,19 @@ export const userSocketRoutes: FastifyPluginAsyncZod<{
 /** Messagerie (docs/api.md) ; seuls les membres d'une conversation la voient. */
 export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api, { service }) => {
   api.addHook('preHandler', api.authenticate);
+
+  // Proposition de covoiturage dans un groupe ou une conversation privée (texte écrit par le serveur).
+  api.post(
+    '/conversations/:id/carpool',
+    { schema: { params: conversationParams, body: carpoolBody, response: { 201: message } }, config: { rateLimit: { max: 20, timeWindow: '1 hour' } } },
+    async (request, reply) => reply.code(201).send(await service.postCarpool(request.userId, request.params.id, request.body)),
+  );
+
+  api.post(
+    '/conversations/:id/messages/:messageId/carpool/accept',
+    { schema: { params: messageParams, response: { 200: message } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.acceptCarpool(request.userId, request.params.id, request.params.messageId),
+  );
 
   api.get('/conversations', { schema: { response: { 200: conversationsResponse } } }, async (request) => ({
     conversations: await service.list(request.userId),

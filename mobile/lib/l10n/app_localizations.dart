@@ -3583,6 +3583,114 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Choisis une photo JPEG ou PNG.'**
   String get errorPhotoInvalid;
+
+  /// No description provided for @carpoolTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposer un covoiturage'**
+  String get carpoolTitle;
+
+  /// No description provided for @carpoolIDrive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je conduis'**
+  String get carpoolIDrive;
+
+  /// No description provided for @carpoolILook.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je cherche'**
+  String get carpoolILook;
+
+  /// No description provided for @carpoolNoRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun trajet à conduire ces deux semaines. Accepte d\'abord un trajet comme conducteur.'**
+  String get carpoolNoRide;
+
+  /// No description provided for @carpoolSeats.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}'**
+  String carpoolSeats(int count);
+
+  /// No description provided for @carpoolPickDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir le jour'**
+  String get carpoolPickDay;
+
+  /// No description provided for @carpoolToCampus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aller'**
+  String get carpoolToCampus;
+
+  /// No description provided for @carpoolFromCampus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get carpoolFromCampus;
+
+  /// No description provided for @carpoolAsk.
+  ///
+  /// In fr, this message translates to:
+  /// **'Publier ma demande'**
+  String get carpoolAsk;
+
+  /// No description provided for @carpoolOffer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trajet proposé'**
+  String get carpoolOffer;
+
+  /// No description provided for @carpoolRequest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cherche un trajet'**
+  String get carpoolRequest;
+
+  /// No description provided for @carpoolJoin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je monte'**
+  String get carpoolJoin;
+
+  /// No description provided for @carpoolTake.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je te prends'**
+  String get carpoolTake;
+
+  /// No description provided for @carpoolJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'{names} : c\'est réservé'**
+  String carpoolJoined(String names);
+
+  /// No description provided for @carpoolDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est réservé : le trajet est dans ta semaine.'**
+  String get carpoolDone;
+
+  /// No description provided for @errorNoRideThatDay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu ne conduis pas ce jour-là. Accepte d\'abord un trajet comme conducteur.'**
+  String get errorNoRideThatDay;
+
+  /// No description provided for @errorOwnCarpool.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est ta propre proposition.'**
+  String get errorOwnCarpool;
+
+  /// No description provided for @errorCarpoolNotHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propose un trajet dans un groupe ou une conversation privée.'**
+  String get errorCarpoolNotHere;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

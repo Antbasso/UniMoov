@@ -230,7 +230,11 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       ? { notify: async (userIds, event) => void (await Promise.all([extra.notify(userIds, event), notifications.notify(userIds, event)])) }
       : notifications;
     const userHub = new UserHub();
-    const chat = new ChatService(new ChatRepo(modules.db), userHub, settings, notifier, clock);
+    // Accord dans une conversation : le matching ajoute le passager (déclaré plus bas, appelé
+    // seulement pendant une requête).
+    const chat = new ChatService(new ChatRepo(modules.db), userHub, settings, notifier, clock, (rideId, passengerId) =>
+      matchingService.joinByAgreement(rideId, passengerId),
+    );
     // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),

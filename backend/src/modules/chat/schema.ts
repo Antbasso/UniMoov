@@ -4,13 +4,31 @@ export const conversationParams = z.object({ id: z.uuid() });
 
 const member = z.strictObject({ userId: z.uuid(), firstName: z.string(), photoUrl: z.string().nullable() });
 
+const direction = z.enum(['to_campus', 'from_campus']);
+
 export const message = z.strictObject({
   id: z.uuid(),
   conversationId: z.uuid(),
   senderId: z.uuid(),
   body: z.string(),
   createdAt: z.date(),
+  carpool: z
+    .strictObject({
+      kind: z.enum(['offer', 'request']),
+      rideId: z.uuid().nullable(),
+      day: z.iso.date(),
+      direction,
+      time: z.date().nullable(),
+      joined: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string() })),
+    })
+    .nullable(),
 });
+
+export const carpoolBody = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('offer'), rideId: z.uuid() }),
+  z.object({ kind: z.literal('request'), day: z.iso.date(), direction }),
+]);
+export const messageParams = z.object({ id: z.uuid(), messageId: z.uuid() });
 
 export const conversation = z.strictObject({
   id: z.uuid(),
