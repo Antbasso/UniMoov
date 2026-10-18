@@ -116,6 +116,13 @@ describe('détour estimé', () => {
     expect(opposite).toBeGreaterThan(4 * onTheWay);
   });
 
+  it('chaque arrêt ajoute un temps fixe, même pour un passager sur la route', () => {
+    const onTheWay = detourSeconds(places.seynod, [places.cranGevrier], params);
+    expect(detourSeconds(places.seynod, [places.cranGevrier], { ...params, stopPenaltySeconds: 240 })).toBeCloseTo(onTheWay + 240, 5);
+    expect(detourSeconds(places.seynod, [places.cranGevrier, places.meythet], { ...params, stopPenaltySeconds: 240 })).toBeGreaterThan(480);
+    expect(detourSeconds(places.seynod, [], { ...params, stopPenaltySeconds: 240 })).toBe(0);
+  });
+
   it('applique le facteur routier et la vitesse moyenne', () => {
     const slow = detourSeconds(places.seynod, [places.sevrier], { ...params, avgSpeedKmh: 20 });
     expect(slow).toBeCloseTo(2 * detourSeconds(places.seynod, [places.sevrier], params), 5);

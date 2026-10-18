@@ -136,6 +136,7 @@ export class MatchingService {
       avgSpeedKmh: await this.settings.get('matching.avgSpeedKmh'),
       arrivalWindowMinutes: await this.settings.get('matching.arrivalWindowMinutes'),
       reliabilityWeightSeconds: await this.settings.get('matching.reliabilityWeightSeconds'),
+      stopPenaltySeconds: await this.settings.get('matching.stopPenaltySeconds'),
     };
   }
 

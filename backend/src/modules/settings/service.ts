@@ -44,6 +44,7 @@ const settingSchemas = {
     })
     .refine((p) => p.lateHours <= p.earlyHours, 'lateHours doit être inférieur à earlyHours'),
   'matching.reliabilityWeightSeconds': z.number().int().min(0).max(3600),
+  'matching.stopPenaltySeconds': z.number().int().min(0).max(900),
   'ratings.windowDays': z.number().int().min(1).max(60),
   'disputes.windowDays': z.number().int().min(1).max(90),
   'reports.dailyLimit': z.number().int().min(1).max(100),

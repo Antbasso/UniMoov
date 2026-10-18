@@ -184,7 +184,7 @@ export class RidesRepo {
       durationS: number;
       estimated: boolean;
       totalCostCents: number | null;
-      stops: { userId: string; order: number; eta: Date; onboardM?: number | null }[];
+      stops: { userId: string; order: number; eta: Date; onboardM?: number | null; detourS?: number | null }[];
       /** Null : plan provisoire (estimé), à recalculer. */
       now: Date | null;
     },
@@ -204,7 +204,13 @@ export class RidesRepo {
     for (const stop of plan.stops) {
       await tx
         .update(rideParticipants)
-        .set({ stopOrder: stop.order, eta: stop.eta, onboardM: stop.onboardM ?? null })
+        .set({
+          stopOrder: stop.order,
+          eta: stop.eta,
+          onboardM: stop.onboardM ?? null,
+          // Détour réel s'il a pu être calculé ; sinon l'estimation du matching reste.
+          ...(stop.detourS != null ? { detourS: stop.detourS } : {}),
+        })
         .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, stop.userId)));
     }
   }

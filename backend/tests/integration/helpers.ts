@@ -1,3 +1,4 @@
+import type { RoutingProvider } from '../../src/shared/routing/routing-provider.js';
 import type { FastifyInstance } from 'fastify';
 import { expect } from 'vitest';
 import { buildApp } from '../../src/app.js';
@@ -35,12 +36,15 @@ export interface TestContext {
 /** Base remise à zéro puis migrée, app complète avec fournisseurs factices. */
 export async function setupTestContext(
   start = new Date('2026-10-15T08:00:00Z'),
-  { rateLimit = false } = {},
+  { rateLimit = false, routing }: { rateLimit?: boolean; routing?: RoutingProvider } = {},
 ): Promise<TestContext> {
   const url = testDatabaseUrl();
   await prepareTestDatabase(url);
   await runMigrations(url);
   const database = createDatabase(url);
+  // Scénarios écrits avec le détour estimé à vol d'oiseau seul : pas de temps fixe par arrêt
+  // (couvert par les tests unitaires du matching).
+  await database.pool.query(`UPDATE app_settings SET value = '0' WHERE key = 'matching.stopPenaltySeconds'`);
   const mail = new MemoryMailProvider();
   const geocoding = new FakeGeocodingProvider();
   const payments = new FakePaymentProvider();
@@ -54,7 +58,7 @@ export async function setupTestContext(
     },
   };
   const app = await buildApp({
-    config: { LOG_LEVEL: 'silent' },
+    config: { LOG_LEVEL: process.env.TEST_LOG ?? 'silent' },
     pingDb: async () => {
       await database.pool.query('SELECT 1');
     },
@@ -73,6 +77,7 @@ export async function setupTestContext(
       push,
       clock: () => clock.now,
       rateLimit,
+      ...(routing ? { routing } : {}),
     },
   });
   return {

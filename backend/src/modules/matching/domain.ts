@@ -30,6 +30,8 @@ export interface MatchParams {
   arrivalWindowMinutes: number;
   /** Détour fictif ajouté au classement pour un score nul (cahier §4, §7). */
   reliabilityWeightSeconds: number;
+  /** Temps fixe par prise en charge (quitter l'axe, s'arrêter, repartir) ; 0 par défaut. */
+  stopPenaltySeconds?: number;
 }
 
 export interface PlannedPassenger {
@@ -128,7 +130,8 @@ export function detourSeconds(driverHome: LatLon, passengerHomes: readonly LatLo
   ).map((p) => p.home);
   const withPassengers = routeSeconds([driverHome, ...ordered, params.campus], params);
   const direct = routeSeconds([driverHome, params.campus], params);
-  return Math.max(0, withPassengers - direct);
+  // Chaque arrêt coûte aussi un temps fixe, même pour un passager pile sur la route.
+  return Math.max(0, withPassengers - direct + ordered.length * (params.stopPenaltySeconds ?? 0));
 }
 
 export function isTimeCompatible(driverTime: Date, passengerTime: Date, params: MatchParams): boolean {

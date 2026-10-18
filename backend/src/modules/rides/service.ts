@@ -116,6 +116,7 @@ export class RidesService {
     const route = await this.routing.route([inputs.start, ...ordered.map((s) => s.point), inputs.end]);
     const times = passageTimes(ride.direction, ride.targetTime, route.legs);
     const onboard = onboardDistances(ride.direction, route.legs);
+    const detours = route.estimated ? new Map<string, number>() : await this.realDetours(inputs.start, inputs.end, ordered, route);
     const price = await this.estimate(ride, route.distanceM, inputs.stops.length + 1);
 
     await this.repo.transaction(async (tx) => {
@@ -133,7 +134,13 @@ export class RidesService {
           totalCostCents: price?.totalCostCents ?? null,
           stops: [
             { userId: ride.driverId, order: 0, eta: ride.direction === 'to_campus' ? times[0]! : times.at(-1)! },
-            ...ordered.map((s, i) => ({ userId: s.userId, order: i + 1, eta: times[i + 1]!, onboardM: onboard[i] ?? null })),
+            ...ordered.map((s, i) => ({
+              userId: s.userId,
+              order: i + 1,
+              eta: times[i + 1]!,
+              onboardM: onboard[i] ?? null,
+              detourS: detours.get(s.userId) ?? null,
+            })),
           ],
           // Tracé estimé alors qu'un fournisseur existe : on retentera à la prochaine lecture.
           now: route.estimated && this.retryEstimated ? null : this.clock(),
@@ -141,6 +148,44 @@ export class RidesService {
         tx,
       );
     });
+  }
+
+  /**
+   * Détour réel de chaque passager (cahier §4) : durée du trajet avec lui moins durée sans lui,
+   * sur de vrais itinéraires. Remplace l'estimation du matching une fois le trajet planifié.
+   * Jusqu'à 4 passagers (un appel d'itinéraire par passager, plus le trajet direct pour un
+   * seul), gardés en mémoire ; en cas d'échec, l'estimation reste.
+   */
+  private async realDetours(
+    start: LatLon,
+    end: LatLon,
+    ordered: readonly { userId: string; point: LatLon }[],
+    full: RouteResult,
+  ): Promise<Map<string, number>> {
+    const detours = new Map<string, number>();
+    if (ordered.length === 0 || ordered.length > 4) return detours;
+    try {
+      for (const stop of ordered) {
+        const others = ordered.filter((o) => o !== stop).map((o) => o.point);
+        const without = await this.cachedRoute([start, ...others, end]);
+        if (without.estimated) return new Map();
+        detours.set(stop.userId, Math.max(0, Math.round(full.durationS - without.durationS)));
+      }
+    } catch {
+      return new Map();
+    }
+    return detours;
+  }
+
+  /** Itinéraire gardé en mémoire par jeu de points (aperçus, détours réels). */
+  private async cachedRoute(points: LatLon[]): Promise<RouteResult> {
+    const key = points.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join('|');
+    const cached = this.previews.get(key);
+    if (cached) return cached;
+    const route = await this.routing.route(points);
+    if (this.previews.size >= PREVIEW_CACHE_SIZE) this.previews.delete(this.previews.keys().next().value!);
+    this.previews.set(key, route);
+    return route;
   }
 
   /**
