@@ -212,8 +212,16 @@ describe('contrôle d’accès', () => {
       studyProgram: 'BUT Informatique',
       interests: ['Escalade', 'Jazz'],
       ridesCompleted: 0,
+      bio: null,
+      preferences: { chat: null, music: null, smoking: null, pets: null },
+      memberSince: expect.stringMatching(/^\d{4}-\d{2}$/) as string,
+      ratingsCount: 0,
+      cancellationRate: 0,
+      level: { key: 'newcomer', points: 0 },
+      badges: [],
+      co2SavedKg: 0,
     });
-    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|lat|address|2005/);
+    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|"lat"|address|2005/);
     expect((await call(hugo, 'PATCH', '/me', { interests: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).statusCode).toBe(400);
   });
 

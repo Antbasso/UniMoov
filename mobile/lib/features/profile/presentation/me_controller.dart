@@ -32,9 +32,20 @@ class MeController extends AsyncNotifier<Me?> {
     String? studyProgram,
     int? birthYear,
     required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
   }) => _apply(
-    () => _api.updateAbout(studyProgram: studyProgram, birthYear: birthYear, interests: interests),
+    () => _api.updateAbout(
+      studyProgram: studyProgram,
+      birthYear: birthYear,
+      interests: interests,
+      bio: bio,
+      preferences: preferences,
+    ),
   );
+
+  Future<void> setLeaderboardVisible(bool visible) =>
+      _apply(() => _api.setLeaderboardVisible(visible));
   Future<void> setPhoto(Uint8List bytes, String contentType) =>
       _apply(() => _api.setPhoto(bytes, contentType));
 

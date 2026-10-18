@@ -3907,6 +3907,498 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fermer'**
   String get close;
+
+  /// No description provided for @achievementsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes réussites'**
+  String get achievementsTitle;
+
+  /// No description provided for @levelNewcomer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvel Uni-Mooveur'**
+  String get levelNewcomer;
+
+  /// No description provided for @levelRegular.
+  ///
+  /// In fr, this message translates to:
+  /// **'Habitué'**
+  String get levelRegular;
+
+  /// No description provided for @levelPillar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pilier du campus'**
+  String get levelPillar;
+
+  /// No description provided for @levelSuper.
+  ///
+  /// In fr, this message translates to:
+  /// **'Super Uni-Mooveur'**
+  String get levelSuper;
+
+  /// No description provided for @levelLegend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Légende du campus'**
+  String get levelLegend;
+
+  /// No description provided for @levelTop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as atteint le plus haut niveau.'**
+  String get levelTop;
+
+  /// No description provided for @levelNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Encore {count} points pour devenir {level}'**
+  String levelNext(int count, String level);
+
+  /// No description provided for @pointsCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{0 point} =1{1 point} other{{count} points}}'**
+  String pointsCount(int count);
+
+  /// No description provided for @pointsShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} pts'**
+  String pointsShort(int count);
+
+  /// No description provided for @impactCo2.
+  ///
+  /// In fr, this message translates to:
+  /// **'de CO2 évités'**
+  String get impactCo2;
+
+  /// No description provided for @impactKm.
+  ///
+  /// In fr, this message translates to:
+  /// **'partagés'**
+  String get impactKm;
+
+  /// No description provided for @impactRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'trajets effectués'**
+  String get impactRides;
+
+  /// No description provided for @impactReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'reçus en conducteur'**
+  String get impactReceived;
+
+  /// No description provided for @impactPaid.
+  ///
+  /// In fr, this message translates to:
+  /// **'payés en passager'**
+  String get impactPaid;
+
+  /// No description provided for @badgesTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Badges ({earned}/{total})'**
+  String badgesTitle(int earned, int total);
+
+  /// No description provided for @badgeEarned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gagné'**
+  String get badgeEarned;
+
+  /// No description provided for @badgeProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'{progress}/{goal}'**
+  String badgeProgress(int progress, int goal);
+
+  /// No description provided for @badgeFirstRide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premier trajet'**
+  String get badgeFirstRide;
+
+  /// No description provided for @badgeFirstRideGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais ton premier trajet.'**
+  String get badgeFirstRideGoal;
+
+  /// No description provided for @badgeTenRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'10 trajets'**
+  String get badgeTenRides;
+
+  /// No description provided for @badgeTenRidesGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais 10 trajets.'**
+  String get badgeTenRidesGoal;
+
+  /// No description provided for @badgeFiftyRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'50 trajets'**
+  String get badgeFiftyRides;
+
+  /// No description provided for @badgeFiftyRidesGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais 50 trajets.'**
+  String get badgeFiftyRidesGoal;
+
+  /// No description provided for @badgeLoyalDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conducteur fidèle'**
+  String get badgeLoyalDriver;
+
+  /// No description provided for @badgeLoyalDriverGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conduis 10 trajets avec des passagers.'**
+  String get badgeLoyalDriverGoal;
+
+  /// No description provided for @badgeFullWeek.
+  ///
+  /// In fr, this message translates to:
+  /// **'Semaine complète'**
+  String get badgeFullWeek;
+
+  /// No description provided for @badgeFullWeekGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais 5 trajets dans la même semaine.'**
+  String get badgeFullWeekGoal;
+
+  /// No description provided for @badgeSociable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sociable'**
+  String get badgeSociable;
+
+  /// No description provided for @badgeSociableGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voyage avec 10 personnes différentes.'**
+  String get badgeSociableGoal;
+
+  /// No description provided for @badgeEco.
+  ///
+  /// In fr, this message translates to:
+  /// **'Éco-voyageur'**
+  String get badgeEco;
+
+  /// No description provided for @badgeEcoGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Évite 100 kg de CO2.'**
+  String get badgeEcoGoal;
+
+  /// No description provided for @badgeReliable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fiable'**
+  String get badgeReliable;
+
+  /// No description provided for @badgeReliableGoal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fais 5 trajets avec une fiabilité d\'au moins 95 %.'**
+  String get badgeReliableGoal;
+
+  /// No description provided for @leaderboardTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement du campus'**
+  String get leaderboardTitle;
+
+  /// No description provided for @leaderboardTitleMonth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement du campus en {month}'**
+  String leaderboardTitleMonth(String month);
+
+  /// No description provided for @leaderboardShowMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Apparaître avec mon prénom'**
+  String get leaderboardShowMe;
+
+  /// No description provided for @leaderboardShowMeHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sinon, tu restes classé, mais anonyme.'**
+  String get leaderboardShowMeHelp;
+
+  /// No description provided for @leaderboardEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personne n\'a encore de points ce mois-ci. Un trajet suffit pour entrer au classement.'**
+  String get leaderboardEmpty;
+
+  /// No description provided for @leaderboardMyRank.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta place : {rank} sur {total}'**
+  String leaderboardMyRank(int rank, int total);
+
+  /// No description provided for @leaderboardError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Classement indisponible pour l\'instant.'**
+  String get leaderboardError;
+
+  /// No description provided for @leaderboardYou.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toi'**
+  String get leaderboardYou;
+
+  /// No description provided for @leaderboardAnonymous.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un étudiant'**
+  String get leaderboardAnonymous;
+
+  /// No description provided for @leaderboardRowSemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rank}e, {name}, {points} points'**
+  String leaderboardRowSemantic(int rank, String name, int points);
+
+  /// No description provided for @sectionAbout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon profil'**
+  String get sectionAbout;
+
+  /// No description provided for @sectionActivity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon activité'**
+  String get sectionActivity;
+
+  /// No description provided for @sectionTrips.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes trajets'**
+  String get sectionTrips;
+
+  /// No description provided for @sectionPauses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pauses'**
+  String get sectionPauses;
+
+  /// No description provided for @sectionAppearance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Apparence'**
+  String get sectionAppearance;
+
+  /// No description provided for @sectionAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compte et confidentialité'**
+  String get sectionAccount;
+
+  /// No description provided for @aboutBio.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mini-bio'**
+  String get aboutBio;
+
+  /// No description provided for @aboutBioHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes points de rendez-vous, ce que j\'aime en trajet…'**
+  String get aboutBioHint;
+
+  /// No description provided for @aboutInterestsHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche ceux qui te ressemblent ({count}/{max}).'**
+  String aboutInterestsHelp(int count, int max);
+
+  /// No description provided for @prefsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préférences de covoiturage'**
+  String get prefsTitle;
+
+  /// No description provided for @prefChatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discussion'**
+  String get prefChatTitle;
+
+  /// No description provided for @prefChatChatty.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'aime bien discuter'**
+  String get prefChatChatty;
+
+  /// No description provided for @prefChatDepends.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je discute si je me sens à l\'aise'**
+  String get prefChatDepends;
+
+  /// No description provided for @prefChatQuiet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je préfère le calme'**
+  String get prefChatQuiet;
+
+  /// No description provided for @prefMusicTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Musique'**
+  String get prefMusicTitle;
+
+  /// No description provided for @prefMusicYes.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'aime la musique en voiture'**
+  String get prefMusicYes;
+
+  /// No description provided for @prefMusicDepends.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'aime la musique si elle me plaît'**
+  String get prefMusicDepends;
+
+  /// No description provided for @prefMusicNo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je préfère sans musique'**
+  String get prefMusicNo;
+
+  /// No description provided for @prefSmokingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cigarette'**
+  String get prefSmokingTitle;
+
+  /// No description provided for @prefSmokingOk.
+  ///
+  /// In fr, this message translates to:
+  /// **'La cigarette ne me dérange pas'**
+  String get prefSmokingOk;
+
+  /// No description provided for @prefSmokingOutside.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pauses cigarette dehors seulement'**
+  String get prefSmokingOutside;
+
+  /// No description provided for @prefSmokingNo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je préfère qu\'on ne fume pas en voiture'**
+  String get prefSmokingNo;
+
+  /// No description provided for @prefPetsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Animaux'**
+  String get prefPetsTitle;
+
+  /// No description provided for @prefPetsYes.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'aime les animaux à bord'**
+  String get prefPetsYes;
+
+  /// No description provided for @prefPetsSome.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je peux covoiturer avec certains animaux'**
+  String get prefPetsSome;
+
+  /// No description provided for @prefPetsNo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Je préfère sans animaux'**
+  String get prefPetsNo;
+
+  /// No description provided for @profileRating.
+  ///
+  /// In fr, this message translates to:
+  /// **'{score}/5 · {count, plural, =0{aucun avis} =1{1 avis} other{{count} avis}}'**
+  String profileRating(String score, int count);
+
+  /// No description provided for @profileWrite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écrire à {name}'**
+  String profileWrite(String name);
+
+  /// No description provided for @profileEditMine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier mon profil'**
+  String get profileEditMine;
+
+  /// No description provided for @profileVerifiedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} a un profil vérifié'**
+  String profileVerifiedTitle(String name);
+
+  /// No description provided for @profileVerifiedEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mail universitaire vérifié'**
+  String get profileVerifiedEmail;
+
+  /// No description provided for @profileMemberSince.
+  ///
+  /// In fr, this message translates to:
+  /// **'Membre depuis {month}'**
+  String profileMemberSince(String month);
+
+  /// No description provided for @profileAboutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'À propos de {name}'**
+  String profileAboutTitle(String name);
+
+  /// No description provided for @profileAboutEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a encore rien ajouté.'**
+  String profileAboutEmpty(String name);
+
+  /// No description provided for @profileBadges.
+  ///
+  /// In fr, this message translates to:
+  /// **'Badges'**
+  String get profileBadges;
+
+  /// No description provided for @profileRides.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun trajet effectué} =1{1 trajet effectué} other{{count} trajets effectués}}'**
+  String profileRides(int count);
+
+  /// No description provided for @profileCancellationRate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taux d\'annulation de {rate} %'**
+  String profileCancellationRate(int rate);
+
+  /// No description provided for @profileCo2.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kg} kg de CO2 évités en covoiturant'**
+  String profileCo2(int kg);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

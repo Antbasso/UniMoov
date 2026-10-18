@@ -127,6 +127,13 @@
       "when": 1792336204885,
       "tag": "0017_chat_reactions_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792337138183,
+      "tag": "0018_profile_preferences_leaderboard",
+      "breakpoints": true
     }
   ]
 }

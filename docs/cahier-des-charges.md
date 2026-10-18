@@ -57,6 +57,9 @@ Architecture façon Teams, trois niveaux de conversation :
 - Score de fiabilité agrégeant les notations et des données comportementales objectives (taux d'annulation, etc.), visible publiquement sur le profil avant tout engagement sur un trajet.
 - Le score est utilisé comme critère dans le matching automatique (priorité aux utilisateurs bien notés) — pas de sanction brutale ni de bannissement automatique.
 
+- Gamification (décision de l'équipe du 18/10/2026) : points gagnés à chaque trajet effectué (davantage en conduisant, et par passager transporté), niveaux, badges de réussite, impact cumulé (CO₂ évité, kilomètres partagés, sommes payées ou reçues) et classement mensuel du campus. Le classement est anonyme sauf accord de la personne pour y montrer son prénom. Les récompenses sont symboliques en v1 ; réductions ou avantages pour étudiants à étudier plus tard.
+- Profil public façon covoiturage : profil vérifié (mail universitaire), à propos (formation, âge, mini-bio), préférences de covoiturage (discussion, musique, cigarette, animaux), centres d'intérêt choisis parmi des propositions colorées ou saisis, badges, niveau, nombre de trajets, taux d'annulation. Depuis ce profil, « Écrire » ouvre une conversation privée.
+
 ## 8. Annulations et modifications
 
 - Toute annulation entraîne : une pénalité sur le score de fiabilité (dégressive selon le délai, plus sévère si tardif), une notification immédiate à l'autre partie, et une relance automatique de recherche de remplaçant sur le créneau.

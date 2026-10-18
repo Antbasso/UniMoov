@@ -1,3 +1,6 @@
+import 'package:unimoov/features/achievements/data/achievements_api.dart';
+import 'package:unimoov/features/achievements/domain/achievements.dart';
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -37,7 +40,8 @@ class FakeBackend
         TrustApi,
         ChatApi,
         NotificationsApi,
-        AccountApi {
+        AccountApi,
+        AchievementsApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
   static const knownLabel = '12 Rue de la Paix 74000 Annecy';
@@ -147,12 +151,72 @@ class FakeBackend
     String? studyProgram,
     int? birthYear,
     required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
   }) async {
     _maybeFail();
     _me
       ..studyProgram = studyProgram
       ..birthYear = birthYear
-      ..interests = interests;
+      ..interests = interests
+      ..bio = bio
+      ..preferences = preferences;
+    return _me.toMe();
+  }
+
+  // Gamification : réussites d'exemple, classement avec quelques prénoms.
+  @override
+  Future<Achievements> achievements() async {
+    await Future<void>.value();
+    return Achievements(
+      points: 245,
+      levelKey: 'regular',
+      levelMin: 100,
+      nextKey: 'pillar',
+      nextMin: 300,
+      badges: const [
+        AchievementBadge(key: 'first_ride', goal: 1, progress: 1, earned: true),
+        AchievementBadge(key: 'ten_rides', goal: 10, progress: 10, earned: true),
+        AchievementBadge(key: 'fifty_rides', goal: 50, progress: 18, earned: false),
+        AchievementBadge(key: 'loyal_driver', goal: 10, progress: 4, earned: false),
+        AchievementBadge(key: 'full_week', goal: 5, progress: 5, earned: true),
+        AchievementBadge(key: 'sociable', goal: 10, progress: 7, earned: false),
+        AchievementBadge(key: 'eco', goal: 100, progress: 41, earned: false),
+        AchievementBadge(key: 'reliable', goal: 5, progress: 5, earned: true),
+      ],
+      rides: 18,
+      sharedKm: 212,
+      co2SavedKg: 41,
+      paidCents: 3460,
+      receivedCents: 0,
+      monthPoints: 85,
+      monthRank: 3,
+      ranked: 14,
+      leaderboardVisible: _me.leaderboardVisible,
+    );
+  }
+
+  @override
+  Future<Leaderboard> leaderboard() async {
+    await Future<void>.value();
+    return Leaderboard(
+      month: DateTime(2026, 10),
+      ranked: 14,
+      myRank: 3,
+      myPoints: 85,
+      entries: [
+        const LeaderEntry(rank: 1, firstName: 'Léa', points: 140, levelKey: 'pillar', me: false),
+        const LeaderEntry(rank: 2, points: 95, levelKey: 'regular', me: false),
+        LeaderEntry(rank: 3, firstName: _me.firstName, points: 85, levelKey: 'regular', me: true),
+        const LeaderEntry(rank: 4, firstName: 'Hugo', points: 60, levelKey: 'regular', me: false),
+        const LeaderEntry(rank: 5, points: 35, levelKey: 'newcomer', me: false),
+      ],
+    );
+  }
+
+  @override
+  Future<Me> setLeaderboardVisible(bool visible) async {
+    _me.leaderboardVisible = visible;
     return _me.toMe();
   }
 
@@ -181,6 +245,14 @@ class FakeBackend
       age: 20,
       studyProgram: 'BUT Génie mécanique',
       interests: ['Ski', 'Rock'],
+      bio: 'Rendez-vous habituel : arrêt Seynod Centre.',
+      preferences: CarpoolPreferences(chat: 'depends', music: 'yes', smoking: 'no'),
+      ratingsCount: 9,
+      cancellationRate: 2,
+      levelKey: 'super',
+      points: 760,
+      badges: ['first_ride', 'loyal_driver'],
+      co2SavedKg: 85,
     ),
   };
 
@@ -1132,6 +1204,9 @@ class FakeAccount {
   String? studyProgram;
   int? birthYear;
   List<String> interests = const [];
+  String? bio;
+  CarpoolPreferences preferences = const CarpoolPreferences();
+  bool leaderboardVisible = false;
   Uint8List? photo;
 
   Me toMe() {
@@ -1155,6 +1230,9 @@ class FakeAccount {
       studyProgram: studyProgram,
       birthYear: birthYear,
       interests: interests,
+      bio: bio,
+      preferences: preferences,
+      leaderboardVisible: leaderboardVisible,
     );
   }
 }

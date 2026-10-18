@@ -7,6 +7,14 @@ const navApp = z.enum(['google_maps', 'waze', 'apple_maps']);
 const stepStatus = z.enum(['done', 'skipped']);
 const isoDate = z.iso.date();
 
+/** Préférences de covoiturage montrées sur le profil (null : non précisé). */
+export const preferences = z.strictObject({
+  chat: z.enum(['chatty', 'depends', 'quiet']).nullable(),
+  music: z.enum(['yes', 'depends', 'no']).nullable(),
+  smoking: z.enum(['ok', 'outside', 'no']).nullable(),
+  pets: z.enum(['yes', 'some', 'no']).nullable(),
+});
+
 export const vehicleSchema = z.object({
   consumptionLPer100km: z.number().min(2).max(20),
   defaultSeats: z.number().int().min(1).max(8),
@@ -25,6 +33,9 @@ export const meResponse = z.object({
   studyProgram: z.string().nullable(),
   birthYear: z.number().int().nullable(),
   interests: z.array(z.string()),
+  bio: z.string().nullable(),
+  preferences,
+  leaderboardVisible: z.boolean(),
   campusId: z.uuid().nullable(),
   home: z
     .object({ address: z.string(), lat: z.number(), lon: z.number(), sector: z.string() })
@@ -53,6 +64,9 @@ export const patchMeBody = z
     studyProgram: z.string().trim().min(1).max(80).nullable(),
     birthYear: z.number().int().min(1940).max(2020).nullable(),
     interests,
+    bio: z.string().trim().min(1).max(200).nullable(),
+    preferences: preferences.partial(),
+    leaderboardVisible: z.boolean(),
   })
   .partial()
   .refine((body) => Object.keys(body).length > 0, 'Aucun champ à modifier');
@@ -97,4 +111,14 @@ export const publicProfileResponse = z.strictObject({
   studyProgram: z.string().nullable(),
   interests: z.array(z.string()),
   ridesCompleted: z.number().int(),
+  bio: z.string().nullable(),
+  preferences,
+  /** Mois d'inscription (`AAAA-MM`), pas la date exacte. */
+  memberSince: z.string(),
+  ratingsCount: z.number().int(),
+  /** Part des trajets acceptés puis annulés par la personne, en pour cent. */
+  cancellationRate: z.number().int(),
+  level: z.strictObject({ key: z.string(), points: z.number().int() }),
+  badges: z.array(z.string()),
+  co2SavedKg: z.number().int(),
 });

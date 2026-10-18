@@ -1,3 +1,5 @@
+import 'package:unimoov/features/achievements/data/achievements_api.dart';
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -72,6 +74,7 @@ Future<void> launchApp(
         chatApiProvider.overrideWithValue(backend),
         notificationsApiProvider.overrideWithValue(backend),
         accountApiProvider.overrideWithValue(backend),
+        achievementsApiProvider.overrideWithValue(backend),
         exportSharerProvider.overrideWithValue(sharer ?? FakeExportSharer()),
         // Sélecteur de photo : une petite image PNG valide, sans galerie.
         photoPickerProvider.overrideWithValue(

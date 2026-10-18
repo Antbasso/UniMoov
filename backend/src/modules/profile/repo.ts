@@ -17,6 +17,12 @@ export class ProfileRepo {
         studyProgram: users.studyProgram,
         birthYear: users.birthYear,
         interests: users.interests,
+        bio: users.bio,
+        prefChat: users.prefChat,
+        prefMusic: users.prefMusic,
+        prefSmoking: users.prefSmoking,
+        prefPets: users.prefPets,
+        leaderboardVisible: users.leaderboardVisible,
         campusId: users.campusId,
         homeAddress: users.homeAddress,
         homeLat: sql<number | null>`ST_Y(${users.homeLocation}::geometry)`,
@@ -42,8 +48,19 @@ export class ProfileRepo {
         birthYear: users.birthYear,
         studyProgram: users.studyProgram,
         interests: users.interests,
+        bio: users.bio,
+        prefChat: users.prefChat,
+        prefMusic: users.prefMusic,
+        prefSmoking: users.prefSmoking,
+        prefPets: users.prefPets,
+        memberSince: sql<string>`to_char("users"."created_at" AT TIME ZONE 'Europe/Paris', 'YYYY-MM')`,
+        // Colonnes qualifiées à la main : dans une sous-requête, Drizzle écrit « id » seul, que
+        // Postgres rattacherait à la table de la sous-requête.
         ridesCompleted: sql<number>`(SELECT count(*)::int FROM ride_participants p JOIN rides r ON r.id = p.ride_id
-          WHERE p.user_id = ${users.id} AND r.status = 'completed' AND p.status IN ('accepted', 'picked_up'))`,
+          WHERE p.user_id = "users"."id" AND r.status = 'completed' AND p.status IN ('accepted', 'picked_up'))`,
+        ratingsCount: sql<number>`(SELECT count(*)::int FROM ratings rt WHERE rt.rated_id = "users"."id")`,
+        cancellations: sql<number>`(SELECT count(*)::int FROM reliability_events e
+          WHERE e.user_id = "users"."id" AND e.kind IN ('cancel_early', 'cancel_medium', 'cancel_late'))`,
       })
       .from(users)
       .where(and(eq(users.id, userId), isNull(users.deletedAt)));
@@ -102,6 +119,12 @@ export class ProfileRepo {
       studyProgram: string | null;
       birthYear: number | null;
       interests: string[];
+      bio: string | null;
+      prefChat: string | null;
+      prefMusic: string | null;
+      prefSmoking: string | null;
+      prefPets: string | null;
+      leaderboardVisible: boolean;
       roleMode: RoleMode;
       defaultNavApp: string | null;
       onboardingSteps: OnboardingState;

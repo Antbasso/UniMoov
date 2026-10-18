@@ -66,6 +66,46 @@ class Vehicle {
   };
 }
 
+/// Préférences de covoiturage montrées sur le profil (valeurs de l'API, null : non précisé).
+class CarpoolPreferences {
+  const CarpoolPreferences({this.chat, this.music, this.smoking, this.pets});
+
+  factory CarpoolPreferences.fromJson(Map<String, dynamic>? json) => CarpoolPreferences(
+    chat: json?['chat'] as String?,
+    music: json?['music'] as String?,
+    smoking: json?['smoking'] as String?,
+    pets: json?['pets'] as String?,
+  );
+
+  /// Valeurs possibles de chaque préférence, dans l'ordre affiché.
+  static const chatValues = ['chatty', 'depends', 'quiet'];
+  static const musicValues = ['yes', 'depends', 'no'];
+  static const smokingValues = ['ok', 'outside', 'no'];
+  static const petsValues = ['yes', 'some', 'no'];
+
+  final String? chat;
+  final String? music;
+  final String? smoking;
+  final String? pets;
+
+  bool get isEmpty => chat == null && music == null && smoking == null && pets == null;
+
+  /// Une préférence changée (la fonction rend la nouvelle valeur, `null` compris).
+  CarpoolPreferences copyWith({
+    String? Function()? chat,
+    String? Function()? music,
+    String? Function()? smoking,
+    String? Function()? pets,
+  }) => CarpoolPreferences(
+    chat: chat == null ? this.chat : chat(),
+    music: music == null ? this.music : music(),
+    smoking: smoking == null ? this.smoking : smoking(),
+    pets: pets == null ? this.pets : pets(),
+  );
+
+  Map<String, Object?> toJson() => {'chat': chat, 'music': music, 'smoking': smoking, 'pets': pets};
+}
+
 class Me {
   const Me({
     required this.id,
@@ -85,6 +125,9 @@ class Me {
     this.studyProgram,
     this.birthYear,
     this.interests = const [],
+    this.bio,
+    this.preferences = const CarpoolPreferences(),
+    this.leaderboardVisible = false,
   });
 
   factory Me.fromJson(Map<String, dynamic> json) {
@@ -115,6 +158,9 @@ class Me {
       studyProgram: json['studyProgram'] as String?,
       birthYear: json['birthYear'] as int?,
       interests: [for (final i in json['interests'] as List<dynamic>? ?? const []) i as String],
+      bio: json['bio'] as String?,
+      preferences: CarpoolPreferences.fromJson(json['preferences'] as Map<String, dynamic>?),
+      leaderboardVisible: json['leaderboardVisible'] as bool? ?? false,
     );
   }
 
@@ -141,6 +187,13 @@ class Me {
   final String? studyProgram;
   final int? birthYear;
   final List<String> interests;
+
+  /// Mini-bio (200 caractères) et préférences de covoiturage, montrées sur le profil.
+  final String? bio;
+  final CarpoolPreferences preferences;
+
+  /// Prénom et photo visibles dans le classement du campus (sinon ligne anonyme).
+  final bool leaderboardVisible;
 }
 
 /// Profil d'une personne croisée sur un trajet ou dans une conversation (`GET /users/{id}/public`).
@@ -154,6 +207,15 @@ class PublicProfile {
     this.age,
     this.studyProgram,
     this.interests = const [],
+    this.bio,
+    this.preferences = const CarpoolPreferences(),
+    this.memberSince,
+    this.ratingsCount = 0,
+    this.cancellationRate = 0,
+    this.levelKey = 'newcomer',
+    this.points = 0,
+    this.badges = const [],
+    this.co2SavedKg = 0,
   });
 
   factory PublicProfile.fromJson(Map<String, dynamic> json) => PublicProfile(
@@ -165,6 +227,18 @@ class PublicProfile {
     studyProgram: json['studyProgram'] as String?,
     interests: [for (final i in json['interests'] as List<dynamic>) i as String],
     ridesCompleted: json['ridesCompleted'] as int,
+    bio: json['bio'] as String?,
+    preferences: CarpoolPreferences.fromJson(json['preferences'] as Map<String, dynamic>?),
+    memberSince: switch (json['memberSince']) {
+      final String month => DateTime.tryParse('$month-01'),
+      _ => null,
+    },
+    ratingsCount: json['ratingsCount'] as int? ?? 0,
+    cancellationRate: json['cancellationRate'] as int? ?? 0,
+    levelKey: (json['level'] as Map<String, dynamic>?)?['key'] as String? ?? 'newcomer',
+    points: (json['level'] as Map<String, dynamic>?)?['points'] as int? ?? 0,
+    badges: [for (final b in json['badges'] as List<dynamic>? ?? const []) b as String],
+    co2SavedKg: json['co2SavedKg'] as int? ?? 0,
   );
 
   final String id;
@@ -175,6 +249,21 @@ class PublicProfile {
   final String? studyProgram;
   final List<String> interests;
   final int ridesCompleted;
+  final String? bio;
+  final CarpoolPreferences preferences;
+
+  /// Mois d'inscription (premier du mois).
+  final DateTime? memberSince;
+  final int ratingsCount;
+
+  /// Part des trajets acceptés puis annulés, en pour cent.
+  final int cancellationRate;
+  final String levelKey;
+  final int points;
+
+  /// Badges gagnés (clés).
+  final List<String> badges;
+  final int co2SavedKg;
 
   String get scoreOutOfFive => (reliabilityScore * 5).toStringAsFixed(1).replaceAll('.', ',');
 }

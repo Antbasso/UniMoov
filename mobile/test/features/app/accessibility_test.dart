@@ -81,6 +81,8 @@ void main() {
         await tester.tap(find.byTooltip('Mon profil'));
         await tester.pumpAndSettle();
         await expectAccessible(tester);
+        await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Mettre en pause'));
         await tester.pumpAndSettle();
         await expectAccessible(tester);

@@ -19,6 +19,8 @@ import '../../../core/settings/appearance.dart';
 import 'person_avatar.dart';
 import 'photo_sheet.dart';
 import '../../wallet/presentation/wallet_screen.dart';
+import '../../achievements/presentation/achievements_controller.dart';
+import '../../achievements/presentation/achievements_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -116,7 +118,13 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: UmSpace.s5),
+        // Niveau et points : toucher ouvre les badges et le classement.
+        if (ref.watch(achievementsProvider).value case final achievements?) ...[
+          LevelCard(achievements: achievements, onTap: () => context.push(AppRoutes.achievements)),
+          const SizedBox(height: UmSpace.s5),
+        ],
         _Group(
+          title: l10n.sectionAbout,
           children: [
             _Row(
               icon: Icons.person_outline_rounded,
@@ -126,8 +134,9 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s5),
         _Group(
+          title: l10n.sectionActivity,
           children: [
             _Row(
               icon: Icons.savings_outlined,
@@ -146,10 +155,16 @@ class ProfileScreen extends ConsumerWidget {
               title: l10n.profileReliability,
               onTap: () => context.push(AppRoutes.reliability),
             ),
+            _Row(
+              icon: Icons.emoji_events_outlined,
+              title: l10n.achievementsTitle,
+              onTap: () => context.push(AppRoutes.achievements),
+            ),
           ],
         ),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s5),
         _Group(
+          title: l10n.sectionTrips,
           children: [
             _Row(
               icon: Icons.home_outlined,
@@ -185,12 +200,13 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s5),
         const _PausesSection(),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s5),
         const _AppearanceGroup(),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s5),
         _Group(
+          title: l10n.sectionAccount,
           children: [
             _Row(
               icon: Icons.notifications_none_rounded,
@@ -212,14 +228,16 @@ class ProfileScreen extends ConsumerWidget {
 
 /// Bloc de lignes du profil, sur une carte.
 class _Group extends StatelessWidget {
-  const _Group({required this.children});
+  const _Group({required this.title, required this.children});
 
+  /// Nom de la section, au-dessus de la carte.
+  final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final c = context.umColors;
-    return Container(
+    final card = Container(
       decoration: BoxDecoration(
         color: c.surfaceRaised,
         borderRadius: BorderRadius.circular(UmRadius.md),
@@ -237,6 +255,19 @@ class _Group extends StatelessWidget {
           ],
         ),
       ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: UmSpace.s1, bottom: UmSpace.s2),
+          child: Semantics(
+            header: true,
+            child: Text(title, style: UmText.label.copyWith(color: c.inkMuted)),
+          ),
+        ),
+        card,
+      ],
     );
   }
 }
@@ -304,40 +335,44 @@ class _PausesSection extends ConsumerWidget {
     final c = context.umColors;
     final pauses = ref.watch(pausesProvider);
 
-    final content = switch (pauses) {
-      AsyncData(:final value) when value.isEmpty => [
-        Text(l10n.profileNoPauses, style: UmText.bodySm.copyWith(color: c.inkMuted)),
-      ],
+    // Même gabarit que les autres lignes : icône, titre, bouton « + » aligné sur les chevrons.
+    final rows = switch (pauses) {
       AsyncData(:final value) => [
         for (final pause in value)
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  describePause(
-                    startsOn: pause.startsOn,
-                    endsOn: pause.endsOn,
-                    repeat: pause.repeat,
-                    repeatUntil: pause.repeatUntil,
-                    l10n: l10n,
-                  ),
-                  style: UmText.bodySm.copyWith(color: c.ink),
-                ),
+          ListTile(
+            minTileHeight: UmSize.tapTarget + UmSpace.s2,
+            leading: const SizedBox(width: UmSize.iconMd),
+            title: Text(
+              describePause(
+                startsOn: pause.startsOn,
+                endsOn: pause.endsOn,
+                repeat: pause.repeat,
+                repeatUntil: pause.repeatUntil,
+                l10n: l10n,
               ),
-              IconButton(
-                tooltip: l10n.pauseDelete(formatPauseDate(pause.startsOn, l10n.localeName)),
-                icon: Icon(Icons.delete_outline_rounded, color: c.brandStrong),
-                onPressed: () => _remove(context, ref, pause.id),
-              ),
-            ],
+              style: UmText.bodySm.copyWith(color: c.ink),
+            ),
+            trailing: IconButton(
+              tooltip: l10n.pauseDelete(formatPauseDate(pause.startsOn, l10n.localeName)),
+              icon: Icon(Icons.delete_outline_rounded, color: c.brandStrong),
+              onPressed: () => _remove(context, ref, pause.id),
+            ),
           ),
       ],
       AsyncError(:final error) => [
-        UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
-        UmButton(
-          label: l10n.retry,
-          variant: UmButtonVariant.ghost,
-          onPressed: () => ref.invalidate(pausesProvider),
+        Padding(
+          padding: const EdgeInsets.all(UmSpace.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
+              UmButton(
+                label: l10n.retry,
+                variant: UmButtonVariant.ghost,
+                onPressed: () => ref.invalidate(pausesProvider),
+              ),
+            ],
+          ),
         ),
       ],
       _ => [
@@ -347,31 +382,24 @@ class _PausesSection extends ConsumerWidget {
         ),
       ],
     };
+    final none = pauses.value?.isEmpty ?? false;
 
-    return UmCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.pause_circle_outline_rounded, color: c.brandStrong),
-              const SizedBox(width: UmSpace.s4),
-              Expanded(
-                child: Text(
-                  l10n.profilePauses,
-                  style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
-                ),
-              ),
-              IconButton(
-                tooltip: l10n.pauseAction,
-                icon: Icon(Icons.add_rounded, color: c.brandStrong),
-                onPressed: () => showPauseSheet(context),
-              ),
-            ],
+    return _Group(
+      title: l10n.sectionPauses,
+      children: [
+        _Row(
+          icon: Icons.pause_circle_outline_rounded,
+          title: l10n.profilePauses,
+          value: none ? l10n.profileNoPauses : null,
+          onTap: () => showPauseSheet(context),
+          trailing: IconButton(
+            tooltip: l10n.pauseAction,
+            icon: Icon(Icons.add_rounded, color: c.brandStrong),
+            onPressed: () => showPauseSheet(context),
           ),
-          ...content,
-        ],
-      ),
+        ),
+        ...rows,
+      ],
     );
   }
 
@@ -467,6 +495,7 @@ class _AppearanceGroup extends ConsumerWidget {
       ThemeMode.dark => l10n.themeDark,
     };
     return _Group(
+      title: l10n.sectionAppearance,
       children: [
         _Row(
           icon: Icons.dark_mode_outlined,

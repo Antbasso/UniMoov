@@ -147,6 +147,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Erreur serveur sur la pause : message, puis succès.
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Mettre en pause'));
     await tester.pumpAndSettle();
     expect(find.text('Choisir les dates'), findsOneWidget);
@@ -166,6 +168,8 @@ void main() {
     expect(find.textContaining('Du '), findsOneWidget);
 
     // Comme dans un agenda : tous les lundis, jusqu'à une date.
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Mettre en pause'));
     await tester.pumpAndSettle();
     await tapText(tester, 'Jours');

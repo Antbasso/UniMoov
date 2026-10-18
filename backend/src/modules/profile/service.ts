@@ -17,7 +17,8 @@ import {
   type StepStatus,
 } from './domain.js';
 import type { ProfileRepo } from './repo.js';
-import type { MeResponse } from './schema.js';
+import type { z } from 'zod';
+import type { MeResponse, preferences } from './schema.js';
 
 const MAX_PAUSES = 20;
 
@@ -37,6 +38,12 @@ export class ProfileService {
     private readonly clock: () => Date,
     /** Adresse, véhicule, rôle ou pause modifiés : le matching recalcule (cahier §3). */
     private readonly onMatchingInputsChanged: (userId: string) => Promise<void> = () => Promise.resolve(),
+    /** Niveau, badges gagnés et CO₂ évité (gamification), pour le profil public. */
+    private readonly achievements: (userId: string) => Promise<{
+      level: { key: string; points: number };
+      badges: string[];
+      co2SavedKg: number;
+    }> = () => Promise.resolve({ level: { key: 'newcomer', points: 0 }, badges: [], co2SavedKg: 0 }),
   ) {}
 
   async getMe(userId: string): Promise<MeResponse> {
@@ -58,6 +65,9 @@ export class ProfileService {
       studyProgram: user.studyProgram,
       birthYear: user.birthYear,
       interests: user.interests,
+      bio: user.bio,
+      preferences: preferencesOf(user),
+      leaderboardVisible: user.leaderboardVisible,
       campusId: user.campusId,
       home: hasHome
         ? { address: user.homeAddress!, lat: user.homeLat!, lon: user.homeLon!, sector: user.homeSector ?? '' }
@@ -88,9 +98,21 @@ export class ProfileService {
       studyProgram?: string | null | undefined;
       birthYear?: number | null | undefined;
       interests?: string[] | undefined;
+      bio?: string | null | undefined;
+      leaderboardVisible?: boolean | undefined;
+      preferences?:
+        | { chat?: string | null | undefined; music?: string | null | undefined; smoking?: string | null | undefined; pets?: string | null | undefined }
+        | undefined;
     },
   ): Promise<MeResponse> {
-    const clean = withoutUndefined(values);
+    const { preferences, ...rest } = values;
+    const clean = withoutUndefined({
+      ...rest,
+      prefChat: preferences?.chat,
+      prefMusic: preferences?.music,
+      prefSmoking: preferences?.smoking,
+      prefPets: preferences?.pets,
+    });
     // Centres d'intérêt : sans doublon (casse ignorée), dans l'ordre saisi.
     if (clean.interests) {
       const seen = new Set<string>();
@@ -207,9 +229,14 @@ export class ProfileService {
     if (viewerId !== userId && !(await this.repo.related(viewerId, userId))) throw notFound();
     const user = await this.repo.findPublicUser(userId);
     if (!user) throw notFound();
-    const { birthYear, ...rest } = user;
+    const { birthYear, prefChat, prefMusic, prefSmoking, prefPets, cancellations, ...rest } = user;
+    // Taux d'annulation : annulations sur trajets engagés (terminés ou annulés par la personne).
+    const engaged = user.ridesCompleted + cancellations;
     return {
       ...rest,
+      ...(await this.achievements(userId)),
+      preferences: preferencesOf({ prefChat, prefMusic, prefSmoking, prefPets }),
+      cancellationRate: engaged === 0 ? 0 : Math.round((cancellations * 100) / engaged),
       reliabilityScore: Number(user.reliabilityScore),
       // Âge approché à l'année : seule l'année de naissance est gardée.
       age: birthYear === null ? null : Number(parisDate(this.clock()).slice(0, 4)) - birthYear,
@@ -239,4 +266,16 @@ export class ProfileService {
     if (!photo) throw notFound();
     return photo;
   }
+}
+
+type Preferences = z.infer<typeof preferences>;
+
+/** Préférences de covoiturage, telles que gardées en base (colonnes `pref_*`). */
+function preferencesOf(u: { prefChat: string | null; prefMusic: string | null; prefSmoking: string | null; prefPets: string | null }): Preferences {
+  return {
+    chat: u.prefChat as Preferences['chat'],
+    music: u.prefMusic as Preferences['music'],
+    smoking: u.prefSmoking as Preferences['smoking'],
+    pets: u.prefPets as Preferences['pets'],
+  };
 }

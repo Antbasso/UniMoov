@@ -54,6 +54,14 @@ CREATE TABLE user_photos (                -- photo de profil, sauvegardée avec 
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Profil public (facultatif) et classement du campus, ajoutés à users :
+ALTER TABLE users ADD COLUMN bio text CHECK (char_length(bio) <= 200);              -- mini-bio
+ALTER TABLE users ADD COLUMN pref_chat text CHECK (pref_chat IN ('chatty', 'depends', 'quiet'));
+ALTER TABLE users ADD COLUMN pref_music text CHECK (pref_music IN ('yes', 'depends', 'no'));
+ALTER TABLE users ADD COLUMN pref_smoking text CHECK (pref_smoking IN ('ok', 'outside', 'no'));
+ALTER TABLE users ADD COLUMN pref_pets text CHECK (pref_pets IN ('yes', 'some', 'no'));
+ALTER TABLE users ADD COLUMN leaderboard_visible boolean NOT NULL DEFAULT false;     -- prénom au classement
+
 CREATE TABLE vehicles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -31,6 +31,7 @@ import '../../features/rides/presentation/suggestions_screen.dart';
 import '../../features/trust/domain/trust.dart';
 import '../../features/trust/presentation/dispute_screen.dart';
 import '../../features/trust/presentation/reliability_screen.dart';
+import '../../features/achievements/presentation/achievements_screen.dart';
 import '../../features/wallet/presentation/payout_screen.dart';
 import '../../features/wallet/presentation/wallet_screen.dart';
 import '../../features/schedule/presentation/schedule_screen.dart';
@@ -126,6 +127,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'reliability',
                     parentNavigatorKey: _rootKey,
                     builder: (_, _) => const ReliabilityScreen(),
+                  ),
+                  GoRoute(
+                    path: 'achievements',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const AchievementsScreen(),
                   ),
                   GoRoute(
                     path: 'notifications',

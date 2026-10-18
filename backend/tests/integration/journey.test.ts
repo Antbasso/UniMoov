@@ -151,4 +151,45 @@ describe('parcours complet', () => {
     const reliability = (await call(camille, 'GET', '/me/reliability')).json<{ completedRides: number; ratingsCount: number }>();
     expect(reliability).toMatchObject({ completedRides: 1, ratingsCount: 1 });
   });
+
+  it('gamification : points, niveau, badges et impact ; classement du mois, anonyme sans accord', async () => {
+    const mine = (await call(camille, 'GET', '/me/achievements')).json<{
+      points: number;
+      level: { key: string };
+      badges: { key: string; earned: boolean }[];
+      impact: { rides: number; sharedKm: number; co2SavedKg: number; receivedCents: number };
+      month: { rank: number | null; ranked: number };
+    }>();
+    // Conductrice : 15 points par trajet, 5 par passager, 3 par note de 5 étoiles.
+    expect(mine.points).toBe(15 + 5 + 3);
+    expect(mine.level.key).toBe('newcomer');
+    expect(mine.badges.find((b) => b.key === 'first_ride')!.earned).toBe(true);
+    expect(mine.impact).toMatchObject({ rides: 1 });
+    expect(mine.impact.sharedKm).toBeGreaterThan(0);
+    expect(mine.month).toEqual({ month: expect.any(String) as string, points: 23, rank: 1, ranked: 2 });
+
+    // Yanis n'a pas choisi d'apparaître : prénom et photo masqués chez Camille.
+    const board = (await call(camille, 'GET', '/leaderboard')).json<{ entries: { firstName: string | null; me: boolean; points: number }[] }>();
+    expect(board.entries).toEqual([
+      expect.objectContaining({ firstName: 'Camille', me: true, points: 23 }),
+      expect.objectContaining({ firstName: null, me: false, points: 10 }),
+    ]);
+    expect((await call(yanis, 'PATCH', '/me', { leaderboardVisible: true })).statusCode).toBe(200);
+    const after = (await call(camille, 'GET', '/leaderboard')).json<{ entries: { firstName: string | null }[] }>();
+    expect(after.entries[1]!.firstName).toBe('Yanis');
+
+    // Profil public : niveau, badges gagnés, préférences et taux d'annulation.
+    expect((await call(camille, 'PATCH', '/me', { bio: 'Toujours à l’heure.', preferences: { music: 'yes', smoking: 'no' } })).statusCode).toBe(200);
+    const profile = (await call(yanis, 'GET', `/users/${ids.camille}/public`)).json<Record<string, unknown>>();
+    expect(profile).toMatchObject({
+      bio: 'Toujours à l’heure.',
+      preferences: { chat: null, music: 'yes', smoking: 'no', pets: null },
+      ridesCompleted: 1,
+      ratingsCount: 1,
+      cancellationRate: 0,
+      level: { key: 'newcomer', points: 23 },
+      badges: ['first_ride'],
+    });
+    expect(profile.memberSince).toMatch(/^\d{4}-\d{2}$/);
+  });
 });

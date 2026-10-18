@@ -1338,5 +1338,237 @@
     }
   },
   "chatLastPhoto": "Photo",
-  "close": "Fermer"
+  "close": "Fermer",
+  "achievementsTitle": "Mes réussites",
+  "levelNewcomer": "Nouvel Uni-Mooveur",
+  "levelRegular": "Habitué",
+  "levelPillar": "Pilier du campus",
+  "levelSuper": "Super Uni-Mooveur",
+  "levelLegend": "Légende du campus",
+  "levelTop": "Tu as atteint le plus haut niveau.",
+  "levelNext": "Encore {count} points pour devenir {level}",
+  "@levelNext": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "pointsCount": "{count, plural, =0{0 point} =1{1 point} other{{count} points}}",
+  "@pointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsShort": "{count} pts",
+  "@pointsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "impactCo2": "de CO2 évités",
+  "impactKm": "partagés",
+  "impactRides": "trajets effectués",
+  "impactReceived": "reçus en conducteur",
+  "impactPaid": "payés en passager",
+  "badgesTitle": "Badges ({earned}/{total})",
+  "@badgesTitle": {
+    "placeholders": {
+      "earned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeEarned": "Gagné",
+  "badgeProgress": "{progress}/{goal}",
+  "@badgeProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      },
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeFirstRide": "Premier trajet",
+  "badgeFirstRideGoal": "Fais ton premier trajet.",
+  "badgeTenRides": "10 trajets",
+  "badgeTenRidesGoal": "Fais 10 trajets.",
+  "badgeFiftyRides": "50 trajets",
+  "badgeFiftyRidesGoal": "Fais 50 trajets.",
+  "badgeLoyalDriver": "Conducteur fidèle",
+  "badgeLoyalDriverGoal": "Conduis 10 trajets avec des passagers.",
+  "badgeFullWeek": "Semaine complète",
+  "badgeFullWeekGoal": "Fais 5 trajets dans la même semaine.",
+  "badgeSociable": "Sociable",
+  "badgeSociableGoal": "Voyage avec 10 personnes différentes.",
+  "badgeEco": "Éco-voyageur",
+  "badgeEcoGoal": "Évite 100 kg de CO2.",
+  "badgeReliable": "Fiable",
+  "badgeReliableGoal": "Fais 5 trajets avec une fiabilité d'au moins 95 %.",
+  "leaderboardTitle": "Classement du campus",
+  "leaderboardTitleMonth": "Classement du campus en {month}",
+  "@leaderboardTitleMonth": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "leaderboardShowMe": "Apparaître avec mon prénom",
+  "leaderboardShowMeHelp": "Sinon, tu restes classé, mais anonyme.",
+  "leaderboardEmpty": "Personne n'a encore de points ce mois-ci. Un trajet suffit pour entrer au classement.",
+  "leaderboardMyRank": "Ta place : {rank} sur {total}",
+  "@leaderboardMyRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "leaderboardError": "Classement indisponible pour l'instant.",
+  "leaderboardYou": "Toi",
+  "leaderboardAnonymous": "Un étudiant",
+  "leaderboardRowSemantic": "{rank}e, {name}, {points} points",
+  "@leaderboardRowSemantic": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionAbout": "Mon profil",
+  "sectionActivity": "Mon activité",
+  "sectionTrips": "Mes trajets",
+  "sectionPauses": "Pauses",
+  "sectionAppearance": "Apparence",
+  "sectionAccount": "Compte et confidentialité",
+  "aboutBio": "Mini-bio",
+  "aboutBioHint": "Mes points de rendez-vous, ce que j'aime en trajet…",
+  "aboutInterestsHelp": "Touche ceux qui te ressemblent ({count}/{max}).",
+  "@aboutInterestsHelp": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "prefsTitle": "Préférences de covoiturage",
+  "prefChatTitle": "Discussion",
+  "prefChatChatty": "J'aime bien discuter",
+  "prefChatDepends": "Je discute si je me sens à l'aise",
+  "prefChatQuiet": "Je préfère le calme",
+  "prefMusicTitle": "Musique",
+  "prefMusicYes": "J'aime la musique en voiture",
+  "prefMusicDepends": "J'aime la musique si elle me plaît",
+  "prefMusicNo": "Je préfère sans musique",
+  "prefSmokingTitle": "Cigarette",
+  "prefSmokingOk": "La cigarette ne me dérange pas",
+  "prefSmokingOutside": "Pauses cigarette dehors seulement",
+  "prefSmokingNo": "Je préfère qu'on ne fume pas en voiture",
+  "prefPetsTitle": "Animaux",
+  "prefPetsYes": "J'aime les animaux à bord",
+  "prefPetsSome": "Je peux covoiturer avec certains animaux",
+  "prefPetsNo": "Je préfère sans animaux",
+  "profileRating": "{score}/5 · {count, plural, =0{aucun avis} =1{1 avis} other{{count} avis}}",
+  "@profileRating": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileWrite": "Écrire à {name}",
+  "@profileWrite": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditMine": "Modifier mon profil",
+  "profileVerifiedTitle": "{name} a un profil vérifié",
+  "@profileVerifiedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileVerifiedEmail": "Mail universitaire vérifié",
+  "profileMemberSince": "Membre depuis {month}",
+  "@profileMemberSince": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "profileAboutTitle": "À propos de {name}",
+  "@profileAboutTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileAboutEmpty": "{name} n'a encore rien ajouté.",
+  "@profileAboutEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileBadges": "Badges",
+  "profileRides": "{count, plural, =0{Aucun trajet effectué} =1{1 trajet effectué} other{{count} trajets effectués}}",
+  "@profileRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileCancellationRate": "Taux d'annulation de {rate} %",
+  "@profileCancellationRate": {
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "profileCo2": "{kg} kg de CO2 évités en covoiturant",
+  "@profileCo2": {
+    "placeholders": {
+      "kg": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -39,6 +39,9 @@ import { ridesRoutes } from './modules/rides/routes.js';
 import { RidesService } from './modules/rides/service.js';
 import { ProfileRepo } from './modules/profile/repo.js';
 import { profileRoutes } from './modules/profile/routes.js';
+import { GamificationRepo } from './modules/gamification/repo.js';
+import { gamificationRoutes } from './modules/gamification/routes.js';
+import { GamificationService } from './modules/gamification/service.js';
 import { ProfileService } from './modules/profile/service.js';
 import { SettingsService } from './modules/settings/service.js';
 import { TrustRepo } from './modules/trust/repo.js';
@@ -269,11 +272,18 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       },
       (rideId, userId, joiningDetourS) => ridesService.quote(rideId, userId, joiningDetourS),
     );
-    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
-      await matchingService.onProfileChanged(userId);
-      // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
-      await ridesService.onUserChanged(userId);
-    });
+    const gamification = new GamificationService(new GamificationRepo(modules.db), clock);
+    const profileService = new ProfileService(
+      new ProfileRepo(modules.db),
+      modules.geocoding,
+      clock,
+      async (userId) => {
+        await matchingService.onProfileChanged(userId);
+        // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
+        await ridesService.onUserChanged(userId);
+      },
+      (userId) => gamification.publicSummary(userId),
+    );
     const calendarService = new CalendarService({
       repo: new CalendarRepo(modules.db),
       box: new SecretBox(modules.calendarKey),
@@ -307,6 +317,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       async (api) => {
         await api.register(authRoutes, { service: authService });
         await api.register(profileRoutes, { service: profileService });
+        await api.register(gamificationRoutes, { service: gamification });
         await api.register(accountRoutes, { service: accountService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });

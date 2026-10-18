@@ -14,7 +14,16 @@ abstract interface class ProfileApi {
   Future<Me> updateNames({String? firstName, String? lastName});
 
   /// Formation, année de naissance, centres d'intérêt (null efface).
-  Future<Me> updateAbout({String? studyProgram, int? birthYear, required List<String> interests});
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
+  });
+
+  /// Prénom et photo visibles, ou non, dans le classement du campus.
+  Future<Me> setLeaderboardVisible(bool visible);
 
   /// Photo de profil (JPEG ou PNG déjà réduite par l'app).
   Future<Me> setPhoto(Uint8List bytes, String contentType);
@@ -56,13 +65,28 @@ class DioProfileApi implements ProfileApi {
       _me$(() => _dio.patch(_me, data: {'firstName': ?firstName, 'lastName': ?lastName}));
 
   @override
-  Future<Me> updateAbout({String? studyProgram, int? birthYear, required List<String> interests}) =>
-      _me$(
-        () => _dio.patch(
-          _me,
-          data: {'studyProgram': studyProgram, 'birthYear': birthYear, 'interests': interests},
-        ),
-      );
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
+  }) => _me$(
+    () => _dio.patch(
+      _me,
+      data: {
+        'studyProgram': studyProgram,
+        'birthYear': birthYear,
+        'interests': interests,
+        'bio': bio,
+        'preferences': preferences.toJson(),
+      },
+    ),
+  );
+
+  @override
+  Future<Me> setLeaderboardVisible(bool visible) =>
+      _me$(() => _dio.patch(_me, data: {'leaderboardVisible': visible}));
 
   @override
   Future<Me> setPhoto(Uint8List bytes, String contentType) => _me$(

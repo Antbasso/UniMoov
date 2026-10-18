@@ -7,3 +7,4 @@ export 'um_chip.dart';
 export 'um_field.dart';
 export 'um_page.dart';
 export 'um_ride_card.dart';
+export 'um_section_title.dart';

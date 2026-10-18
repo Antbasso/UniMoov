@@ -1,3 +1,6 @@
+import '../../achievements/data/achievements_api.dart';
+import '../../achievements/domain/achievements.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -43,7 +46,8 @@ class DemoBackend
         TrustApi,
         ChatApi,
         NotificationsApi,
-        AccountApi {
+        AccountApi,
+        AchievementsApi {
   /// `withAccount` : compte de Camille prêt à l'emploi ; sinon parcours d'inscription complet.
   DemoBackend({
     required this._clock,
@@ -531,12 +535,72 @@ class DemoBackend
     String? studyProgram,
     int? birthYear,
     required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
   }) async {
     await _wait();
     _me
       ..studyProgram = studyProgram
       ..birthYear = birthYear
-      ..interests = interests;
+      ..interests = interests
+      ..bio = bio
+      ..preferences = preferences;
+    return _me.toMe(_today);
+  }
+
+  // Gamification : réussites d'exemple, classement avec quelques prénoms.
+  @override
+  Future<Achievements> achievements() async {
+    await _wait();
+    return Achievements(
+      points: 245,
+      levelKey: 'regular',
+      levelMin: 100,
+      nextKey: 'pillar',
+      nextMin: 300,
+      badges: const [
+        AchievementBadge(key: 'first_ride', goal: 1, progress: 1, earned: true),
+        AchievementBadge(key: 'ten_rides', goal: 10, progress: 10, earned: true),
+        AchievementBadge(key: 'fifty_rides', goal: 50, progress: 18, earned: false),
+        AchievementBadge(key: 'loyal_driver', goal: 10, progress: 4, earned: false),
+        AchievementBadge(key: 'full_week', goal: 5, progress: 5, earned: true),
+        AchievementBadge(key: 'sociable', goal: 10, progress: 7, earned: false),
+        AchievementBadge(key: 'eco', goal: 100, progress: 41, earned: false),
+        AchievementBadge(key: 'reliable', goal: 5, progress: 5, earned: true),
+      ],
+      rides: 18,
+      sharedKm: 212,
+      co2SavedKg: 41,
+      paidCents: 3460,
+      receivedCents: 0,
+      monthPoints: 85,
+      monthRank: 3,
+      ranked: 14,
+      leaderboardVisible: _me.leaderboardVisible,
+    );
+  }
+
+  @override
+  Future<Leaderboard> leaderboard() async {
+    await _wait();
+    return Leaderboard(
+      month: DateTime(2026, 10),
+      ranked: 14,
+      myRank: 3,
+      myPoints: 85,
+      entries: [
+        const LeaderEntry(rank: 1, firstName: 'Léa', points: 140, levelKey: 'pillar', me: false),
+        const LeaderEntry(rank: 2, points: 95, levelKey: 'regular', me: false),
+        LeaderEntry(rank: 3, firstName: _me.firstName, points: 85, levelKey: 'regular', me: true),
+        const LeaderEntry(rank: 4, firstName: 'Hugo', points: 60, levelKey: 'regular', me: false),
+        const LeaderEntry(rank: 5, points: 35, levelKey: 'newcomer', me: false),
+      ],
+    );
+  }
+
+  @override
+  Future<Me> setLeaderboardVisible(bool visible) async {
+    _me.leaderboardVisible = visible;
     return _me.toMe(_today);
   }
 
@@ -578,6 +642,15 @@ class DemoBackend
         age: me.birthYear == null ? null : _now.year - me.birthYear!,
         studyProgram: me.studyProgram,
         interests: me.interests,
+        bio: me.bio,
+        preferences: me.preferences,
+        memberSince: DateTime(2026, 9),
+        ratingsCount: 9,
+        cancellationRate: 4,
+        levelKey: 'regular',
+        points: 245,
+        badges: const ['first_ride', 'ten_rides', 'full_week', 'reliable'],
+        co2SavedKg: 41,
       );
     }
     final person = demoPeople[userId];
@@ -591,6 +664,23 @@ class DemoBackend
       age: about?.age,
       studyProgram: about?.study,
       interests: about?.interests ?? const [],
+      // Profil d'exemple complet, comme sur les applis de covoiturage.
+      bio: userId == 'lea'
+          ? 'Points de rendez-vous habituels : arrêt Meythet Centre ou la gare.'
+          : null,
+      preferences: const CarpoolPreferences(
+        chat: 'depends',
+        music: 'depends',
+        smoking: 'no',
+        pets: 'some',
+      ),
+      memberSince: DateTime(2026, 9),
+      ratingsCount: 5 + userId.length,
+      cancellationRate: 2,
+      levelKey: userId == 'lea' ? 'super' : 'regular',
+      points: userId == 'lea' ? 820 : 180,
+      badges: const ['first_ride', 'ten_rides', 'loyal_driver', 'reliable'],
+      co2SavedKg: 60 + userId.length * 7,
     );
   }
 
@@ -2341,6 +2431,9 @@ class _DemoAccount {
   String? studyProgram;
   int? birthYear;
   List<String> interests = const [];
+  String? bio;
+  CarpoolPreferences preferences = const CarpoolPreferences();
+  bool leaderboardVisible = false;
   Uint8List? photo;
   int photoVersion = 0;
 
@@ -2372,6 +2465,9 @@ class _DemoAccount {
       studyProgram: studyProgram,
       birthYear: birthYear,
       interests: interests,
+      bio: bio,
+      preferences: preferences,
+      leaderboardVisible: leaderboardVisible,
     );
   }
 }

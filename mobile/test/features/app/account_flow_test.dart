@@ -83,7 +83,10 @@ void main() {
     await tapText(tester, 'À propos de moi');
     await tester.enterText(fieldLabeled('Formation'), 'BUT Informatique');
     await tester.enterText(fieldLabeled('Année de naissance'), '1900');
+    await tester.ensureVisible(fieldLabeled('Ajouter un centre d\'intérêt'));
     await tester.enterText(fieldLabeled('Ajouter un centre d\'intérêt'), 'Escalade');
+    await tester.ensureVisible(find.byTooltip('Ajouter un centre d\'intérêt'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Ajouter un centre d\'intérêt'));
     await tester.pumpAndSettle();
     await tapText(tester, 'Enregistrer');
@@ -121,7 +124,10 @@ void main() {
     await tester.tap(find.textContaining('Léa').first);
     await tester.pumpAndSettle();
     expect(find.text('Léa'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    // Mon propre profil : pas « Écrire », mais de quoi le modifier.
+    expect(find.text('Modifier mon profil'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('3 trajets effectués'), 200);
+    expect(find.text('3 trajets effectués'), findsOneWidget);
   });
 
   testWidgets('trajet : toucher le conducteur ouvre son profil, sans nom ni adresse', (
@@ -134,7 +140,8 @@ void main() {
     expect(find.text('Nathan, 20 ans'), findsOneWidget);
     expect(find.text('BUT Génie mécanique'), findsOneWidget);
     expect(find.text('Ski'), findsOneWidget);
-    expect(find.text('14'), findsOneWidget);
+    expect(find.text('Écrire à Nathan'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('14 trajets effectués'), 200);
     expect(find.textContaining('Petit'), findsNothing);
   });
 

@@ -2255,4 +2255,308 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get close => 'Fermer';
+
+  @override
+  String get achievementsTitle => 'Mes réussites';
+
+  @override
+  String get levelNewcomer => 'Nouvel Uni-Mooveur';
+
+  @override
+  String get levelRegular => 'Habitué';
+
+  @override
+  String get levelPillar => 'Pilier du campus';
+
+  @override
+  String get levelSuper => 'Super Uni-Mooveur';
+
+  @override
+  String get levelLegend => 'Légende du campus';
+
+  @override
+  String get levelTop => 'Tu as atteint le plus haut niveau.';
+
+  @override
+  String levelNext(int count, String level) {
+    return 'Encore $count points pour devenir $level';
+  }
+
+  @override
+  String pointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count points',
+      one: '1 point',
+      zero: '0 point',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pointsShort(int count) {
+    return '$count pts';
+  }
+
+  @override
+  String get impactCo2 => 'de CO2 évités';
+
+  @override
+  String get impactKm => 'partagés';
+
+  @override
+  String get impactRides => 'trajets effectués';
+
+  @override
+  String get impactReceived => 'reçus en conducteur';
+
+  @override
+  String get impactPaid => 'payés en passager';
+
+  @override
+  String badgesTitle(int earned, int total) {
+    return 'Badges ($earned/$total)';
+  }
+
+  @override
+  String get badgeEarned => 'Gagné';
+
+  @override
+  String badgeProgress(int progress, int goal) {
+    return '$progress/$goal';
+  }
+
+  @override
+  String get badgeFirstRide => 'Premier trajet';
+
+  @override
+  String get badgeFirstRideGoal => 'Fais ton premier trajet.';
+
+  @override
+  String get badgeTenRides => '10 trajets';
+
+  @override
+  String get badgeTenRidesGoal => 'Fais 10 trajets.';
+
+  @override
+  String get badgeFiftyRides => '50 trajets';
+
+  @override
+  String get badgeFiftyRidesGoal => 'Fais 50 trajets.';
+
+  @override
+  String get badgeLoyalDriver => 'Conducteur fidèle';
+
+  @override
+  String get badgeLoyalDriverGoal => 'Conduis 10 trajets avec des passagers.';
+
+  @override
+  String get badgeFullWeek => 'Semaine complète';
+
+  @override
+  String get badgeFullWeekGoal => 'Fais 5 trajets dans la même semaine.';
+
+  @override
+  String get badgeSociable => 'Sociable';
+
+  @override
+  String get badgeSociableGoal => 'Voyage avec 10 personnes différentes.';
+
+  @override
+  String get badgeEco => 'Éco-voyageur';
+
+  @override
+  String get badgeEcoGoal => 'Évite 100 kg de CO2.';
+
+  @override
+  String get badgeReliable => 'Fiable';
+
+  @override
+  String get badgeReliableGoal => 'Fais 5 trajets avec une fiabilité d\'au moins 95 %.';
+
+  @override
+  String get leaderboardTitle => 'Classement du campus';
+
+  @override
+  String leaderboardTitleMonth(String month) {
+    return 'Classement du campus en $month';
+  }
+
+  @override
+  String get leaderboardShowMe => 'Apparaître avec mon prénom';
+
+  @override
+  String get leaderboardShowMeHelp => 'Sinon, tu restes classé, mais anonyme.';
+
+  @override
+  String get leaderboardEmpty =>
+      'Personne n\'a encore de points ce mois-ci. Un trajet suffit pour entrer au classement.';
+
+  @override
+  String leaderboardMyRank(int rank, int total) {
+    return 'Ta place : $rank sur $total';
+  }
+
+  @override
+  String get leaderboardError => 'Classement indisponible pour l\'instant.';
+
+  @override
+  String get leaderboardYou => 'Toi';
+
+  @override
+  String get leaderboardAnonymous => 'Un étudiant';
+
+  @override
+  String leaderboardRowSemantic(int rank, String name, int points) {
+    return '${rank}e, $name, $points points';
+  }
+
+  @override
+  String get sectionAbout => 'Mon profil';
+
+  @override
+  String get sectionActivity => 'Mon activité';
+
+  @override
+  String get sectionTrips => 'Mes trajets';
+
+  @override
+  String get sectionPauses => 'Pauses';
+
+  @override
+  String get sectionAppearance => 'Apparence';
+
+  @override
+  String get sectionAccount => 'Compte et confidentialité';
+
+  @override
+  String get aboutBio => 'Mini-bio';
+
+  @override
+  String get aboutBioHint => 'Mes points de rendez-vous, ce que j\'aime en trajet…';
+
+  @override
+  String aboutInterestsHelp(int count, int max) {
+    return 'Touche ceux qui te ressemblent ($count/$max).';
+  }
+
+  @override
+  String get prefsTitle => 'Préférences de covoiturage';
+
+  @override
+  String get prefChatTitle => 'Discussion';
+
+  @override
+  String get prefChatChatty => 'J\'aime bien discuter';
+
+  @override
+  String get prefChatDepends => 'Je discute si je me sens à l\'aise';
+
+  @override
+  String get prefChatQuiet => 'Je préfère le calme';
+
+  @override
+  String get prefMusicTitle => 'Musique';
+
+  @override
+  String get prefMusicYes => 'J\'aime la musique en voiture';
+
+  @override
+  String get prefMusicDepends => 'J\'aime la musique si elle me plaît';
+
+  @override
+  String get prefMusicNo => 'Je préfère sans musique';
+
+  @override
+  String get prefSmokingTitle => 'Cigarette';
+
+  @override
+  String get prefSmokingOk => 'La cigarette ne me dérange pas';
+
+  @override
+  String get prefSmokingOutside => 'Pauses cigarette dehors seulement';
+
+  @override
+  String get prefSmokingNo => 'Je préfère qu\'on ne fume pas en voiture';
+
+  @override
+  String get prefPetsTitle => 'Animaux';
+
+  @override
+  String get prefPetsYes => 'J\'aime les animaux à bord';
+
+  @override
+  String get prefPetsSome => 'Je peux covoiturer avec certains animaux';
+
+  @override
+  String get prefPetsNo => 'Je préfère sans animaux';
+
+  @override
+  String profileRating(String score, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count avis',
+      one: '1 avis',
+      zero: 'aucun avis',
+    );
+    return '$score/5 · $_temp0';
+  }
+
+  @override
+  String profileWrite(String name) {
+    return 'Écrire à $name';
+  }
+
+  @override
+  String get profileEditMine => 'Modifier mon profil';
+
+  @override
+  String profileVerifiedTitle(String name) {
+    return '$name a un profil vérifié';
+  }
+
+  @override
+  String get profileVerifiedEmail => 'Mail universitaire vérifié';
+
+  @override
+  String profileMemberSince(String month) {
+    return 'Membre depuis $month';
+  }
+
+  @override
+  String profileAboutTitle(String name) {
+    return 'À propos de $name';
+  }
+
+  @override
+  String profileAboutEmpty(String name) {
+    return '$name n\'a encore rien ajouté.';
+  }
+
+  @override
+  String get profileBadges => 'Badges';
+
+  @override
+  String profileRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trajets effectués',
+      one: '1 trajet effectué',
+      zero: 'Aucun trajet effectué',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileCancellationRate(int rate) {
+    return 'Taux d\'annulation de $rate %';
+  }
+
+  @override
+  String profileCo2(int kg) {
+    return '$kg kg de CO2 évités en covoiturant';
+  }
 }
