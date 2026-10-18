@@ -94,6 +94,23 @@ Finder fieldLabeled(String label) => find.descendant(
 );
 
 /// Touche un texte visible ; `index` choisit parmi plusieurs occurrences.
+/// Ouvre un trajet de l'accueil en touchant sa carte (`index` négatif : depuis la fin).
+Future<void> openTrip(WidgetTester tester, {int index = 0}) async {
+  final cards = find.byType(UmRideCard);
+  final target = index < 0 ? cards.at(cards.evaluate().length + index) : cards.at(index);
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
+
+/// Action rare d'un trajet, rangée dans le menu « Plus d'actions ».
+Future<void> menuAction(WidgetTester tester, String label) async {
+  await tester.tap(find.byTooltip("Plus d'actions"));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
+}
+
 Future<void> tapText(WidgetTester tester, String text, {int? index}) async {
   final target = index == null ? find.text(text) : find.text(text).at(index);
   await tester.ensureVisible(target);

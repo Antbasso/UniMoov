@@ -77,6 +77,17 @@ describe('assignRoles', () => {
     expect(roles.get('small')).toBe('passenger');
   });
 
+  it('automatique : on alterne, celui qui a le moins conduit récemment conduit', () => {
+    const car = { seats: 3, maxDetourMinutes: 10 };
+    const roles = assignRoles([
+      need('p', 'annecy'),
+      need('big', 'sevrier', { roleMode: 'auto', vehicle: { seats: 4, maxDetourMinutes: 10 }, drivenRecently: 3 }),
+      need('rested', 'seynod', { roleMode: 'auto', vehicle: car, drivenRecently: 0 }),
+    ]);
+    expect(roles.get('rested')).toBe('driver');
+    expect(roles.get('big')).toBe('passenger');
+  });
+
   it('automatique : conduit si l’offre égale tout juste la demande (marge de places)', () => {
     const roles = assignRoles([
       driver('d', 'seynod', 1),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,8 +50,39 @@ final mapBackgroundProvider = FutureProvider<MapBackground?>((ref) async {
   }
 });
 
-/// Carte d'un trajet : tracé, arrêts numérotés dans l'ordre, campus. `onTap` sert au choix
-/// d'un point de rendez-vous ; `pin` montre le point choisi.
+/// Zone d'une personne dont on ne connaît que le secteur (cercle de 750 m, cahier §4). Une
+/// personne proposée ou en attente est « provisoire » (cercle clair, pastille creuse) ; validée,
+/// elle passe en plein.
+class MapArea {
+  const MapArea({
+    required this.lat,
+    required this.lon,
+    required this.name,
+    this.provisional = false,
+    this.driver = false,
+  });
+
+  final double lat;
+  final double lon;
+  final String name;
+  final bool provisional;
+  final bool driver;
+}
+
+/// Rayon des zones, en mètres : contient le domicile sans le révéler.
+const mapAreaRadiusMeters = 750.0;
+
+List<LatLng> _areaCorners(LatLng center) {
+  final dLat = mapAreaRadiusMeters / 111320;
+  final dLon = mapAreaRadiusMeters / (111320 * math.cos(center.latitude * math.pi / 180));
+  return [
+    LatLng(center.latitude + dLat, center.longitude - dLon),
+    LatLng(center.latitude - dLat, center.longitude + dLon),
+  ];
+}
+
+/// Carte d'un trajet : tracé, arrêts numérotés dans l'ordre, campus, zones approximatives.
+/// `onTap` sert au choix d'un point de rendez-vous ; `pin` montre le point choisi.
 class RideMap extends ConsumerWidget {
   const RideMap({
     super.key,
@@ -60,9 +93,13 @@ class RideMap extends ConsumerWidget {
     this.pin,
     this.onTap,
     this.live,
+    this.areas = const [],
   });
 
   final List<RideStop> stops;
+
+  /// Personnes dont on ne montre que le secteur (proposées, en attente, autres passagers).
+  final List<MapArea> areas;
   final List<(double, double)> route;
   final String semanticLabel;
 
@@ -78,7 +115,26 @@ class RideMap extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.umColors;
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
-    final points = [...line, for (final s in stops) LatLng(s.lat, s.lon), ?pin];
+    final points = [
+      ...line,
+      for (final s in stops) LatLng(s.lat, s.lon),
+      // Les zones entières restent visibles (bords nord-ouest et sud-est du cercle).
+      for (final a in [...areas, ...stops.where((s) => s.approximate)])
+        for (final corner in _areaCorners(
+          LatLng(
+            a is MapArea ? a.lat : (a as RideStop).lat,
+            a is MapArea ? a.lon : (a as RideStop).lon,
+          ),
+        ))
+          corner,
+      ?pin,
+    ];
+    final exact = stops.where((s) => !s.approximate).toList();
+    final zones = [
+      for (final s in stops.where((s) => s.approximate))
+        MapArea(lat: s.lat, lon: s.lon, name: s.firstName ?? '', driver: s.kind == StopKind.driver),
+      ...areas,
+    ];
 
     return Semantics(
       label: semanticLabel,
@@ -116,9 +172,32 @@ class RideMap extends ConsumerWidget {
                 ),
               ],
             ),
+          if (zones.isNotEmpty)
+            CircleLayer(
+              circles: [
+                for (final zone in zones)
+                  CircleMarker(
+                    point: LatLng(zone.lat, zone.lon),
+                    radius: mapAreaRadiusMeters,
+                    useRadiusInMeter: true,
+                    color: (zone.provisional ? c.inkMuted : c.brand).withValues(
+                      alpha: zone.provisional ? 0.10 : 0.18,
+                    ),
+                    borderColor: zone.provisional ? c.inkMuted : c.brand,
+                    borderStrokeWidth: UmSize.routeRing,
+                  ),
+              ],
+            ),
           MarkerLayer(
             markers: [
-              for (final stop in stops)
+              for (final zone in zones)
+                Marker(
+                  point: LatLng(zone.lat, zone.lon),
+                  width: UmSize.mapMarker,
+                  height: UmSize.mapMarker,
+                  child: AreaBadge(area: zone),
+                ),
+              for (final stop in exact)
                 Marker(
                   point: LatLng(stop.lat, stop.lon),
                   width: UmSize.mapMarker,
@@ -156,6 +235,42 @@ class RideMap extends ConsumerWidget {
           ),
           const MapAttribution(),
         ],
+      ),
+    );
+  }
+}
+
+/// Pastille d'une zone : voiture (conducteur) ou initiale ; creuse tant que c'est provisoire.
+class AreaBadge extends StatelessWidget {
+  const AreaBadge({super.key, required this.area, this.size = UmSize.mapMarker});
+
+  final MapArea area;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    final (background, foreground) = area.provisional
+        ? (c.surfaceRaised, c.inkMuted)
+        : (c.brand, c.onBrand);
+    final initial = area.name.isEmpty ? '?' : area.name.characters.first.toUpperCase();
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: background,
+          border: Border.all(
+            color: area.provisional ? c.inkMuted : c.onBrand,
+            width: UmSize.routeRing,
+          ),
+          boxShadow: context.umShadowSoft,
+        ),
+        child: area.driver
+            ? Icon(Icons.directions_car_rounded, size: UmSize.iconSm, color: foreground)
+            : Text(initial, style: UmText.label.copyWith(color: foreground)),
       ),
     );
   }

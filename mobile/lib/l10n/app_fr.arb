@@ -33,14 +33,6 @@
       }
     }
   },
-  "rideSeats": "{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}",
-  "@rideSeats": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "ridePriceLabel": "Prix estimé : {price}",
   "@ridePriceLabel": {
     "placeholders": {
@@ -49,12 +41,11 @@
       }
     }
   },
-  "rideStatusProposed": "Proposé",
+  "rideStatusProposed": "À confirmer",
   "rideStatusConfirmed": "Confirmé",
   "rideStatusCancelled": "Annulé",
   "welcomeTitle": "Ton emploi du temps organise aussi tes trajets.",
   "welcomeSubtitle": "Covoiturage domicile-campus pour les étudiants d'Annecy",
-  "welcomeNote": "Inscris-toi en deux minutes !",
   "welcomeBenefitSchedule": "Trajets calés sur tes cours",
   "welcomeBenefitPrice": "Frais partagés au juste prix",
   "welcomeBenefitConfirm": "Confirmé à deux, toujours",
@@ -81,7 +72,6 @@
   "continueAction": "Continuer",
   "skipForNow": "Passer pour l'instant",
   "save": "Enregistrer",
-  "edit": "Modifier",
   "errorGeneric": "Une erreur est survenue. Réessaie.",
   "errorNetwork": "Connexion impossible pour l'instant. Vérifie ton réseau.",
   "errorRateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
@@ -180,7 +170,6 @@
   "roleTitle": "Quel rôle préfères-tu ?",
   "roleBody": "Tu pourras le changer quand tu veux depuis ton profil.",
   "roleAuto": "Automatique",
-  "roleAutoHelp": "Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.",
   "roleDriver": "Toujours au volant",
   "rolePassenger": "Toujours côté passager",
   "roleNoVehicle": "Sans voiture, tu voyages côté passager. Tu peux ajouter un véhicule plus tard dans ton profil.",
@@ -216,10 +205,7 @@
   "discoveryAction": "Compléter mon profil",
   "pausedToday": "En pause aujourd'hui",
   "pauseAction": "Mettre en pause",
-  "pauseManage": "Gérer mes pauses",
   "weekTitle": "Ta semaine",
-  "profileTitle": "Mon profil",
-  "profileIdentity": "Identité",
   "profileAddress": "Adresse",
   "profileNoAddress": "Aucune adresse enregistrée.",
   "profileVehicle": "Véhicule",
@@ -238,7 +224,6 @@
       }
     }
   },
-  "profileRemoveVehicle": "Retirer le véhicule",
   "profileRole": "Rôle",
   "profilePauses": "Pauses",
   "profileNoPauses": "Aucune pause programmée.",
@@ -294,7 +279,6 @@
     }
   },
   "and": "et",
-
   "pauseDelete": "Supprimer la pause du {start}",
   "@pauseDelete": {
     "placeholders": {
@@ -317,13 +301,10 @@
   "pauseUntilLabel": "Jusqu'au",
   "pauseChooseUntil": "Choisir la date de fin",
   "pauseChooseFirst": "Choisir la première pause",
-  "pauseNeedDays": "Choisis au moins un jour.",
   "pauseTooLongForPeriod": "La pause est plus longue que sa fréquence : raccourcis-la.",
   "pauseSave": "Enregistrer la pause",
   "rideStatusWaiting": "En attente",
   "campusName": "Campus d'Annecy",
-  "nearYourHome": "Près de chez toi",
-  "yourHome": "Chez toi",
   "calendarBody": "Uni-Moov lit ton emploi du temps pour te proposer tes trajets de la semaine. Choisis comment le partager.",
   "calendarChooseIcs": "Coller mon lien d'agenda (ICS)",
   "calendarChooseManual": "Saisir mes horaires",
@@ -333,10 +314,8 @@
   "icsPlaceholder": "https://…",
   "icsConsent": "J'accepte qu'Uni-Moov lise cet agenda pour n'en garder que l'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.",
   "icsConsentRequired": "Coche la case pour autoriser la lecture de ton agenda.",
-  "icsConnect": "Connecter mon agenda",
   "manualTitle": "Tes horaires de la semaine",
   "manualBody": "Indique l'heure de ton premier cours et la fin de ton dernier, pour chaque jour.",
-  "manualSave": "Enregistrer mes horaires",
   "manualStart": "Début",
   "manualEnd": "Fin",
   "manualDayOff": "Pas de cours",
@@ -383,34 +362,6 @@
   "searchAction": "Chercher un trajet",
   "directionTo": "Aller",
   "directionFrom": "Retour",
-  "rideWith": "Avec {driver}",
-  "@rideWith": {
-    "placeholders": {
-      "driver": {
-        "type": "String"
-      }
-    }
-  },
-  "rideMetaDriverShort": "{count, plural, =0{Aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
-  "@rideMetaDriverShort": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "rideMetaDriver": "{time} · tu conduis · {count, plural, =0{aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
-  "@rideMetaDriver": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "see": "Voir",
   "proposalTitleTo": "Aller du {day}",
   "@proposalTitleTo": {
     "placeholders": {
@@ -427,47 +378,8 @@
       }
     }
   },
-  "proposalTime": "Horaire : {time}",
-  "@proposalTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "proposalDriverIntro": "Tu montes avec",
-  "proposalPassengersIntro": "Tes passagers",
   "proposalNoPassengers": "Personne pour l'instant. Tu recevras une notification si quelqu'un est proposé.",
   "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min",
-  "personDetailsDriver": "Fiabilité {score} sur 5 · fait {minutes} min de détour pour toi",
-  "@personDetailsDriver": {
-    "placeholders": {
-      "score": {
-        "type": "String"
-      },
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
-  "sectorEnlarge": "Touche pour agrandir",
-  "sectorTitle": "Secteur de {name}",
-  "@sectorTitle": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "sectorBody": "Zone approximative : le domicile se trouve quelque part dans le cercle. L'adresse exacte s'affiche une fois le trajet confirmé à deux.",
-  "sectorMapLabel": "Carte : cercle autour du secteur de {name} et campus",
-  "@sectorMapLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "@personDetails": {
     "placeholders": {
       "score": {
@@ -478,13 +390,11 @@
       }
     }
   },
-  "privacyNote": "Nom et adresse exacte s'affichent seulement une fois le trajet confirmé à deux.",
+  "privacyNote": "Nom et adresse sont partagés seulement quand vous avez accepté tous les deux.",
   "accept": "Accepter",
   "decline": "Refuser",
   "seeOthers": "Voir d'autres voitures",
   "proposalConfirmed": "Trajet confirmé",
-  "proposalWaiting": "Tu as accepté. On attend la réponse de l'autre.",
-  "proposalDeclined": "Proposition refusée.",
   "alternativesTitle": "Autres voitures",
   "alternativesEmpty": "Aucune autre voiture compatible pour ce créneau.",
   "choose": "Choisir",
@@ -495,14 +405,6 @@
   "searchNoTime": "Selon mon emploi du temps",
   "searchEmpty": "Aucune voiture trouvée pour ce créneau.",
   "searchHint": "Choisis un jour et un sens, puis lance la recherche.",
-  "seatsLeftLabel": "{count, plural, =1{1 place} other{{count} places}}",
-  "@seatsLeftLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "profileSchedule": "Emploi du temps",
   "scheduleConnected": "Agenda connecté, mis à jour le {date}.",
   "@scheduleConnected": {
@@ -525,7 +427,6 @@
   "scheduleSync": "Mettre à jour",
   "scheduleDisconnect": "Déconnecter l'agenda",
   "scheduleSynced": "Emploi du temps mis à jour.",
-  "rideMapOpen": "Voir la carte",
   "rideMapLabel": "Carte du trajet avec {count, plural, =1{1 arrêt} other{{count} arrêts}}",
   "@rideMapLabel": {
     "placeholders": {
@@ -535,7 +436,6 @@
     }
   },
   "rideRouteEstimated": "Tracé approximatif : le calcul d'itinéraire n'était pas disponible.",
-  "rideStopsTitle": "Arrêts",
   "rideStopAround": "Vers {time}",
   "@rideStopAround": {
     "placeholders": {
@@ -579,24 +479,10 @@
       }
     }
   },
-  "ridePriceDetail": "Estimation : {total} de carburant partagés entre {persons} personnes, plus {commission} de frais de service par passager. Le prix final est calculé à l'arrivée.",
-  "@ridePriceDetail": {
-    "placeholders": {
-      "total": {
-        "type": "String"
-      },
-      "persons": {
-        "type": "int"
-      },
-      "commission": {
-        "type": "String"
-      }
-    }
-  },
   "ridePriceUnknown": "Prix indisponible : le véhicule du conducteur n'est plus renseigné.",
   "rideAddPassengers": "Ajouter des passagers",
-  "rideChooseMeetingPoint": "Choisir un point de rendez-vous",
-  "rideChangeMeetingPoint": "Changer de point de rendez-vous",
+  "rideChooseMeetingPoint": "Fixer un rendez-vous",
+  "rideChangeMeetingPoint": "Modifier le rendez-vous",
   "meetingPointTitle": "Point de rendez-vous",
   "meetingPointIntro": "Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
   "meetingPointMapLabel": "Carte : touche pour placer le point de rendez-vous",
@@ -843,7 +729,6 @@
   "ratingDriver": "Conducteur",
   "ratingPassenger": "Passager",
   "profileReliability": "Fiabilité",
-  "profileReliabilityBody": "Ton score, ce qui le compose, et les pénalités que tu peux contester.",
   "reliabilityTitle": "Ma fiabilité",
   "reliabilityIntro": "Ton score aide à composer des trajets fiables, il ne t'exclut jamais. Il se calcule sur les {days} derniers jours.",
   "@reliabilityIntro": {
@@ -1060,9 +945,7 @@
     }
   },
   "rideChat": "Chat du trajet",
-  "rideChatOpen": "Écrire au groupe",
   "profileNotifications": "Notifications",
-  "profileNotificationsBody": "Choisis ce qui te prévient sur ton téléphone.",
   "notificationsTitle": "Notifications",
   "notificationsIntro": "Tout est activé par défaut. Coupe ce dont tu n'as pas besoin.",
   "notificationsRideReminder": "Rappel de trajet",
@@ -1086,8 +969,6 @@
   "chatLeaveCancel": "Rester",
   "notificationsBlockedTitle": "Notifications bloquées",
   "notificationsBlockedBody": "Ton téléphone bloque les notifications d'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.",
-  "profileData": "Mes données",
-  "profileDataBody": "Récupère tout ce qu'Uni-Moov garde sur toi, ou supprime ton compte.",
   "exportAction": "Exporter mes données",
   "exportSubject": "Mes données Uni-Moov",
   "deleteAccountAction": "Supprimer mon compte",
@@ -1132,16 +1013,133 @@
     }
   },
   "requestSent": "Demande envoyée",
-  "requestPending": "{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.",
-  "@requestPending": {
+  "requestWithdraw": "Retirer ma demande",
+  "requestApprove": "Accepter",
+  "requestReject": "Refuser",
+  "homePlace": "Domicile",
+  "rideSeatsTaken": "{taken}/{total}",
+  "@rideSeatsTaken": {
     "placeholders": {
-      "driver": {
+      "taken": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeBalance": "Solde : {amount}. Ouvrir le portefeuille",
+  "@homeBalance": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
   },
-  "requestWithdraw": "Retirer ma demande",
-  "requestFrom": "Demande à monter avec toi.",
-  "requestApprove": "Accepter",
-  "requestReject": "Refuser"
+  "rideStatusLive": "En cours",
+  "historyTitle": "Historique",
+  "historyEmpty": "Tes trajets terminés apparaîtront ici.",
+  "historyAbsent": "Absent",
+  "roleAutoInfoTooltip": "Comment marche le mode automatique",
+  "roleAutoInfo": "Chaque jour, Uni-Moov regarde les besoins de ton secteur. S'il manque un conducteur, tu conduis ; sinon tu montes avec quelqu'un. Entre plusieurs conducteurs possibles, on alterne : celui qui a le moins conduit ces dernières semaines prend le volant. Tes pauses programmées sont toujours respectées.",
+  "understood": "Compris",
+  "tripTitleTo": "Aller · {date}",
+  "@tripTitleTo": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "tripTitleFrom": "Retour · {date}",
+  "@tripTitleFrom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statScore": "Note : {score} sur 5",
+  "@statScore": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "statDetour": "+{minutes} min",
+  "@statDetour": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statDetourDriver": "Fait {minutes} minutes de détour pour toi",
+  "@statDetourDriver": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statDetourPassenger": "Te fait faire {minutes} minutes de détour",
+  "@statDetourPassenger": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "personAccepted": "Accepté",
+  "personRequested": "Demande",
+  "personPending": "En attente",
+  "priceBulletFuel": "Carburant du trajet : {amount}",
+  "@priceBulletFuel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "priceBulletShare": "Ta part : {mine} km sur {total} km",
+  "@priceBulletShare": {
+    "placeholders": {
+      "mine": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "priceBulletPersons": "{count, plural, =1{Pour 1 personne} other{Partagé au km entre {count} personnes}}",
+  "@priceBulletPersons": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "priceBulletCommission": "Frais de service : {amount}",
+  "@priceBulletCommission": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "priceBulletFinal": "Prix final calculé à l'arrivée",
+  "stopOnBoard": "À bord",
+  "moreActions": "Plus d'actions",
+  "rideDetailsTitle": "Détails du trajet",
+  "proposalMapLabel": "{count, plural, =0{Carte du trajet proposé} =1{Carte du trajet proposé, 1 personne en zone approximative} other{Carte du trajet proposé, {count} personnes en zones approximatives}}",
+  "@proposalMapLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatRideBar": "Ton trajet"
 }

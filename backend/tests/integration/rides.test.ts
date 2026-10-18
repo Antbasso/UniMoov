@@ -94,6 +94,24 @@ afterAll(async () => {
 });
 
 describe('carte d’un trajet confirmé', () => {
+  it('aperçu avant confirmation : tracé sans les abords des domiciles des autres, mon point exact', async () => {
+    const response = await call('Hugo', 'GET', `/rides/${mondayId}/preview`);
+    expect(response.statusCode).toBe(200);
+    const preview = response.json<{ route: [number, number][]; campus: { lat: number }; me: { lat: number; lon: number } }>();
+    expect(preview.me).toEqual({ lat: user('Hugo').lat, lon: user('Hugo').lon });
+    expect(preview.route.length).toBeGreaterThan(0);
+    for (const [lat, lon] of preview.route) {
+      for (const other of ['Léa', 'Chloé', 'Inès']) {
+        expect(distanceMeters({ lat, lon }, user(other))).toBeGreaterThan(500);
+      }
+    }
+    expect(JSON.stringify(preview)).not.toContain(user('Léa').homeAddress);
+    // Un tiers n'y a pas accès.
+    expect((await call('Nathan', 'GET', `/rides/${mondayId}/preview`)).statusCode).toBe(403);
+    // Pas encore de trajet terminé : historique vide.
+    expect((await call('Hugo', 'GET', '/rides/history')).json()).toEqual({ rides: [] });
+  });
+
   it('avant la confirmation à deux, même les participants n’y ont pas accès', async () => {
     expect((await call('Léa', 'GET', `/rides/${mondayId}`)).statusCode).toBe(403);
     expect((await call('Léa', 'POST', `/proposals/${mondayId}/accept`)).statusCode).toBe(200);
@@ -148,7 +166,10 @@ describe('carte d’un trajet confirmé', () => {
     expect((await call('Inès', 'POST', `/proposals/${mondayId}/accept`)).statusCode).toBe(200);
     const view = await ride('Hugo', mondayId);
     const byName = new Map(view.stops.map((s) => [s.firstName, s]));
-    expect(byName.get('Léa')).toMatchObject({ lastName: 'Martin', label: user('Léa').homeAddress });
+    // Le domicile du conducteur ne sert pas au passager : son départ reste approximatif.
+    expect(byName.get('Léa')).toMatchObject({ lastName: 'Martin', label: '', approximate: true });
+    expect({ lat: byName.get('Léa')!.lat, lon: byName.get('Léa')!.lon }).toEqual(publicSector(sectorOf(user('Léa'))));
+    expect(JSON.stringify(view)).not.toContain(user('Léa').homeAddress);
     expect(byName.get('Hugo')!.lastName).toBe('Bernard');
     // Entre passagers, pas d'acceptation mutuelle : secteur seulement, sans adresse (cahier §4, §14).
     const ines = byName.get('Inès')!;
@@ -157,6 +178,7 @@ describe('carte d’un trajet confirmé', () => {
     expect(JSON.stringify(view)).not.toContain(user('Inès').homeAddress);
     for (const [lat, lon] of view.route) {
       expect(distanceMeters({ lat, lon }, user('Inès'))).toBeGreaterThan(500);
+      expect(distanceMeters({ lat, lon }, user('Léa'))).toBeGreaterThan(500);
     }
     // Le conducteur, lui, voit l'adresse exacte de chacun.
     const driverView = await ride('Léa', mondayId);

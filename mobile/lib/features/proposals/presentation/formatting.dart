@@ -31,12 +31,13 @@ UmRideStatus _byState(Proposal p) => switch (p.state) {
   ProposalState.cancelled => UmRideStatus.cancelled,
 };
 
-/// Départ et arrivée affichés sur la carte de trajet, sans adresse exacte.
+/// Départ et arrivée affichés sur la carte de trajet, sans adresse exacte : « Domicile » et
+/// le campus, dans le sens du trajet.
 (String from, String to) endpoints(
   AppLocalizations l10n,
   Direction direction, {
   required bool driver,
 }) {
-  final home = driver ? l10n.yourHome : l10n.nearYourHome;
+  final home = l10n.homePlace;
   return direction == Direction.toCampus ? (home, l10n.campusName) : (l10n.campusName, home);
 }

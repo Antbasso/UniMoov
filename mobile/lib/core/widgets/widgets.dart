@@ -1,3 +1,4 @@
+export 'um_avatar.dart';
 export 'um_benefit.dart';
 export 'um_button.dart';
 export 'um_card.dart';

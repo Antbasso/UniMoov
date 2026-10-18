@@ -148,20 +148,22 @@ void main() {
 
   testWidgets('écran du trajet : accès direct au chat du trajet', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
-    await tapText(tester, 'Voir la carte');
+    await openTrip(tester, index: 0);
     await tester.tap(find.byTooltip('Chat du trajet'));
     await tester.pumpAndSettle();
     expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
   });
 
-  testWidgets('depuis l’accueil : « Écrire au groupe » ouvre la conversation dans Messages', (
+  testWidgets('depuis l’accueil : l’icône du chat ouvre la conversation dans Messages', (
     tester,
   ) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
-    await tapText(tester, 'Écrire au groupe');
+    await openTrip(tester, index: 0);
+    await tester.tap(find.byTooltip('Chat du trajet'));
+    await tester.pumpAndSettle();
     expect(find.text('Je pars à 7 h 40.'), findsOneWidget);
+    // Le trajet est épinglé en haut de sa conversation.
+    expect(find.text('Voir le trajet'), findsOneWidget);
     // Retour : la liste des conversations, onglet Messages actif.
     await tester.tap(find.byTooltip('Retour'));
     await tester.pumpAndSettle();

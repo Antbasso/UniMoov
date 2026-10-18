@@ -15,6 +15,7 @@ import '../domain/vehicle_input.dart';
 import 'me_controller.dart';
 import 'pause_format.dart';
 import 'pause_sheet.dart';
+import '../../wallet/presentation/wallet_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -22,6 +23,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
     final me = ref.watch(meProvider).value;
     if (me == null) return const SizedBox.shrink();
 
@@ -31,10 +33,9 @@ class ProfileScreen extends ConsumerWidget {
       RoleMode.alwaysPassenger => l10n.rolePassenger,
     };
     final vehicle = me.vehicle;
+    final balance = ref.watch(walletProvider).value?.balanceCents;
 
     return UmPage(
-      appBar: AppBar(),
-      title: l10n.profileTitle,
       footer: [
         UmButton(
           label: l10n.signOut,
@@ -44,89 +45,187 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ],
       children: [
-        _Section(
-          title: l10n.profileIdentity,
-          body: '${me.firstName} ${me.lastName}\n${me.universityEmail}',
+        Row(
+          children: [
+            UmAvatar(name: me.firstName, size: UmSize.avatarLg),
+            const SizedBox(width: UmSpace.s4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      '${me.firstName} ${me.lastName}',
+                      style: UmText.h2.copyWith(color: c.ink),
+                    ),
+                  ),
+                  Text(me.universityEmail, style: UmText.bodySm.copyWith(color: c.inkMuted)),
+                ],
+              ),
+            ),
+          ],
         ),
-        _Section(
-          title: l10n.profileAddress,
-          body: me.home?.address ?? l10n.profileNoAddress,
-          onEdit: () => context.push(AppRoutes.profileAddress),
+        const SizedBox(height: UmSpace.s5),
+        _Group(
+          children: [
+            _Row(
+              icon: Icons.savings_outlined,
+              title: l10n.profileWallet,
+              value: balance == null ? null : UmRideCard.formatPrice(balance, l10n.localeName),
+              strongValue: true,
+              onTap: () => context.push(AppRoutes.wallet),
+            ),
+            _Row(
+              icon: Icons.history_rounded,
+              title: l10n.historyTitle,
+              onTap: () => context.push(AppRoutes.history),
+            ),
+            _Row(
+              icon: Icons.verified_outlined,
+              title: l10n.profileReliability,
+              onTap: () => context.push(AppRoutes.reliability),
+            ),
+          ],
         ),
-        _Section(
-          title: l10n.profileVehicle,
-          body: vehicle == null
-              ? l10n.profileNoVehicle
-              : l10n.profileVehicleSummary(
-                  VehicleInput.formatConsumption(vehicle.consumptionLPer100km),
-                  vehicle.defaultSeats,
-                  vehicle.maxDetourMinutes,
-                ),
-          onEdit: () => context.push(AppRoutes.profileVehicle),
+        const SizedBox(height: UmSpace.s4),
+        _Group(
+          children: [
+            _Row(
+              icon: Icons.home_outlined,
+              title: l10n.profileAddress,
+              value: me.home?.address ?? l10n.profileNoAddress,
+              onTap: () => context.push(AppRoutes.profileAddress),
+            ),
+            _Row(
+              icon: Icons.directions_car_outlined,
+              title: l10n.profileVehicle,
+              value: vehicle == null
+                  ? l10n.profileNoVehicle
+                  : l10n.profileVehicleSummary(
+                      VehicleInput.formatConsumption(vehicle.consumptionLPer100km),
+                      vehicle.defaultSeats,
+                      vehicle.maxDetourMinutes,
+                    ),
+              onTap: () => context.push(AppRoutes.profileVehicle),
+            ),
+            _Row(
+              icon: Icons.swap_horiz_rounded,
+              title: l10n.profileRole,
+              value: roleLabel,
+              onTap: () => context.push(AppRoutes.profileRole),
+            ),
+            _Row(
+              icon: Icons.calendar_month_outlined,
+              title: l10n.profileSchedule,
+              onTap: () => context.push(AppRoutes.profileSchedule),
+            ),
+          ],
         ),
-        _Section(
-          title: l10n.profileRole,
-          body: roleLabel,
-          onEdit: () => context.push(AppRoutes.profileRole),
-        ),
-        _Section(
-          title: l10n.profileSchedule,
-          body: l10n.calendarBody,
-          onEdit: () => context.push(AppRoutes.profileSchedule),
-        ),
-        _Section(
-          title: l10n.profileWallet,
-          body: l10n.walletIntro,
-          onEdit: () => context.push(AppRoutes.wallet),
-        ),
-        _Section(
-          title: l10n.profileNotifications,
-          body: l10n.profileNotificationsBody,
-          onEdit: () => context.push(AppRoutes.notificationSettings),
-        ),
-        _Section(
-          title: l10n.profileReliability,
-          body: l10n.profileReliabilityBody,
-          actionLabel: l10n.see,
-          onEdit: () => context.push(AppRoutes.reliability),
-        ),
+        const SizedBox(height: UmSpace.s4),
         const _PausesSection(),
         const SizedBox(height: UmSpace.s4),
-        const _DataSection(),
+        _Group(
+          children: [
+            _Row(
+              icon: Icons.notifications_none_rounded,
+              title: l10n.profileNotifications,
+              onTap: () => context.push(AppRoutes.notificationSettings),
+            ),
+            const _ExportRow(),
+            _Row(
+              icon: Icons.delete_outline_rounded,
+              title: l10n.deleteAccountAction,
+              onTap: () => context.push(AppRoutes.deleteAccount),
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.body, this.onEdit, this.actionLabel});
+/// Bloc de lignes du profil, sur une carte.
+class _Group extends StatelessWidget {
+  const _Group({required this.children});
 
-  final String title;
-  final String body;
-  final VoidCallback? onEdit;
-
-  /// Libellé du bouton (« Modifier » par défaut).
-  final String? actionLabel;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: UmSpace.s4),
-      child: UmCard(
-        title: title,
-        body: body,
-        child: onEdit == null
-            ? null
-            : Align(
-                alignment: Alignment.centerLeft,
-                child: UmButton(
-                  label: actionLabel ?? l10n.edit,
-                  variant: UmButtonVariant.secondary,
-                  onPressed: onEdit,
-                ),
-              ),
+    final c = context.umColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surfaceRaised,
+        borderRadius: BorderRadius.circular(UmRadius.md),
+        boxShadow: context.umShadowSoft,
       ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) Divider(height: 1, indent: UmSpace.s6 * 2, color: c.border),
+              children[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne : icône, titre, valeur sur une ligne, chevron. Toute la ligne s'ouvre.
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.value,
+    this.strongValue = false,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? value;
+
+  /// Valeur mise en avant à droite (solde) plutôt que sous le titre.
+  final bool strongValue;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    final value = this.value;
+    return ListTile(
+      minTileHeight: UmSize.tapTarget + UmSpace.s2,
+      leading: Icon(icon, color: c.brandStrong),
+      title: Text(
+        title,
+        style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
+      ),
+      subtitle: value == null || strongValue
+          ? null
+          : Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: UmText.bodySm.copyWith(color: c.inkMuted),
+            ),
+      trailing:
+          trailing ??
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (value != null && strongValue)
+                Text(value, style: UmText.h3.copyWith(color: c.brandStrong)),
+              Icon(Icons.chevron_right_rounded, color: c.inkMuted),
+            ],
+          ),
+      onTap: onTap,
     );
   }
 }
@@ -185,21 +284,27 @@ class _PausesSection extends ConsumerWidget {
     };
 
     return UmCard(
-      title: l10n.profilePauses,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ...content,
-          const SizedBox(height: UmSpace.s3),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: UmButton(
-              label: l10n.pauseAction,
-              icon: Icons.pause_circle_outline_rounded,
-              variant: UmButtonVariant.secondary,
-              onPressed: () => showPauseSheet(context),
-            ),
+          Row(
+            children: [
+              Icon(Icons.pause_circle_outline_rounded, color: c.brandStrong),
+              const SizedBox(width: UmSpace.s4),
+              Expanded(
+                child: Text(
+                  l10n.profilePauses,
+                  style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.pauseAction,
+                icon: Icon(Icons.add_rounded, color: c.brandStrong),
+                onPressed: () => showPauseSheet(context),
+              ),
+            ],
           ),
+          ...content,
         ],
       ),
     );
@@ -217,15 +322,15 @@ class _PausesSection extends ConsumerWidget {
   }
 }
 
-/// Droits RGPD : récupérer ses données, supprimer son compte (docs/rgpd.md).
-class _DataSection extends ConsumerStatefulWidget {
-  const _DataSection();
+/// Droit d'accès (docs/rgpd.md) : récupérer ses données en un fichier.
+class _ExportRow extends ConsumerStatefulWidget {
+  const _ExportRow();
 
   @override
-  ConsumerState<_DataSection> createState() => _DataSectionState();
+  ConsumerState<_ExportRow> createState() => _ExportRowState();
 }
 
-class _DataSectionState extends ConsumerState<_DataSection> {
+class _ExportRowState extends ConsumerState<_ExportRow> {
   bool _exporting = false;
 
   Future<void> _export(BuildContext buttonContext) async {
@@ -252,28 +357,18 @@ class _DataSectionState extends ConsumerState<_DataSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return UmCard(
-      title: l10n.profileData,
-      body: l10n.profileDataBody,
-      child: Wrap(
-        spacing: UmSpace.s3,
-        runSpacing: UmSpace.s3,
-        children: [
-          Builder(
-            builder: (buttonContext) => UmButton(
-              label: l10n.exportAction,
-              icon: Icons.download_rounded,
-              variant: UmButtonVariant.secondary,
-              loading: _exporting,
-              onPressed: () => _export(buttonContext),
-            ),
-          ),
-          UmButton(
-            label: l10n.deleteAccountAction,
-            variant: UmButtonVariant.ghost,
-            onPressed: () => context.push(AppRoutes.deleteAccount),
-          ),
-        ],
+    final c = context.umColors;
+    return Builder(
+      builder: (rowContext) => _Row(
+        icon: Icons.download_rounded,
+        title: l10n.exportAction,
+        onTap: _exporting ? null : () => _export(rowContext),
+        trailing: _exporting
+            ? SizedBox.square(
+                dimension: UmSize.iconMd,
+                child: CircularProgressIndicator(strokeWidth: 2, color: c.brand),
+              )
+            : null,
       ),
     );
   }

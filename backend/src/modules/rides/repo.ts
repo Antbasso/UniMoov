@@ -296,4 +296,60 @@ export class RidesRepo {
   async invalidatePlan(rideId: string, db: DbOrTx = this.db): Promise<void> {
     await db.update(rides).set({ plannedAt: null }).where(eq(rides.id, rideId));
   }
+
+  /**
+   * Trajets terminés d'un participant (historique), du plus récent au plus ancien, avec ce qu'il
+   * a payé (passager) ou reçu (conducteur) une fois la clôture faite.
+   */
+  async history(userId: string, limit: number): Promise<HistoryRow[]> {
+    const { rows } = await this.db.execute<{
+      id: string;
+      day: string;
+      direction: Direction;
+      target_time: Date;
+      role: 'driver' | 'passenger';
+      status: string;
+      amount_cents: number | null;
+      others: string[] | null;
+    }>(sql`
+      SELECT r.id, r.day::text AS day, r.direction, r.target_time, p.role, p.status::text AS status,
+        CASE WHEN p.role = 'driver'
+          THEN (SELECT sum(pay.share_cents)::int FROM payments pay
+                WHERE pay.ride_id = r.id AND pay.payee_id = ${userId} AND pay.status = 'paid')
+          ELSE (SELECT (pay.share_cents + pay.commission_cents)::int FROM payments pay
+                WHERE pay.ride_id = r.id AND pay.payer_id = ${userId} AND pay.status = 'paid')
+        END AS amount_cents,
+        (SELECT array_agg(u.first_name ORDER BY o.role, u.first_name) FROM ride_participants o
+           JOIN users u ON u.id = o.user_id
+          WHERE o.ride_id = r.id AND o.user_id <> ${userId} AND o.status IN ('accepted', 'picked_up')
+            AND (p.role = 'driver' OR o.role = 'driver')) AS others
+      FROM rides r JOIN ride_participants p ON p.ride_id = r.id
+      WHERE p.user_id = ${userId} AND r.status = 'completed'
+        AND p.status IN ('accepted', 'picked_up', 'absent')
+      ORDER BY r.day DESC, r.target_time DESC
+      LIMIT ${limit}`);
+    return rows.map((r) => ({
+      id: r.id,
+      day: r.day,
+      direction: r.direction,
+      time: new Date(r.target_time),
+      role: r.role,
+      myStatus: r.status,
+      amountCents: r.amount_cents,
+      with: r.others ?? [],
+    }));
+  }
+}
+
+export interface HistoryRow {
+  id: string;
+  day: string;
+  direction: Direction;
+  time: Date;
+  role: 'driver' | 'passenger';
+  myStatus: string;
+  /** Payé (passager) ou reçu (conducteur), null sans paiement (absent, prix indisponible). */
+  amountCents: number | null;
+  /** Prénoms des personnes acceptées : conducteur ↔ passagers, jamais entre passagers. */
+  with: string[];
 }

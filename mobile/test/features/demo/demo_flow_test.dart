@@ -58,10 +58,9 @@ void main() {
     expect(find.text('Ta semaine'), findsOneWidget);
 
     // Trajet en cours : Nathan approche, la présence se valide à la prise en charge.
-    // Mercredi : deux trajets terminés ; jeudi (aujourd'hui) : le trajet en cours d'abord.
-    await tapText(tester, 'Voir', index: 2);
-    await tapText(tester, 'Voir la carte');
-    expect(find.text('Trajet en cours'), findsOneWidget);
+    // Le trajet en cours est en tête de l'accueil (les trajets terminés sont dans l'historique).
+    await openTrip(tester, index: 0);
+    expect(find.text('En cours'), findsOneWidget);
     for (var i = 0; i < 12; i++) {
       await tester.pump(const Duration(seconds: 2));
     }

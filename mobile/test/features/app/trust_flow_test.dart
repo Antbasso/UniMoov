@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unimoov/core/api/api_client.dart';
@@ -27,8 +28,7 @@ void main() {
     ThemeMode mode = ThemeMode.light,
   }) async {
     await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
-    await tapText(tester, 'Voir', index: index);
-    await tapText(tester, 'Voir la carte');
+    await openTrip(tester, index: index);
   }
 
   Future<void> go(WidgetTester tester, String location, {ThemeMode mode = ThemeMode.light}) async {
@@ -48,7 +48,7 @@ void main() {
   group('annulation', () {
     testWidgets('passagère : pénalité annoncée, confirmée, retour à l’accueil', (tester) async {
       await openRide(tester);
-      await tapText(tester, 'Annuler ma place');
+      await menuAction(tester, 'Annuler ma place');
       expect(find.text('Annuler ta place ?'), findsOneWidget);
       expect(find.text('Le départ approche\u00a0: ton score baisse davantage.'), findsOneWidget);
       expect(find.textContaining('ta place est proposée à quelqu\'un d\'autre'), findsOneWidget);
@@ -57,7 +57,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(backend.cancelled, ['ride-1']);
       expect(find.text('Ta place est annulée.'), findsOneWidget);
-      expect(find.text('Arrêts'), findsNothing);
+      expect(find.byType(FlutterMap), findsNothing);
     });
 
     testWidgets('seuil franchi pendant la confirmation : le palier appliqué est annoncé', (
@@ -67,7 +67,7 @@ void main() {
         ..cancelTier = CancelTier.early
         ..appliedTier = CancelTier.medium;
       await openRide(tester);
-      await tapText(tester, 'Annuler ma place');
+      await menuAction(tester, 'Annuler ma place');
       await tester.tap(find.text('Annuler ma place').last);
       await tester.pumpAndSettle();
       expect(find.textContaining('Ta place est annulée. Le départ approche'), findsOneWidget);
@@ -75,10 +75,10 @@ void main() {
 
     testWidgets('garder son trajet : rien n’est annulé', (tester) async {
       await openRide(tester);
-      await tapText(tester, 'Annuler ma place');
+      await menuAction(tester, 'Annuler ma place');
       await tapText(tester, 'Garder mon trajet');
       expect(backend.cancelled, isEmpty);
-      expect(find.text('Arrêts'), findsOneWidget);
+      expect(find.byType(FlutterMap), findsOneWidget);
     });
 
     testWidgets('conducteur au dernier moment : pénalité forte, passagers relancés', (
@@ -86,7 +86,7 @@ void main() {
     ) async {
       backend.cancelTier = CancelTier.late;
       await openRide(tester, index: 1);
-      await tapText(tester, 'Annuler le trajet');
+      await menuAction(tester, 'Annuler le trajet');
       expect(find.text('Annuler ce trajet ?'), findsOneWidget);
       expect(find.text('Départ imminent\u00a0: ton score baisse nettement.'), findsOneWidget);
       expect(
@@ -127,7 +127,7 @@ void main() {
         );
         expect(find.text('Noter le trajet'), findsNothing);
 
-        await tapText(tester, 'Un problème sur ce trajet ?');
+        await menuAction(tester, 'Un problème sur ce trajet ?');
         await tapText(tester, 'Envoyer'); // motif « absence » déjà choisi
         expect(find.text('Décision maintenue'), findsOneWidget);
         expect(find.textContaining('Aucune validation de présence'), findsOneWidget);
@@ -158,7 +158,7 @@ void main() {
     testWidgets('signaler une personne du trajet, avec un motif', (tester) async {
       completed();
       await openRide(tester);
-      await tapText(tester, 'Signaler une personne');
+      await menuAction(tester, 'Signaler une personne');
       expect(find.text('Envoyer le signalement'), findsOneWidget);
       // Le nom figure aussi dans les arrêts, sous la feuille.
       await tester.tap(find.text('Nathan Petit').last);

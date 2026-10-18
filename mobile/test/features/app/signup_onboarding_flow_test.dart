@@ -123,15 +123,24 @@ void main() {
     expect(find.text('Aucune pause programmée.'), findsOneWidget);
 
     // Véhicule.
-    await tester.tap(find.text('Modifier').at(1));
-    await tester.pumpAndSettle();
+    await tapText(tester, 'Véhicule');
     await tapText(tester, 'Oui, j\'ai une voiture');
     await tester.enterText(fieldLabeled('Consommation (L/100 km)'), '5,8');
     await tapText(tester, 'Enregistrer');
     expect(find.text('5,8 L/100 km · 3 places · détour 10 min'), findsOneWidget);
 
+    // Rôle : un « i » explique le mode automatique (alternance entre conducteurs).
+    await tapText(tester, 'Rôle');
+    await tester.tap(find.byTooltip('Comment marche le mode automatique'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('on alterne'), findsOneWidget);
+    await tapText(tester, 'Compris');
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+
     // Erreur serveur sur la pause : message, puis succès.
-    await tapText(tester, 'Mettre en pause');
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
     expect(find.text('Choisir les dates'), findsOneWidget);
     await tapText(tester, 'Choisir les dates');
     // Saisie clavier du sélecteur : dates relatives à aujourd'hui (jours passés désactivés).
@@ -149,7 +158,8 @@ void main() {
     expect(find.textContaining('Du '), findsOneWidget);
 
     // Comme dans un agenda : tous les lundis, jusqu'à une date.
-    await tapText(tester, 'Mettre en pause');
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
     await tapText(tester, 'Certains jours');
     await tapText(tester, 'lun.');
     await tapText(tester, 'Choisir la date de fin');

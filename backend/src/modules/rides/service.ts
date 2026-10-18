@@ -1,14 +1,17 @@
 import { AppError } from '../../shared/errors.js';
 import { distanceMeters, type LatLon, SECTOR_SIZE_M, sectorOf } from '../../shared/geo.js';
 import { publicSector } from '../matching/service.js';
-import type { RoutingProvider } from '../../shared/routing/routing-provider.js';
+import type { RouteResult, RoutingProvider } from '../../shared/routing/routing-provider.js';
 import { estimatePrice, type PriceEstimate } from '../pricing/domain.js';
 import { parisDateOf } from '../../shared/time.js';
 import type { SettingsService } from '../settings/service.js';
 import { type Direction, orderStops, passageTimes, planKey } from './domain.js';
-import { isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
+import { type HistoryRow, isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 
 const VISIBLE_STATUSES = new Set(['confirmed', 'in_progress', 'completed']);
+/** Participants dont le domicile entre dans l'aperçu d'un trajet (proposés, demandes, acceptés). */
+const PREVIEW_STATUSES = new Set(['proposed', 'requested', 'accepted', 'picked_up']);
+const PREVIEW_CACHE_SIZE = 200;
 const LOCKED_STATUSES = new Set(['in_progress', 'completed', 'cancelled']);
 
 export interface StopView {
@@ -23,6 +26,8 @@ export interface StopView {
   lon: number;
   eta: Date | null;
   isMeetingPoint: boolean;
+  /** Point approximatif (centre du secteur) : à montrer comme une zone, jamais comme une adresse. */
+  approximate: boolean;
   /** Passager : monté (signalé par le conducteur), présence validée par proximité. */
   pickedUp: boolean;
   presenceValidated: boolean;
@@ -37,6 +42,15 @@ export interface PriceView extends PriceEstimate {
   estimated: true;
   youPayCents: number | null;
   youReceiveCents: number | null;
+}
+
+/** Aperçu d'un trajet pas encore confirmé : tracé sans les abords des domiciles des autres. */
+export interface RidePreview {
+  route: [number, number][];
+  estimated: boolean;
+  campus: LatLon & { name: string };
+  /** Mon point de prise en charge (ou de dépose), le seul exact. */
+  me: LatLon | null;
 }
 
 export interface RideView {
@@ -69,6 +83,9 @@ export class RidesService {
     /** Un vrai fournisseur existe : un plan estimé (panne, quota) sera recalculé plus tard. */
     private readonly retryEstimated = false,
   ) {}
+
+  /** Tracés d'aperçu déjà calculés (mêmes points) : un seul appel d'itinéraire par jeu de points. */
+  private readonly previews = new Map<string, RouteResult>();
 
   /** Adresse d'un participant modifiée : ses trajets confirmés à venir sont recalculés. */
   async onUserChanged(userId: string): Promise<void> {
@@ -221,6 +238,7 @@ export class RidesService {
       // Aller : arrivée à l'heure cible ; retour : départ à l'heure cible.
       eta: ride.targetTime,
       isMeetingPoint: false,
+      approximate: false,
       pickedUp: false,
       presenceValidated: false,
       arrived: false,
@@ -228,23 +246,25 @@ export class RidesService {
     };
     // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
     // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
+    // Le passager n'a pas besoin du domicile du conducteur : son départ reste approximatif.
     const hidden: LatLon[] = [];
     const person = (m: Member, kind: 'driver' | 'passenger'): Omit<StopView, 'order'> | null => {
       const pickup = kind === 'driver' ? (m.home ? { point: m.home, label: m.homeLabel ?? '', isMeetingPoint: false } : null) : pickupOf(m);
       if (!pickup) return null;
-      const coPassengerHome = me.role === 'passenger' && kind === 'passenger' && m.userId !== me.userId && !pickup.isMeetingPoint;
-      if (coPassengerHome) hidden.push(pickup.point);
-      const point = coPassengerHome ? publicSector(sectorOf(pickup.point)) : pickup.point;
+      const masked = me.role === 'passenger' && m.userId !== me.userId && !pickup.isMeetingPoint;
+      if (masked) hidden.push(pickup.point);
+      const point = masked ? publicSector(sectorOf(pickup.point)) : pickup.point;
       return {
         kind,
         userId: m.userId,
         firstName: m.firstName,
         lastName: lastNameFor(m),
-        label: coPassengerHome ? '' : pickup.label,
+        label: masked ? '' : pickup.label,
         lat: point.lat,
         lon: point.lon,
         eta: m.eta,
         isMeetingPoint: pickup.isMeetingPoint,
+        approximate: masked,
         pickedUp: m.status === 'picked_up',
         presenceValidated: m.presenceValidatedAt !== null,
         arrived: m.arrivedAt !== null,
@@ -279,6 +299,61 @@ export class RidesService {
       stops,
       price: estimate ? priceView(estimate, me.role) : null,
     };
+  }
+
+  /**
+   * Aperçu d'un trajet proposé (avant confirmation) : tracé du conducteur passant par les
+   * personnes proposées ou acceptées, sans les abords de leurs domiciles ni de celui du
+   * conducteur (seul mon point est exact). Calculé à la demande, gardé en mémoire.
+   */
+  async preview(userId: string, rideId: string): Promise<RidePreview> {
+    const ride = await this.repo.ride(rideId);
+    if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
+    const members = (await this.repo.members(rideId)).filter((m) => PREVIEW_STATUSES.has(m.status));
+    const me = members.find((m) => m.userId === userId);
+    if (!me) throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
+    const driver = members.find((m) => m.role === 'driver');
+    const campus = { name: ride.campus.name, lat: ride.campus.lat, lon: ride.campus.lon };
+    const mine = me.role === 'driver' ? me.home : (pickupOf(me)?.point ?? null);
+    if (!driver?.home) return { route: [], estimated: true, campus, me: mine };
+
+    const stops = members
+      .filter((m) => m.role === 'passenger')
+      .flatMap((m) => {
+        const pickup = pickupOf(m);
+        return pickup ? [{ userId: m.userId, point: pickup.point }] : [];
+      });
+    const inputs =
+      ride.direction === 'to_campus'
+        ? { start: driver.home, end: campus as LatLon, stops }
+        : { start: campus as LatLon, end: driver.home, stops };
+    const key = planKey(inputs);
+    let route = this.previews.get(key);
+    if (!route) {
+      const ordered = orderStops(inputs.start, inputs.end, inputs.stops);
+      route = await this.routing.route([inputs.start, ...ordered.map((s) => s.point), inputs.end]);
+      if (this.previews.size >= PREVIEW_CACHE_SIZE) this.previews.delete(this.previews.keys().next().value!);
+      this.previews.set(key, route);
+    }
+    const hidden = members
+      .filter((m) => m.userId !== userId)
+      .flatMap((m) => {
+        const point = m.role === 'driver' ? m.home : (pickupOf(m)?.isMeetingPoint ? null : m.home);
+        return point ? [point] : [];
+      });
+    return {
+      route: thin(route.geometry)
+        .filter((p) => hidden.every((h) => distanceMeters(h, p) > SECTOR_SIZE_M))
+        .map((p) => [p.lat, p.lon]),
+      estimated: route.estimated,
+      campus,
+      me: mine,
+    };
+  }
+
+  /** Historique : trajets terminés, 50 au plus. */
+  history(userId: string): Promise<HistoryRow[]> {
+    return this.repo.history(userId, 50);
   }
 
   async price(userId: string, rideId: string): Promise<PriceView | null> {
@@ -343,4 +418,15 @@ function planInputs(ride: RideInfo, members: Member[]) {
   return ride.direction === 'to_campus'
     ? { start: driver.home, end: campus, stops }
     : { start: campus, end: driver.home, stops };
+}
+
+/** Tracé allégé pour l'app : un point tous les 25 m au moins (extrémités gardées). */
+function thin(points: readonly LatLon[], minM = 25): LatLon[] {
+  if (points.length <= 2) return [...points];
+  const kept: LatLon[] = [points[0]!];
+  for (let i = 1; i < points.length - 1; i++) {
+    if (distanceMeters(kept.at(-1)!, points[i]!) >= minM) kept.push(points[i]!);
+  }
+  kept.push(points.at(-1)!);
+  return kept;
 }

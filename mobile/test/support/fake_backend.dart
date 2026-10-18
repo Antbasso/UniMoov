@@ -352,6 +352,22 @@ class FakeBackend
     return ride;
   }
 
+  /// Aperçu d'un trajet proposé : un tracé simple de Seynod au campus.
+  int previews = 0;
+
+  @override
+  Future<RidePreview> preview(String id) async {
+    _maybeFail();
+    previews++;
+    return const RidePreview(
+      route: [(45.8865, 6.089), (45.905, 6.12), (45.9195, 6.158)],
+      estimated: false,
+      campus: (45.9195, 6.158),
+      campusName: "Campus d'Annecy",
+      me: (45.8865, 6.089),
+    );
+  }
+
   @override
   Future<void> setMeetingPoint(String id, MeetingPoint? point) async {
     _maybeFail();
@@ -515,6 +531,15 @@ class FakeBackend
       ],
     );
     actions.add('presence');
+  }
+
+  /// Historique des trajets terminés (profil).
+  List<HistoryEntry> historyEntries = [];
+
+  @override
+  Future<List<HistoryEntry>> history() async {
+    _maybeFail();
+    return historyEntries;
   }
 
   @override

@@ -10,6 +10,9 @@ import '../../demo/demo_mode.dart';
 abstract interface class RidesApi {
   Future<RideDetails> ride(String id);
 
+  /// Avant confirmation : tracé approximatif du trajet proposé.
+  Future<RidePreview> preview(String id);
+
   /// `null` : revenir à son adresse.
   Future<void> setMeetingPoint(String id, MeetingPoint? point);
   Future<Suggestions> suggestions(String id);
@@ -23,6 +26,9 @@ abstract interface class RidesApi {
   /// Passager : présence validée par proximité ; renvoie `true` si le paiement est passé.
   Future<void> presence(String id);
   Future<void> finish(String id);
+
+  /// Trajets terminés, du plus récent au plus ancien.
+  Future<List<HistoryEntry>> history();
 }
 
 class DioRidesApi implements RidesApi {
@@ -34,6 +40,12 @@ class DioRidesApi implements RidesApi {
   Future<RideDetails> ride(String id) => guardApi(() async {
     final response = await _dio.get<Map<String, dynamic>>('/api/v1/rides/$id');
     return RideDetails.fromJson(response.data!);
+  });
+
+  @override
+  Future<RidePreview> preview(String id) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/rides/$id/preview');
+    return RidePreview.fromJson(response.data!);
   });
 
   @override
@@ -79,6 +91,15 @@ class DioRidesApi implements RidesApi {
 
   @override
   Future<void> finish(String id) => guardApi(() => _dio.post<void>('/api/v1/rides/$id/finish'));
+
+  @override
+  Future<List<HistoryEntry>> history() => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/rides/history');
+    return [
+      for (final r in response.data!['rides'] as List<dynamic>)
+        HistoryEntry.fromJson(r as Map<String, dynamic>),
+    ];
+  });
 }
 
 final ridesApiProvider = Provider<RidesApi>(

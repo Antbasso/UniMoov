@@ -21,6 +21,7 @@ import '../../features/proposals/presentation/alternatives_screen.dart';
 import '../../features/proposals/presentation/proposal_screen.dart';
 import '../../features/proposals/presentation/search_screen.dart';
 import '../../features/rides/presentation/departure_screen.dart';
+import '../../features/rides/presentation/history_screen.dart';
 import '../../features/rides/presentation/location_screen.dart';
 import '../../features/rides/presentation/meeting_point_screen.dart';
 import '../../features/rides/presentation/ride_screen.dart';
@@ -108,6 +109,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'role',
                     parentNavigatorKey: _rootKey,
                     builder: (_, _) => const EditRoleScreen(),
+                  ),
+                  GoRoute(
+                    path: 'history',
+                    parentNavigatorKey: _rootKey,
+                    builder: (_, _) => const HistoryScreen(),
                   ),
                   GoRoute(
                     path: 'reliability',

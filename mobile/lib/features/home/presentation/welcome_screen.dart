@@ -17,54 +17,93 @@ class WelcomeScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
 
-    return UmPage(
-      footer: [
-        UmButton(
-          label: l10n.welcomeSignup,
-          expand: true,
-          onPressed: () => context.push(AppRoutes.signup),
+    final actions = [
+      UmButton(
+        label: l10n.welcomeSignup,
+        expand: true,
+        onPressed: () => context.push(AppRoutes.signup),
+      ),
+      UmButton(
+        label: l10n.welcomeLogin,
+        variant: UmButtonVariant.ghost,
+        expand: true,
+        onPressed: () => context.push(AppRoutes.login),
+      ),
+      // Données fictives dans l'app, sans serveur : pour découvrir ou présenter Uni-Moov.
+      UmButton(
+        label: l10n.demoTry,
+        icon: Icons.play_circle_outline_rounded,
+        variant: UmButtonVariant.ghost,
+        expand: true,
+        onPressed: () => showDemoSheet(context, ref),
+      ),
+    ];
+
+    // Tout tient sur un écran ; le défilement ne sert qu'avec un texte très agrandi.
+    return Scaffold(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: UmSpace.s6, vertical: UmSpace.s4),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - UmSpace.s4 * 2),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Spacer(),
+                    Center(
+                      child: UmLogo(
+                        width: (constraints.maxHeight * 0.24).clamp(
+                          UmSize.logoWidth / 2,
+                          UmSize.logoHero,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: UmSpace.s5),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        l10n.welcomeTitle,
+                        textAlign: TextAlign.center,
+                        style: UmText.h2.copyWith(color: c.ink),
+                      ),
+                    ),
+                    const SizedBox(height: UmSpace.s2),
+                    Text(
+                      l10n.welcomeSubtitle,
+                      textAlign: TextAlign.center,
+                      style: UmText.bodySm.copyWith(color: c.inkMuted),
+                    ),
+                    const SizedBox(height: UmSpace.s5),
+                    UmBenefitRow(
+                      benefits: [
+                        UmBenefit(icon: Icons.schedule_rounded, label: l10n.welcomeBenefitSchedule),
+                        UmBenefit(icon: Icons.savings_outlined, label: l10n.welcomeBenefitPrice),
+                        UmBenefit(
+                          icon: Icons.handshake_outlined,
+                          label: l10n.welcomeBenefitConfirm,
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: UmSpace.s4),
+                    for (var i = 0; i < actions.length; i++) ...[
+                      if (i > 0) const SizedBox(height: UmSpace.s2),
+                      actions[i],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
-        UmButton(
-          label: l10n.welcomeLogin,
-          variant: UmButtonVariant.ghost,
-          expand: true,
-          onPressed: () => context.push(AppRoutes.login),
-        ),
-        // Données fictives dans l'app, sans serveur : pour découvrir ou présenter Uni-Moov.
-        UmButton(
-          label: l10n.demoTry,
-          icon: Icons.play_circle_outline_rounded,
-          variant: UmButtonVariant.ghost,
-          expand: true,
-          onPressed: () => showDemoSheet(context, ref),
-        ),
-      ],
-      children: [
-        const Center(child: UmLogo()),
-        const SizedBox(height: UmSpace.s6),
-        Semantics(
-          header: true,
-          child: Text(l10n.welcomeTitle, style: UmText.h1.copyWith(color: c.ink)),
-        ),
-        const SizedBox(height: UmSpace.s3),
-        Text(l10n.welcomeSubtitle, style: UmText.h3.copyWith(color: c.brandStrong)),
-        const SizedBox(height: UmSpace.s6),
-        UmBenefitRow(
-          benefits: [
-            UmBenefit(icon: Icons.schedule_rounded, label: l10n.welcomeBenefitSchedule),
-            UmBenefit(icon: Icons.savings_outlined, label: l10n.welcomeBenefitPrice),
-            UmBenefit(icon: Icons.handshake_outlined, label: l10n.welcomeBenefitConfirm),
-          ],
-        ),
-        const SizedBox(height: UmSpace.s6),
-        Center(child: UmNote(text: l10n.welcomeNote)),
-      ],
+      ),
     );
   }
 }
 
-/// Logo complet. Fond blanc opaque : jamais directement sur un fond sombre (logo.md),
-/// donc posé sur la plaque claire `surface-raised` du thème clair dans les deux thèmes.
+/// Logo complet, sans plaque : « Moov » passe en clair sur fond sombre (logo_dark.png).
 class UmLogo extends StatelessWidget {
   const UmLogo({super.key, this.width = UmSize.logoWidth});
 
@@ -72,17 +111,28 @@ class UmLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(UmSpace.s3),
-      decoration: BoxDecoration(
-        color: UmColorTokens.light.surfaceRaised,
-        borderRadius: BorderRadius.circular(UmRadius.lg),
-      ),
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: width,
-        semanticLabel: AppLocalizations.of(context).logoLabel,
-      ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Image.asset(
+      dark ? 'assets/images/logo_dark.png' : 'assets/images/logo.png',
+      width: width,
+      // Proportions du fichier (1024 × 879) : place réservée avant le décodage de l'image.
+      height: width * 879 / 1024,
+      semanticLabel: AppLocalizations.of(context).logoLabel,
     );
   }
+}
+
+/// Logo compact (pastille et voiture), pour l'onglet Accueil.
+class UmLogoCompact extends StatelessWidget {
+  const UmLogoCompact({super.key, this.size = UmSize.iconMd});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/images/logo_compact.png',
+    width: size,
+    height: size,
+    excludeFromSemantics: true,
+  );
 }

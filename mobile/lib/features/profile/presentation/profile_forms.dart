@@ -374,8 +374,28 @@ class _RoleFormState extends ConsumerState<RoleForm> with SubmitStateMixin {
                 RadioListTile<RoleMode>(
                   contentPadding: EdgeInsets.zero,
                   value: RoleMode.auto,
-                  title: Text(l10n.roleAuto),
-                  subtitle: Text(l10n.roleAutoHelp),
+                  title: Row(
+                    children: [
+                      Flexible(child: Text(l10n.roleAuto)),
+                      IconButton(
+                        tooltip: l10n.roleAutoInfoTooltip,
+                        icon: Icon(Icons.info_outline_rounded, color: context.umColors.brandStrong),
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: Text(l10n.roleAuto),
+                            content: Text(l10n.roleAutoInfo),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(),
+                                child: Text(l10n.understood),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 RadioListTile<RoleMode>(
                   contentPadding: EdgeInsets.zero,

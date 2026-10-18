@@ -221,7 +221,9 @@ describe('accepter, refuser, voir d’autres', () => {
 describe('relance sur changement d’horaire', () => {
   it('Hugo commence à 10 h le jeudi : sa proposition de l’aller est recalculée', async () => {
     const thursday = '2026-10-22';
-    expect(find(await proposals('Hugo'), thursday, 'to_campus')?.driver?.firstName).toBe('Léa');
+    // Conducteur du jeudi : celui qui a le moins conduit récemment (alternance du mode automatique).
+    const driver = find(await proposals('Hugo'), thursday, 'to_campus')?.driver?.firstName;
+    expect(driver).toBeDefined();
     const days = user('Hugo').week;
     const response = await call('Hugo', 'PUT', '/schedule/manual', {
       days: Object.entries(days).map(([weekday, [startTime, endTime]]) => ({
@@ -241,9 +243,9 @@ describe('relance sur changement d’horaire', () => {
     // Plus de voiture à 10 h : plus de proposition d'aller ; le retour reste.
     const after = await proposals('Hugo');
     expect(find(after, thursday, 'to_campus')).toBeUndefined();
-    expect(find(after, thursday, 'from_campus')?.driver?.firstName).toBe('Léa');
-    const lea = find(await proposals('Léa'), thursday, 'to_campus')!;
-    expect(lea.passengers.map((p) => p.firstName)).not.toContain('Hugo');
+    expect(find(after, thursday, 'from_campus')?.driver?.firstName).toBeDefined();
+    const theirs = find(await proposals(driver!), thursday, 'to_campus')!;
+    expect(theirs.passengers.map((p) => p.firstName)).not.toContain('Hugo');
   });
 
   it('un trajet confirmé n’est pas recalculé par une relance', async () => {

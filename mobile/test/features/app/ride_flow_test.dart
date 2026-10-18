@@ -19,16 +19,15 @@ void main() {
 
   Future<void> openRide(WidgetTester tester, {int index = 0}) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: index);
-    await tapText(tester, 'Voir la carte');
+    await openTrip(tester, index: index);
   }
 
   testWidgets('passagère : carte, arrêts dans l’ordre, noms débloqués, prix estimé', (
     tester,
   ) async {
     await openRide(tester);
+    // Confirmé : l'accueil ouvre directement la carte, sans « Voir la carte ».
     expect(find.byType(FlutterMap), findsOneWidget);
-    expect(find.text('Arrêts'), findsOneWidget);
     expect(find.text('Nathan Petit'), findsOneWidget); // conducteur : nom complet
     expect(find.text('Toi'), findsOneWidget);
     expect(find.text('Hugo'), findsOneWidget); // autre passager : prénom seulement
@@ -36,8 +35,11 @@ void main() {
     expect(find.text("Campus d'Annecy (USMB)"), findsOneWidget);
     expect(find.text('Tu paies'), findsOneWidget);
     expect(find.textContaining('0,76'), findsOneWidget);
-    expect(find.textContaining('partagés entre 3 personnes'), findsOneWidget);
-    expect(find.textContaining('Vers '), findsNWidgets(4));
+    expect(find.textContaining('entre 3 personnes'), findsOneWidget);
+    expect(find.byIcon(Icons.schedule_rounded), findsNWidgets(4));
+    // Chat en icône en haut, plus de grand bouton en double.
+    expect(find.byTooltip('Chat du trajet'), findsOneWidget);
+    expect(find.text('Écrire au groupe'), findsNothing);
     expect(find.text('Ajouter des passagers'), findsNothing);
   });
 
@@ -45,7 +47,7 @@ void main() {
     tester,
   ) async {
     await openRide(tester);
-    await tapText(tester, 'Choisir un point de rendez-vous');
+    await tapText(tester, 'Fixer un rendez-vous');
     expect(find.text('Point de rendez-vous'), findsOneWidget);
     await tester.tap(find.byType(FlutterMap));
     await tester.pumpAndSettle();
@@ -60,7 +62,7 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    await tapText(tester, 'Changer de point de rendez-vous');
+    await tapText(tester, 'Modifier le rendez-vous');
     await tapText(tester, 'Revenir à mon adresse');
     expect(find.text('Arrêt Mairie'), findsNothing);
     expect(find.text(FakeBackend.knownAddress), findsOneWidget);
@@ -68,7 +70,7 @@ void main() {
 
   testWidgets('point de rendez-vous trop loin : message du serveur', (tester) async {
     await openRide(tester);
-    await tapText(tester, 'Choisir un point de rendez-vous');
+    await tapText(tester, 'Fixer un rendez-vous');
     await tester.enterText(fieldLabeled('Nom du point'), 'Gare');
     await tester.pump();
     backend.failNext = const ApiException('meeting_point_too_far', '', statusCode: 422);
@@ -96,7 +98,7 @@ void main() {
 
   testWidgets('la proposition du conducteur ouvre aussi les suggestions', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 1);
+    await openTrip(tester, index: 1);
     await tapText(tester, 'Ajouter des passagers');
     await tapText(tester, 'Proposer une place');
     await tester.tap(find.byTooltip('Retour'));
@@ -108,7 +110,7 @@ void main() {
     tester,
   ) async {
     await openRide(tester);
-    await tapText(tester, 'Choisir un point de rendez-vous');
+    await tapText(tester, 'Fixer un rendez-vous');
     await tester.enterText(fieldLabeled('Nom du point'), 'Arrêt Mairie');
     await tester.pump();
     backend.failNextRide = const ApiException('network_error', '');
@@ -121,19 +123,17 @@ void main() {
 
   testWidgets('erreur au chargement du trajet, puis réessayer', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
-    backend.failNext = const ApiException('network_error', '');
-    await tapText(tester, 'Voir la carte');
+    backend.failNextRide = const ApiException('network_error', '');
+    await openTrip(tester, index: 0);
     expect(find.text('Réessayer'), findsOneWidget);
     await tapText(tester, 'Réessayer');
-    expect(find.text('Arrêts'), findsOneWidget);
+    expect(find.byType(FlutterMap), findsOneWidget);
   });
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets('golden trajet confirmé ${mode.name}', (tester) async {
       await launchApp(tester, backend: backend, storage: storage, themeMode: mode);
-      await tapText(tester, 'Voir', index: 0);
-      await tapText(tester, 'Voir la carte');
+      await openTrip(tester, index: 0);
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('goldens/ride_${mode.name}.png'),

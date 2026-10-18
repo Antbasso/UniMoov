@@ -16,6 +16,7 @@ abstract final class AppRoutes {
   static const profileVehicle = '/profile/vehicle';
   static const profileRole = '/profile/role';
   static const profileSchedule = '/profile/schedule';
+  static const history = '/profile/history';
   static const profileScheduleIcs = '/profile/schedule/ics';
   static const profileScheduleManual = '/profile/schedule/manual';
   static const search = '/search';

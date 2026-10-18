@@ -43,8 +43,7 @@ void main() {
 
   Future<void> openDeparture(WidgetTester tester) async {
     await launch(tester);
-    await tapText(tester, 'Voir', index: 1);
-    await tapText(tester, 'Voir la carte');
+    await openTrip(tester, index: 1);
     await tapText(tester, 'Écran de départ');
   }
 
@@ -140,15 +139,14 @@ void main() {
     Future<void> openLive(WidgetTester tester, {ThemeMode mode = ThemeMode.light}) async {
       await backend.start('ride-1');
       await launch(tester, mode: mode);
-      await tapText(tester, 'Voir', index: 0);
-      await tapText(tester, 'Voir la carte');
+      await openTrip(tester, index: 0);
     }
 
     testWidgets('voit le conducteur arriver, puis « dernière position connue » après 30 s', (
       tester,
     ) async {
       await openLive(tester);
-      expect(find.text('Trajet en cours'), findsOneWidget);
+      expect(find.text('En cours'), findsOneWidget);
       live.last
         ..emit(const LiveReady())
         ..emit(LivePosition(userId: 'driver-1', lat: 45.88, lon: 6.13, at: now))
@@ -164,7 +162,7 @@ void main() {
     testWidgets('valider sa présence : paiement à l’arrivée annoncé', (tester) async {
       await openLive(tester);
       // Pas encore à bord : renoncer, c'est annuler sa place.
-      expect(find.text('Annuler ma place'), findsOneWidget);
+      expect(find.byTooltip("Plus d'actions"), findsOneWidget); // « Annuler ma place »
       expect(find.text('Terminer mon trajet'), findsNothing);
       await tapText(tester, 'Valider ma présence');
       expect(backend.actions.last, 'presence');
@@ -174,7 +172,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Valider ma présence'), findsNothing);
-      expect(find.text('Annuler ma place'), findsNothing);
+      expect(find.byTooltip("Plus d'actions"), findsNothing);
     });
 
     testWidgets(
@@ -256,7 +254,7 @@ void main() {
       await launch(tester);
       await tester.tap(find.byTooltip('Mon profil'));
       await tester.pumpAndSettle();
-      await tapText(tester, 'Modifier', index: 4);
+      await tapText(tester, 'Portefeuille');
     }
 
     testWidgets('recharger : solde et historique à jour', (tester) async {

@@ -13,7 +13,7 @@
 
 - À la configuration du profil, l'utilisateur indique s'il possède une voiture ; si oui, consommation du véhicule et nombre de places passagers par défaut.
 - La capacité par défaut peut être modifiée ponctuellement pour un trajet donné.
-- Gestion du rôle à chaque trajet, deux modes au choix : mode automatique (uniquement si véhicule déclaré, l'app propose conducteur ou passager selon l'optimisation du réseau), ou mode forcé (l'utilisateur impose toujours conducteur ou toujours passager).
+- Gestion du rôle à chaque trajet, deux modes au choix : mode automatique (uniquement si véhicule déclaré, l'app propose conducteur ou passager selon les besoins du secteur ; entre plusieurs conducteurs possibles, elle alterne : celui qui a le moins conduit ces dernières semaines prend le volant ; un « i » l'explique dans les réglages), ou mode forcé (l'utilisateur impose toujours conducteur ou toujours passager).
 - Sans véhicule déclaré : rôle passager par défaut, pas d'accès au mode automatique.
 
 ## 3. Emploi du temps et génération des trajets
@@ -27,7 +27,7 @@
 - Chaque conducteur définit un seuil de détour acceptable (temps ou distance) ; le moteur ne propose un passager que si le détour reste sous ce seuil.
 - V1 : règle simple de départage en cas de conflit sur les places (détour le plus court, combiné au score de fiabilité). V2 (évolution) : matching global optimisant l'ensemble du réseau.
 - Recherche manuelle en secours si aucune proposition automatique : écran liste avec filtres (horaires, distance), limité en nombre de requêtes par jour pour éviter le scraping.
-- Confidentialité avant acceptation mutuelle : seules ces informations sont visibles — prénom, photo, secteur de départ approximatif (jamais l'adresse exacte), horaire, score de fiabilité, temps de détour exact engendré pour le conducteur. Nom complet et adresse précise débloqués après acceptation des deux parties. Sous chaque personne proposée, une mini-carte montre son secteur comme une annonce immobilière (agrandie au toucher) : un cercle d'environ 750 m qui contient le domicile sans le révéler. Le détour affiché est toujours celui du conducteur : côté passager, « il fait X min de détour pour toi ».
+- Confidentialité avant acceptation mutuelle : seules ces informations sont visibles — prénom, photo, secteur de départ approximatif (jamais l'adresse exacte), horaire, score de fiabilité, temps de détour exact engendré pour le conducteur. Nom complet et adresse précise débloqués après acceptation des deux parties. Ouvrir un trajet montre d'abord la carte : le tracé du conducteur et chaque personne proposée dans sa zone, comme une annonce immobilière (un cercle d'environ 750 m qui contient le domicile sans le révéler), en provisoire tant qu'elle n'a pas accepté, puis validée ; la liste des personnes est dessous (prénom, note ★ sur 5, détour ⏱), celles qui ont refusé disparaissent. Le détour affiché est toujours celui du conducteur : côté passager, « il fait X min de détour pour toi ».
 - Sur l'écran de sélection des covoitureurs, uniquement visible par le conducteur : suggestion d'ajout de passagers supplémentaires (y compris ceux écartés automatiquement car hors seuil de détour), avec simulation en direct de la baisse de prix induite.
 
 ## 5. Tarification
@@ -89,7 +89,7 @@ Architecture façon Teams, trois niveaux de conversation :
 
 ## 14. Carte et suivi en direct
 
-- Carte du trajet, accessible depuis tout trajet confirmé : le tracé de l'itinéraire du conducteur, son point de départ, la destination (campus) et un repère pour chaque passager (adresse ou point de rendez-vous), dans l'ordre de ramassage, avec l'heure de passage estimée à chaque arrêt.
+- Carte du trajet, affichée directement en ouvrant le trajet (un seul écran, sans clic de plus) : le tracé de l'itinéraire du conducteur, son point de départ, la destination (campus) et un repère pour chaque passager (adresse ou point de rendez-vous), dans l'ordre de ramassage, avec l'heure de passage estimée à chaque arrêt. Pour un passager, le départ du conducteur reste toujours approximatif (sa zone, le tracé sans ses abords). Le chat du trajet est une icône en haut ; une fois le trajet terminé, la notation passe en tête et le reste se replie. Les trajets terminés quittent l'accueil pour l'historique du profil.
 - Confidentialité : un passager n'apparaît avec son adresse exacte qu'après acceptation mutuelle (voir section 4) ; avant cela, seul le secteur approximatif est montré. Chaque participant ne voit sur la carte que les personnes de son propre trajet.
 - Point de rendez-vous : le passager peut remplacer son adresse par un point de rendez-vous (par exemple un arrêt proche) ; c'est ce point qui est affiché au conducteur à la place de l'adresse.
 - Suivi en direct pendant le trajet : le passager voit la position du conducteur se déplacer en temps réel vers son point de ramassage (heure d'arrivée estimée mise à jour) ; le conducteur voit les passagers pas encore montés. Le partage s'active au départ du trajet et s'arrête à sa clôture (voir section 9) ; il ne fonctionne jamais en dehors d'un trajet confirmé.

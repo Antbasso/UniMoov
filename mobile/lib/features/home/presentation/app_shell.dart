@@ -10,6 +10,7 @@ import '../../notifications/presentation/push_controller.dart';
 import '../../proposals/domain/proposal.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../../rides/presentation/active_ride.dart';
+import 'welcome_screen.dart';
 
 /// Onglets de l'app connectée : messages à gauche, accueil au milieu, profil à droite. Le
 /// trajet en cours reste visible au-dessus de la barre, quel que soit l'onglet.
@@ -33,7 +34,8 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (active != null) LiveRideBanner(ride: active),
+          // Sur l'accueil, le trajet en cours est déjà en tête de liste.
+          if (active != null && shell.currentIndex != 1) LiveRideBanner(ride: active),
           UmNavBar(
             selected: shell.currentIndex,
             onSelect: go,
@@ -50,6 +52,7 @@ class AppShell extends ConsumerWidget {
               UmNavItem(
                 icon: Icons.home_outlined,
                 selectedIcon: Icons.home_rounded,
+                image: const UmLogoCompact(),
                 label: l10n.navHome,
                 tooltip: l10n.navHome,
               ),
@@ -74,7 +77,11 @@ class UmNavItem {
     required this.label,
     required this.tooltip,
     this.badge = 0,
+    this.image,
   });
+
+  /// Remplace l'icône (logo compact pour l'accueil).
+  final Widget? image;
 
   final IconData icon;
   final IconData selectedIcon;
@@ -128,7 +135,9 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.umColors;
     final color = selected ? c.brandStrong : c.ink;
-    final icon = Icon(selected ? item.selectedIcon : item.icon, color: color, size: UmSize.iconMd);
+    final icon =
+        item.image ??
+        Icon(selected ? item.selectedIcon : item.icon, color: color, size: UmSize.iconMd);
     return Tooltip(
       message: item.tooltip,
       excludeFromSemantics: true,

@@ -18,6 +18,8 @@ export interface Need {
   roleMode: RoleMode;
   vehicle: { seats: number; maxDetourMinutes: number } | null;
   reliability: number;
+  /** Trajets conduits ces 4 dernières semaines : en automatique, on alterne les conducteurs. */
+  drivenRecently?: number;
 }
 
 export interface MatchParams {
@@ -51,7 +53,8 @@ const byId = (a: { userId: string }, b: { userId: string }) => a.userId.localeCo
  * Rôle de chacun pour un créneau (fonction `assignRole` de l'architecture §4).
  * Sans véhicule : passager. Mode forcé : respecté. Mode automatique : on fait conduire tant
  * que l'offre de places ne dépasse pas la demande (une marge est nécessaire, car le détour
- * limite qui peut monter avec qui), en commençant par les voitures les plus grandes.
+ * limite qui peut monter avec qui). On alterne : celui qui a le moins conduit ces dernières
+ * semaines passe d'abord ; à égalité, la plus grande voiture.
  */
 export function assignRoles(needs: readonly Need[]): Map<string, Role> {
   const roles = new Map<string, Role>();
@@ -71,7 +74,13 @@ export function assignRoles(needs: readonly Need[]): Map<string, Role> {
     }
   }
 
-  autos.sort((a, b) => b.vehicle!.seats - a.vehicle!.seats || b.reliability - a.reliability || byId(a, b));
+  autos.sort(
+    (a, b) =>
+      (a.drivenRecently ?? 0) - (b.drivenRecently ?? 0) ||
+      b.vehicle!.seats - a.vehicle!.seats ||
+      b.reliability - a.reliability ||
+      byId(a, b),
+  );
   for (const need of autos) {
     if (seatsOffered <= passengers) {
       roles.set(need.userId, 'driver');

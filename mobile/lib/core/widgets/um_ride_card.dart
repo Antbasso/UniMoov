@@ -13,7 +13,10 @@ enum UmRideStatus { proposed, waiting, confirmed, inProgress, completed, cancell
 /// couleur seule).
 enum UmRideRole { driver, passenger }
 
-/// Carte de trajet (docs/design-system/components/RideCard.md). Une seule action.
+/// Carte de trajet (docs/design-system/components/RideCard.md), allégée : l'heure en grand,
+/// « départ → arrivée » sur une ligne, un statut. Chaque état a sa teinte : dégradé animé en
+/// cours, vert confirmé, lavande à confirmer, grisé terminé ou annulé. Toute la carte s'ouvre
+/// au toucher (`onTap`) ; un bouton reste possible (`actionLabel`, ex. « Choisir »).
 class UmRideCard extends StatelessWidget {
   const UmRideCard({
     super.key,
@@ -25,8 +28,10 @@ class UmRideCard extends StatelessWidget {
     this.priceCents,
     required this.status,
     this.metaText,
+    this.meta = const [],
     this.actionLabel,
     this.onAction,
+    this.onTap,
     this.actionVariant = UmButtonVariant.primary,
     this.role,
     this.live = false,
@@ -35,7 +40,7 @@ class UmRideCard extends StatelessWidget {
   /// Rôle mis en avant avec l'heure en grand (liste de la semaine).
   final UmRideRole? role;
 
-  /// Trajet en cours : contour qui pulse (fixe si les animations sont réduites).
+  /// Trajet en cours : fond en dégradé animé (fixe si les animations sont réduites).
   final bool live;
 
   final String from;
@@ -47,11 +52,15 @@ class UmRideCard extends StatelessWidget {
   /// Montant en centimes (entier, jamais de flottant) ; absent tant qu'il n'est pas calculé.
   final int? priceCents;
 
-  /// Remplace la ligne « horaire · avec … · places » (ex. côté conducteur).
+  /// Ligne de détail en texte (recherche) ; sinon `meta`, petites icônes et valeurs.
   final String? metaText;
+  final List<(IconData, String)> meta;
   final UmRideStatus status;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// Toucher la carte (ouvre le trajet).
+  final VoidCallback? onTap;
 
   /// Dans une liste de cartes, `secondary` : un seul bouton principal par écran.
   final UmButtonVariant actionVariant;
@@ -64,6 +73,10 @@ class UmRideCard extends StatelessWidget {
     final c = context.umColors;
     final l10n = AppLocalizations.of(context);
     final price = priceCents == null ? null : formatPrice(priceCents!, l10n.localeName);
+    final onGradient = live;
+    final ink = onGradient ? c.onBrand : c.ink;
+    final muted = onGradient ? c.onBrand : c.inkMuted;
+
     final chip = switch (status) {
       UmRideStatus.proposed => UmChip(label: l10n.rideStatusProposed, icon: Icons.schedule_rounded),
       UmRideStatus.waiting => UmChip(
@@ -75,11 +88,7 @@ class UmRideCard extends StatelessWidget {
         icon: Icons.check_circle_outline_rounded,
         tone: UmChipTone.success,
       ),
-      UmRideStatus.inProgress => UmChip(
-        label: l10n.rideInProgress,
-        icon: Icons.near_me_outlined,
-        tone: UmChipTone.success,
-      ),
+      UmRideStatus.inProgress => _LiveChip(label: l10n.rideStatusLive),
       UmRideStatus.completed => UmChip(label: l10n.rideCompleted, icon: Icons.flag_outlined),
       UmRideStatus.cancelled => UmChip(
         label: l10n.rideStatusCancelled,
@@ -87,134 +96,222 @@ class UmRideCard extends StatelessWidget {
         tone: UmChipTone.danger,
       ),
     };
+    // Teinte du bord gauche : repère l'état d'un coup d'œil (doublée par la puce).
+    final accent = switch (status) {
+      UmRideStatus.confirmed => c.success,
+      UmRideStatus.proposed || UmRideStatus.waiting => c.lavender,
+      UmRideStatus.cancelled => c.danger,
+      UmRideStatus.inProgress => c.brand,
+      UmRideStatus.completed => c.border,
+    };
 
     final role = this.role;
-    final card = Container(
-      constraints: const BoxConstraints(maxWidth: UmSize.rideCardMaxWidth),
-      padding: const EdgeInsets.all(UmSpace.s4),
-      decoration: BoxDecoration(
-        color: c.surfaceRaised,
-        borderRadius: BorderRadius.circular(UmRadius.md),
-        boxShadow: context.umShadowSoft,
-      ),
+    final metaLine = metaText != null
+        ? Text(metaText!, style: UmText.bodySm.copyWith(color: muted))
+        : meta.isEmpty
+        ? null
+        : Wrap(
+            spacing: UmSpace.s4,
+            runSpacing: UmSpace.s1,
+            children: [
+              for (final (icon, text) in meta)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: UmSize.iconSm, color: muted),
+                    const SizedBox(width: UmSpace.s1),
+                    Text(text, style: UmText.bodySm.copyWith(color: muted)),
+                  ],
+                ),
+            ],
+          );
+
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(UmSpace.s4, UmSpace.s3, UmSpace.s4, UmSpace.s3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (role != null) ...[
-            // Texte agrandi : l'heure passe sous le rôle plutôt que de déborder.
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: UmSpace.s3,
-              runSpacing: UmSpace.s2,
+          // Texte agrandi : la puce passe sous l'heure plutôt que de déborder.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: UmSpace.s3,
+            runSpacing: UmSpace.s2,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (role != null) ...[
+                    _RoleBadge(role: role, onGradient: onGradient),
+                    const SizedBox(width: UmSpace.s3),
+                  ],
+                  Text(time, style: UmText.h2.copyWith(color: ink)),
+                ],
+              ),
+              chip,
+            ],
+          ),
+          const SizedBox(height: UmSpace.s2),
+          Semantics(
+            label: '${l10n.rideFrom(from)}, ${l10n.rideTo(to)}',
+            excludeSemantics: true,
+            // Une seule phrase qui peut passer à la ligne : rien n'est coupé.
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: from),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: UmSpace.s2),
+                      child: Icon(Icons.arrow_forward_rounded, size: UmSize.iconSm, color: muted),
+                    ),
+                  ),
+                  TextSpan(text: to),
+                ],
+              ),
+              style: UmText.body.copyWith(color: ink),
+            ),
+          ),
+          if (metaLine != null) ...[const SizedBox(height: UmSpace.s1), metaLine],
+          if (price != null || actionLabel != null) ...[
+            const SizedBox(height: UmSpace.s2),
+            Row(
               children: [
-                _RoleBadge(role: role),
-                Text(time, style: UmText.h2.copyWith(color: c.ink)),
+                if (price != null)
+                  Semantics(
+                    label: l10n.ridePriceLabel(price),
+                    excludeSemantics: true,
+                    child: Text(price, style: UmText.h3.copyWith(color: c.brandStrong)),
+                  ),
+                const Spacer(),
+                if (actionLabel != null)
+                  UmButton(label: actionLabel!, variant: actionVariant, onPressed: onAction),
               ],
             ),
-            const SizedBox(height: UmSpace.s3),
           ],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Stop(label: from, semantic: l10n.rideFrom(from), isEnd: false),
-                    const SizedBox(height: UmSpace.s1),
-                    _Stop(label: to, semantic: l10n.rideTo(to), isEnd: true),
-                    const SizedBox(height: UmSpace.s1),
-                    Text(
-                      metaText ??
-                          (role != null
-                              ? '${l10n.rideWith(driverFirstName)} · ${l10n.rideSeats(seatsLeft)}'
-                              : '${l10n.rideMeta(time, driverFirstName)} · '
-                                    '${l10n.rideSeats(seatsLeft)}'),
-                      style: UmText.bodySm.copyWith(color: c.inkMuted),
-                    ),
-                  ],
-                ),
-              ),
-              if (price != null) ...[
-                const SizedBox(width: UmSpace.s4),
-                Semantics(
-                  label: l10n.ridePriceLabel(price),
-                  excludeSemantics: true,
-                  child: Text(price, style: UmText.h2.copyWith(color: c.brandStrong)),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: UmSpace.s3),
-          Row(
-            children: [
-              chip,
-              const Spacer(),
-              if (actionLabel != null)
-                UmButton(label: actionLabel!, variant: actionVariant, onPressed: onAction),
-            ],
-          ),
         ],
       ),
     );
-    return live ? _LivePulse(child: card) : card;
+
+    final faded = status == UmRideStatus.cancelled || status == UmRideStatus.completed;
+    final shape = BorderRadius.circular(UmRadius.md);
+    Widget card = Container(
+      constraints: const BoxConstraints(maxWidth: UmSize.rideCardMaxWidth),
+      decoration: BoxDecoration(
+        color: live ? null : (faded ? c.surface : c.surfaceRaised),
+        borderRadius: shape,
+        boxShadow: faded || live ? null : context.umShadowSoft,
+        border: faded ? Border.all(color: c.border) : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!live) Container(width: UmSize.rideAccent, color: accent),
+            Expanded(child: content),
+          ],
+        ),
+      ),
+    );
+    if (live) card = _LiveGradient(child: card);
+    if (onTap != null) {
+      card = Material(
+        type: MaterialType.transparency,
+        child: InkWell(borderRadius: shape, onTap: onTap, child: card),
+      );
+    }
+    return card;
   }
 }
 
 class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.role});
+  const _RoleBadge({required this.role, required this.onGradient});
 
   final UmRideRole role;
+  final bool onGradient;
 
   @override
   Widget build(BuildContext context) {
     final c = context.umColors;
     final l10n = AppLocalizations.of(context);
     final driver = role == UmRideRole.driver;
-    final fg = driver ? c.onBrand : c.brandStrong;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: UmSpace.s3, vertical: UmSpace.s1),
-      decoration: BoxDecoration(
-        color: driver ? c.brandStrong : c.lavender,
-        borderRadius: BorderRadius.circular(UmRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
+    final label = driver ? l10n.badgeDriver : l10n.badgePassenger;
+    final (bg, fg) = onGradient
+        ? (c.onBrand, c.brandStrong)
+        : driver
+        ? (c.brandStrong, c.onBrand)
+        : (c.lavender, c.brandStrong);
+    // Icône seule à l'écran (texte pour les lecteurs d'écran et en info-bulle).
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: label,
+        excludeSemantics: true,
+        child: Container(
+          width: UmSize.roleBadge,
+          height: UmSize.roleBadge,
+          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+          child: Icon(
             driver ? Icons.directions_car_rounded : Icons.airline_seat_recline_normal_rounded,
-            size: UmSize.iconMd,
+            size: UmSize.iconSm,
             color: fg,
           ),
-          const SizedBox(width: UmSpace.s2),
-          Flexible(
-            child: Text(
-              driver ? l10n.badgeDriver : l10n.badgePassenger,
-              style: UmText.button.copyWith(color: fg),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Contour pulsé du trajet en cours.
-class _LivePulse extends StatefulWidget {
-  const _LivePulse({required this.child});
+/// Puce « En cours » sur fond dégradé : blanche, avec un point.
+class _LiveChip extends StatelessWidget {
+  const _LiveChip({required this.label});
 
-  final Widget child;
+  final String label;
 
   @override
-  State<_LivePulse> createState() => _LivePulseState();
+  Widget build(BuildContext context) {
+    final c = context.umColors;
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: UmSpace.s3, vertical: UmSpace.s1),
+        decoration: BoxDecoration(
+          color: c.onBrand,
+          borderRadius: BorderRadius.circular(UmRadius.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.near_me_rounded, size: UmSize.iconSm, color: c.brandStrong),
+            const SizedBox(width: UmSpace.s1),
+            Text(label, style: UmText.label.copyWith(color: c.brandStrong)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  );
+/// Fond du trajet en cours : dégradé de la marque qui glisse doucement (fixe si les
+/// animations sont réduites).
+class UmLiveGradient extends StatefulWidget {
+  const UmLiveGradient({super.key, required this.child, this.radius = UmRadius.md});
+
+  final Widget child;
+  final double radius;
+
+  @override
+  State<UmLiveGradient> createState() => _UmLiveGradientState();
+}
+
+typedef _LiveGradient = UmLiveGradient;
+
+class _UmLiveGradientState extends State<UmLiveGradient> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 3));
 
   @override
   void didChangeDependencies() {
@@ -222,7 +319,7 @@ class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMi
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller
         ..stop()
-        ..value = 1;
+        ..value = 0.5;
     } else if (!_controller.isAnimating) {
       _controller.repeat(reverse: true);
     }
@@ -239,56 +336,23 @@ class _LivePulseState extends State<_LivePulse> with SingleTickerProviderStateMi
     final c = context.umColors;
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(UmRadius.md),
-          border: Border.all(
-            color: Color.lerp(c.lavender, c.brand, _controller.value)!,
-            width: UmSize.routeRing,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            boxShadow: context.umShadowSoft,
+            gradient: LinearGradient(
+              begin: Alignment(-1 - t, -1),
+              end: Alignment(1 - t, 1),
+              colors: [c.brandStrong, c.brand, c.brandStrong],
+              tileMode: TileMode.mirror,
+            ),
           ),
-        ),
-        child: child,
-      ),
+          child: child,
+        );
+      },
       child: widget.child,
-    );
-  }
-}
-
-class _Stop extends StatelessWidget {
-  const _Stop({required this.label, required this.semantic, required this.isEnd});
-
-  final String label;
-  final String semantic;
-  final bool isEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.umColors;
-    return Semantics(
-      label: semantic,
-      excludeSemantics: true,
-      child: Row(
-        children: [
-          Container(
-            width: UmSize.routeDot,
-            height: UmSize.routeDot,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isEnd ? null : c.brand,
-              border: isEnd ? Border.all(color: c.brandStrong, width: UmSize.routeRing) : null,
-            ),
-          ),
-          const SizedBox(width: UmSpace.s2),
-          Expanded(
-            child: Text(
-              label,
-              style: UmText.body.copyWith(fontWeight: FontWeight.w600, color: c.ink),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

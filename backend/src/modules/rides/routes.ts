@@ -2,7 +2,9 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { RideLifecycle } from './lifecycle.js';
 import {
+  historyResponse,
   navigationResponse,
+  previewResponse,
   participantParams,
   pickupBody,
   presenceResponse,
@@ -18,6 +20,18 @@ export const ridesRoutes: FastifyPluginAsyncZod<{ service: RidesService; lifecyc
   { service, lifecycle },
 ) => {
   app.addHook('preHandler', app.authenticate);
+
+  // Trajets terminés (historique du profil) ; route fixe, prioritaire sur /rides/:id.
+  app.get('/rides/history', { schema: { response: { 200: historyResponse } } }, async (request) => ({
+    rides: await service.history(request.userId),
+  }));
+
+  // Aperçu avant confirmation (proposés compris) : un appel d'itinéraire, puis gardé en mémoire.
+  app.get(
+    '/rides/:id/preview',
+    { schema: { params: rideParams, response: { 200: previewResponse } }, config: { rateLimit: { max: 60, timeWindow: '1 hour' } } },
+    (request) => service.preview(request.userId, request.params.id),
+  );
 
   app.get('/rides/:id', { schema: { params: rideParams, response: { 200: ride } } }, (request) =>
     service.get(request.userId, request.params.id),

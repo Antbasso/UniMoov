@@ -301,6 +301,14 @@ describe('clôture', () => {
     expect(byAccount[`held:${user('Hugo').id}`]).toBe(0);
     // Clôture rejouée : sans effet.
     expect((await call('Léa', 'POST', `/rides/${rideId}/finish`)).statusCode).toBe(204);
+
+    // Historique du profil : le trajet terminé, avec ce que chacun a payé ou reçu.
+    type History = { rides: { id: string; role: string; amountCents: number | null; with: string[] }[] };
+    const hugoHistory = (await call('Hugo', 'GET', '/rides/history')).json<History>();
+    expect(hugoHistory.rides[0]).toMatchObject({ id: rideId, role: 'passenger', amountCents: paid, with: ['Léa'] });
+    const leaHistory = (await call('Léa', 'GET', '/rides/history')).json<History>();
+    expect(leaHistory.rides[0]).toMatchObject({ id: rideId, role: 'driver', amountCents: hugoPayment.share_cents });
+    expect(leaHistory.rides[0]!.with).toContain('Hugo');
   });
 
   it('trajet oublié « en cours » : clôturé automatiquement, départ refusé longtemps après', async () => {

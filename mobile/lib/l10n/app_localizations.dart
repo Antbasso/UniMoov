@@ -146,12 +146,6 @@ abstract class AppLocalizations {
   /// **'{time} · avec {driver}'**
   String rideMeta(String time, String driver);
 
-  /// No description provided for @rideSeats.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}'**
-  String rideSeats(int count);
-
   /// No description provided for @ridePriceLabel.
   ///
   /// In fr, this message translates to:
@@ -161,7 +155,7 @@ abstract class AppLocalizations {
   /// No description provided for @rideStatusProposed.
   ///
   /// In fr, this message translates to:
-  /// **'Proposé'**
+  /// **'À confirmer'**
   String get rideStatusProposed;
 
   /// No description provided for @rideStatusConfirmed.
@@ -187,12 +181,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Covoiturage domicile-campus pour les étudiants d\'Annecy'**
   String get welcomeSubtitle;
-
-  /// No description provided for @welcomeNote.
-  ///
-  /// In fr, this message translates to:
-  /// **'Inscris-toi en deux minutes !'**
-  String get welcomeNote;
 
   /// No description provided for @welcomeBenefitSchedule.
   ///
@@ -307,12 +295,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Enregistrer'**
   String get save;
-
-  /// No description provided for @edit.
-  ///
-  /// In fr, this message translates to:
-  /// **'Modifier'**
-  String get edit;
 
   /// No description provided for @errorGeneric.
   ///
@@ -698,12 +680,6 @@ abstract class AppLocalizations {
   /// **'Automatique'**
   String get roleAuto;
 
-  /// No description provided for @roleAutoHelp.
-  ///
-  /// In fr, this message translates to:
-  /// **'Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.'**
-  String get roleAutoHelp;
-
   /// No description provided for @roleDriver.
   ///
   /// In fr, this message translates to:
@@ -812,29 +788,11 @@ abstract class AppLocalizations {
   /// **'Mettre en pause'**
   String get pauseAction;
 
-  /// No description provided for @pauseManage.
-  ///
-  /// In fr, this message translates to:
-  /// **'Gérer mes pauses'**
-  String get pauseManage;
-
   /// No description provided for @weekTitle.
   ///
   /// In fr, this message translates to:
   /// **'Ta semaine'**
   String get weekTitle;
-
-  /// No description provided for @profileTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mon profil'**
-  String get profileTitle;
-
-  /// No description provided for @profileIdentity.
-  ///
-  /// In fr, this message translates to:
-  /// **'Identité'**
-  String get profileIdentity;
 
   /// No description provided for @profileAddress.
   ///
@@ -865,12 +823,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{consumption} L/100 km · {seats} places · détour {detour} min'**
   String profileVehicleSummary(String consumption, int seats, int detour);
-
-  /// No description provided for @profileRemoveVehicle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Retirer le véhicule'**
-  String get profileRemoveVehicle;
 
   /// No description provided for @profileRole.
   ///
@@ -1022,12 +974,6 @@ abstract class AppLocalizations {
   /// **'Choisir la première pause'**
   String get pauseChooseFirst;
 
-  /// No description provided for @pauseNeedDays.
-  ///
-  /// In fr, this message translates to:
-  /// **'Choisis au moins un jour.'**
-  String get pauseNeedDays;
-
   /// No description provided for @pauseTooLongForPeriod.
   ///
   /// In fr, this message translates to:
@@ -1051,18 +997,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Campus d\'Annecy'**
   String get campusName;
-
-  /// No description provided for @nearYourHome.
-  ///
-  /// In fr, this message translates to:
-  /// **'Près de chez toi'**
-  String get nearYourHome;
-
-  /// No description provided for @yourHome.
-  ///
-  /// In fr, this message translates to:
-  /// **'Chez toi'**
-  String get yourHome;
 
   /// No description provided for @calendarBody.
   ///
@@ -1118,12 +1052,6 @@ abstract class AppLocalizations {
   /// **'Coche la case pour autoriser la lecture de ton agenda.'**
   String get icsConsentRequired;
 
-  /// No description provided for @icsConnect.
-  ///
-  /// In fr, this message translates to:
-  /// **'Connecter mon agenda'**
-  String get icsConnect;
-
   /// No description provided for @manualTitle.
   ///
   /// In fr, this message translates to:
@@ -1135,12 +1063,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Indique l\'heure de ton premier cours et la fin de ton dernier, pour chaque jour.'**
   String get manualBody;
-
-  /// No description provided for @manualSave.
-  ///
-  /// In fr, this message translates to:
-  /// **'Enregistrer mes horaires'**
-  String get manualSave;
 
   /// No description provided for @manualStart.
   ///
@@ -1340,30 +1262,6 @@ abstract class AppLocalizations {
   /// **'Retour'**
   String get directionFrom;
 
-  /// No description provided for @rideWith.
-  ///
-  /// In fr, this message translates to:
-  /// **'Avec {driver}'**
-  String rideWith(String driver);
-
-  /// No description provided for @rideMetaDriverShort.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =0{Aucun passager pour l\'instant} =1{1 passager} other{{count} passagers}}'**
-  String rideMetaDriverShort(int count);
-
-  /// No description provided for @rideMetaDriver.
-  ///
-  /// In fr, this message translates to:
-  /// **'{time} · tu conduis · {count, plural, =0{aucun passager pour l\'instant} =1{1 passager} other{{count} passagers}}'**
-  String rideMetaDriver(String time, int count);
-
-  /// No description provided for @see.
-  ///
-  /// In fr, this message translates to:
-  /// **'Voir'**
-  String get see;
-
   /// No description provided for @proposalTitleTo.
   ///
   /// In fr, this message translates to:
@@ -1375,24 +1273,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Retour du {day}'**
   String proposalTitleFrom(String day);
-
-  /// No description provided for @proposalTime.
-  ///
-  /// In fr, this message translates to:
-  /// **'Horaire : {time}'**
-  String proposalTime(String time);
-
-  /// No description provided for @proposalDriverIntro.
-  ///
-  /// In fr, this message translates to:
-  /// **'Tu montes avec'**
-  String get proposalDriverIntro;
-
-  /// No description provided for @proposalPassengersIntro.
-  ///
-  /// In fr, this message translates to:
-  /// **'Tes passagers'**
-  String get proposalPassengersIntro;
 
   /// No description provided for @proposalNoPassengers.
   ///
@@ -1406,40 +1286,10 @@ abstract class AppLocalizations {
   /// **'Fiabilité {score} sur 5 · détour {minutes} min'**
   String personDetails(String score, int minutes);
 
-  /// No description provided for @personDetailsDriver.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fiabilité {score} sur 5 · fait {minutes} min de détour pour toi'**
-  String personDetailsDriver(String score, int minutes);
-
-  /// No description provided for @sectorEnlarge.
-  ///
-  /// In fr, this message translates to:
-  /// **'Touche pour agrandir'**
-  String get sectorEnlarge;
-
-  /// No description provided for @sectorTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Secteur de {name}'**
-  String sectorTitle(String name);
-
-  /// No description provided for @sectorBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Zone approximative : le domicile se trouve quelque part dans le cercle. L\'adresse exacte s\'affiche une fois le trajet confirmé à deux.'**
-  String get sectorBody;
-
-  /// No description provided for @sectorMapLabel.
-  ///
-  /// In fr, this message translates to:
-  /// **'Carte : cercle autour du secteur de {name} et campus'**
-  String sectorMapLabel(String name);
-
   /// No description provided for @privacyNote.
   ///
   /// In fr, this message translates to:
-  /// **'Nom et adresse exacte s\'affichent seulement une fois le trajet confirmé à deux.'**
+  /// **'Nom et adresse sont partagés seulement quand vous avez accepté tous les deux.'**
   String get privacyNote;
 
   /// No description provided for @accept.
@@ -1465,18 +1315,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Trajet confirmé'**
   String get proposalConfirmed;
-
-  /// No description provided for @proposalWaiting.
-  ///
-  /// In fr, this message translates to:
-  /// **'Tu as accepté. On attend la réponse de l\'autre.'**
-  String get proposalWaiting;
-
-  /// No description provided for @proposalDeclined.
-  ///
-  /// In fr, this message translates to:
-  /// **'Proposition refusée.'**
-  String get proposalDeclined;
 
   /// No description provided for @alternativesTitle.
   ///
@@ -1538,12 +1376,6 @@ abstract class AppLocalizations {
   /// **'Choisis un jour et un sens, puis lance la recherche.'**
   String get searchHint;
 
-  /// No description provided for @seatsLeftLabel.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =1{1 place} other{{count} places}}'**
-  String seatsLeftLabel(int count);
-
   /// No description provided for @profileSchedule.
   ///
   /// In fr, this message translates to:
@@ -1592,12 +1424,6 @@ abstract class AppLocalizations {
   /// **'Emploi du temps mis à jour.'**
   String get scheduleSynced;
 
-  /// No description provided for @rideMapOpen.
-  ///
-  /// In fr, this message translates to:
-  /// **'Voir la carte'**
-  String get rideMapOpen;
-
   /// No description provided for @rideMapLabel.
   ///
   /// In fr, this message translates to:
@@ -1609,12 +1435,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tracé approximatif : le calcul d\'itinéraire n\'était pas disponible.'**
   String get rideRouteEstimated;
-
-  /// No description provided for @rideStopsTitle.
-  ///
-  /// In fr, this message translates to:
-  /// **'Arrêts'**
-  String get rideStopsTitle;
 
   /// No description provided for @rideStopAround.
   ///
@@ -1652,12 +1472,6 @@ abstract class AppLocalizations {
   /// **'Tu reçois {price}'**
   String ridePriceYouReceive(String price);
 
-  /// No description provided for @ridePriceDetail.
-  ///
-  /// In fr, this message translates to:
-  /// **'Estimation : {total} de carburant partagés entre {persons} personnes, plus {commission} de frais de service par passager. Le prix final est calculé à l\'arrivée.'**
-  String ridePriceDetail(String total, int persons, String commission);
-
   /// No description provided for @ridePriceUnknown.
   ///
   /// In fr, this message translates to:
@@ -1673,13 +1487,13 @@ abstract class AppLocalizations {
   /// No description provided for @rideChooseMeetingPoint.
   ///
   /// In fr, this message translates to:
-  /// **'Choisir un point de rendez-vous'**
+  /// **'Fixer un rendez-vous'**
   String get rideChooseMeetingPoint;
 
   /// No description provided for @rideChangeMeetingPoint.
   ///
   /// In fr, this message translates to:
-  /// **'Changer de point de rendez-vous'**
+  /// **'Modifier le rendez-vous'**
   String get rideChangeMeetingPoint;
 
   /// No description provided for @meetingPointTitle.
@@ -2534,12 +2348,6 @@ abstract class AppLocalizations {
   /// **'Fiabilité'**
   String get profileReliability;
 
-  /// No description provided for @profileReliabilityBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Ton score, ce qui le compose, et les pénalités que tu peux contester.'**
-  String get profileReliabilityBody;
-
   /// No description provided for @reliabilityTitle.
   ///
   /// In fr, this message translates to:
@@ -3134,23 +2942,11 @@ abstract class AppLocalizations {
   /// **'Chat du trajet'**
   String get rideChat;
 
-  /// No description provided for @rideChatOpen.
-  ///
-  /// In fr, this message translates to:
-  /// **'Écrire au groupe'**
-  String get rideChatOpen;
-
   /// No description provided for @profileNotifications.
   ///
   /// In fr, this message translates to:
   /// **'Notifications'**
   String get profileNotifications;
-
-  /// No description provided for @profileNotificationsBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Choisis ce qui te prévient sur ton téléphone.'**
-  String get profileNotificationsBody;
 
   /// No description provided for @notificationsTitle.
   ///
@@ -3289,18 +3085,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ton téléphone bloque les notifications d\'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.'**
   String get notificationsBlockedBody;
-
-  /// No description provided for @profileData.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mes données'**
-  String get profileData;
-
-  /// No description provided for @profileDataBody.
-  ///
-  /// In fr, this message translates to:
-  /// **'Récupère tout ce qu\'Uni-Moov garde sur toi, ou supprime ton compte.'**
-  String get profileDataBody;
 
   /// No description provided for @exportAction.
   ///
@@ -3464,23 +3248,11 @@ abstract class AppLocalizations {
   /// **'Demande envoyée'**
   String get requestSent;
 
-  /// No description provided for @requestPending.
-  ///
-  /// In fr, this message translates to:
-  /// **'{driver} doit accepter ta demande. Son nom et son adresse restent masqués jusque-là.'**
-  String requestPending(String driver);
-
   /// No description provided for @requestWithdraw.
   ///
   /// In fr, this message translates to:
   /// **'Retirer ma demande'**
   String get requestWithdraw;
-
-  /// No description provided for @requestFrom.
-  ///
-  /// In fr, this message translates to:
-  /// **'Demande à monter avec toi.'**
-  String get requestFrom;
 
   /// No description provided for @requestApprove.
   ///
@@ -3493,6 +3265,180 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Refuser'**
   String get requestReject;
+
+  /// No description provided for @homePlace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Domicile'**
+  String get homePlace;
+
+  /// No description provided for @rideSeatsTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'{taken}/{total}'**
+  String rideSeatsTaken(int taken, int total);
+
+  /// No description provided for @homeBalance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Solde : {amount}. Ouvrir le portefeuille'**
+  String homeBalance(String amount);
+
+  /// No description provided for @rideStatusLive.
+  ///
+  /// In fr, this message translates to:
+  /// **'En cours'**
+  String get rideStatusLive;
+
+  /// No description provided for @historyTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get historyTitle;
+
+  /// No description provided for @historyEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tes trajets terminés apparaîtront ici.'**
+  String get historyEmpty;
+
+  /// No description provided for @historyAbsent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Absent'**
+  String get historyAbsent;
+
+  /// No description provided for @roleAutoInfoTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment marche le mode automatique'**
+  String get roleAutoInfoTooltip;
+
+  /// No description provided for @roleAutoInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque jour, Uni-Moov regarde les besoins de ton secteur. S\'il manque un conducteur, tu conduis ; sinon tu montes avec quelqu\'un. Entre plusieurs conducteurs possibles, on alterne : celui qui a le moins conduit ces dernières semaines prend le volant. Tes pauses programmées sont toujours respectées.'**
+  String get roleAutoInfo;
+
+  /// No description provided for @understood.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compris'**
+  String get understood;
+
+  /// No description provided for @tripTitleTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aller · {date}'**
+  String tripTitleTo(String date);
+
+  /// No description provided for @tripTitleFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour · {date}'**
+  String tripTitleFrom(String date);
+
+  /// No description provided for @statScore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note : {score} sur 5'**
+  String statScore(String score);
+
+  /// No description provided for @statDetour.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{minutes} min'**
+  String statDetour(int minutes);
+
+  /// No description provided for @statDetourDriver.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fait {minutes} minutes de détour pour toi'**
+  String statDetourDriver(int minutes);
+
+  /// No description provided for @statDetourPassenger.
+  ///
+  /// In fr, this message translates to:
+  /// **'Te fait faire {minutes} minutes de détour'**
+  String statDetourPassenger(int minutes);
+
+  /// No description provided for @personAccepted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepté'**
+  String get personAccepted;
+
+  /// No description provided for @personRequested.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande'**
+  String get personRequested;
+
+  /// No description provided for @personPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get personPending;
+
+  /// No description provided for @priceBulletFuel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carburant du trajet : {amount}'**
+  String priceBulletFuel(String amount);
+
+  /// No description provided for @priceBulletShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ta part : {mine} km sur {total} km'**
+  String priceBulletShare(String mine, String total);
+
+  /// No description provided for @priceBulletPersons.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Pour 1 personne} other{Partagé au km entre {count} personnes}}'**
+  String priceBulletPersons(int count);
+
+  /// No description provided for @priceBulletCommission.
+  ///
+  /// In fr, this message translates to:
+  /// **'Frais de service : {amount}'**
+  String priceBulletCommission(String amount);
+
+  /// No description provided for @priceBulletFinal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix final calculé à l\'arrivée'**
+  String get priceBulletFinal;
+
+  /// No description provided for @stopOnBoard.
+  ///
+  /// In fr, this message translates to:
+  /// **'À bord'**
+  String get stopOnBoard;
+
+  /// No description provided for @moreActions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus d\'actions'**
+  String get moreActions;
+
+  /// No description provided for @rideDetailsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détails du trajet'**
+  String get rideDetailsTitle;
+
+  /// No description provided for @proposalMapLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Carte du trajet proposé} =1{Carte du trajet proposé, 1 personne en zone approximative} other{Carte du trajet proposé, {count} personnes en zones approximatives}}'**
+  String proposalMapLabel(int count);
+
+  /// No description provided for @chatRideBar.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton trajet'**
+  String get chatRideBar;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

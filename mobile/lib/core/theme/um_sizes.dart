@@ -21,6 +21,17 @@ abstract final class UmSize {
   static const double fieldMaxWidth = 360;
   static const double rideCardMaxWidth = 420;
 
+  /// Bord coloré d'une carte de trajet (teinte de l'état).
+  static const double rideAccent = 4;
+
+  /// Pastille du rôle (voiture ou siège) sur une carte de trajet.
+  static const double roleBadge = 32;
+
+  /// Photo de profil : liste, puis en-tête de profil.
+  static const double avatar = 40;
+  static const double avatarLg = 64;
+  static const double avatarXl = 96;
+
   /// Repères de trajet de la carte : pastille pleine et anneau d'arrivée.
   static const double routeDot = 12;
   static const double routeRing = 3;
@@ -39,6 +50,9 @@ abstract final class UmSize {
 
   /// Logo complet : largeur affichée (minimum 120 px, logo.md).
   static const double logoWidth = 160;
+
+  /// Logo de l'écran d'accueil (avant connexion), au plus.
+  static const double logoHero = 220;
 
   /// Inclinaison du sticker manuscrit, en degrés.
   static const double noteAngleDegrees = -4;

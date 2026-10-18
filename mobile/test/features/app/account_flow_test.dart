@@ -5,6 +5,8 @@ import 'package:unimoov/core/api/api_client.dart';
 import 'package:unimoov/core/router/redirect.dart';
 import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
+import 'package:unimoov/features/proposals/domain/proposal.dart';
+import 'package:unimoov/features/rides/domain/ride.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/chat_fakes.dart';
@@ -41,12 +43,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('profil : solde visible, historique des trajets terminés', (tester) async {
+    backend.historyEntries = [
+      HistoryEntry(
+        id: 'ride-1',
+        day: DateTime(2026, 10, 12),
+        direction: Direction.toCampus,
+        time: DateTime(2026, 10, 12, 8),
+        isDriver: false,
+        myStatus: 'accepted',
+        amountCents: 245,
+        withNames: const ['Nathan'],
+      ),
+    ];
+    await open(tester, AppRoutes.profile);
+    // Le solde se lit directement, sans « Modifier ».
+    expect(find.text('Portefeuille'), findsOneWidget);
+    expect(find.text('Modifier'), findsNothing);
+    await tapText(tester, 'Historique');
+    expect(find.textContaining('Lundi 12 octobre'), findsOneWidget);
+    expect(find.textContaining('Nathan'), findsOneWidget);
+    expect(find.textContaining('2,45'), findsOneWidget);
+  });
+
   testWidgets('profil : télécharger mes données ouvre la feuille de partage avec le fichier', (
     tester,
   ) async {
     final sharer = FakeExportSharer();
     await open(tester, AppRoutes.profile, sharer: sharer);
-    expect(find.text('Mes données'), findsOneWidget);
+    expect(find.text('Exporter mes données'), findsOneWidget);
     await tapText(tester, 'Exporter mes données');
     expect(sharer.shared.single.fileName, 'uni-moov-mes-donnees.json');
     expect(sharer.shared.single.content, contains('lea@etu.univ-smb.fr'));
@@ -121,7 +146,7 @@ void main() {
     await open(tester, AppRoutes.profile);
     await tapText(tester, 'Supprimer mon compte');
     await tapText(tester, 'Garder mon compte');
-    expect(find.text('Mes données'), findsOneWidget);
+    expect(find.text('Exporter mes données'), findsOneWidget);
   });
 
   testWidgets('notifications bloquées sur le téléphone : encart et accès aux réglages', (

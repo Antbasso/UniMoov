@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/error_messages.dart';
@@ -8,16 +9,26 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../rides/data/rides_api.dart';
+import '../../rides/domain/ride.dart';
+import '../../rides/presentation/ride_map.dart';
+import '../../rides/presentation/ride_screen.dart';
+import '../../rides/presentation/trip_widgets.dart';
 import '../../trust/presentation/cancel_sheet.dart';
+import '../../wallet/presentation/insufficient_funds_dialog.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
-import '../../wallet/presentation/insufficient_funds_dialog.dart';
-import '../../chat/presentation/open_ride_chat.dart';
-import 'sector_sheet.dart';
 
-/// Détail d'une proposition : informations publiques seulement, puis accepter, refuser ou
-/// voir d'autres voitures.
+/// Tracé d'un trajet proposé (avant confirmation).
+final ridePreviewProvider = FutureProvider.autoDispose.family<RidePreview, String>(
+  (ref, id) => ref.watch(ridesApiProvider).preview(id),
+  retry: (retryCount, error) => null,
+);
+
+/// Un trajet de la semaine, en un seul écran. Confirmé : l'écran du trajet (carte, arrêts,
+/// prix, chat). Sinon : la carte du trajet proposé tout de suite, les personnes dessous (et sur
+/// la carte, en provisoire tant qu'elles n'ont pas accepté), puis accepter ou refuser.
 class ProposalScreen extends ConsumerStatefulWidget {
   const ProposalScreen({super.key, required this.week, required this.id});
 
@@ -51,6 +62,7 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
     final router = GoRouter.of(context);
     try {
       await action();
+      ref.invalidate(ridePreviewProvider(widget.id));
       if (popAfter && router.canPop()) router.pop();
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -82,21 +94,15 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         ],
       );
     }
-    // Trajet commencé ou terminé : plus d'annulation ici (l'écran du trajet s'en charge).
+    // Engagé sur un trajet confirmé : directement l'écran du trajet, sans clic de plus.
+    if (proposal.state == ProposalState.confirmed) {
+      return RideScreen(id: proposal.id, proposal: proposal);
+    }
     final open = proposal.rideStatus == 'proposed' || proposal.rideStatus == 'confirmed';
 
-    final day = formatDayInline(proposal.day, l10n.localeName);
-    final title = proposal.direction == Direction.toCampus
-        ? l10n.proposalTitleTo(day)
-        : l10n.proposalTitleFrom(day);
     final status = switch (proposal.state) {
-      ProposalState.confirmed => UmChip(
-        label: l10n.proposalConfirmed,
-        icon: Icons.check_circle_outline_rounded,
-        tone: UmChipTone.success,
-      ),
       ProposalState.waiting => UmChip(
-        label: l10n.proposalWaiting,
+        label: l10n.rideStatusWaiting,
         icon: Icons.hourglass_empty_rounded,
       ),
       ProposalState.requested => UmChip(
@@ -108,185 +114,250 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
         icon: Icons.cancel_outlined,
         tone: UmChipTone.danger,
       ),
-      ProposalState.proposed => null,
+      _ => UmChip(label: l10n.rideStatusProposed, icon: Icons.schedule_rounded),
     };
+    final people = proposal.isDriver
+        ? proposal.passengers.where(personVisible).toList()
+        : [?proposal.driver];
 
-    return UmPage(
-      appBar: AppBar(),
-      title: title,
-      intro: l10n.proposalTime(formatTime(proposal.time, l10n.localeName)),
-      footer: [
-        if (proposal.canAnswer) ...[
-          UmButton(
-            label: l10n.accept,
-            expand: true,
-            loading: _busy,
-            onPressed: () => _run(() => controller.accept(proposal.id)),
-          ),
-          if (!proposal.isDriver)
+    final footer = <Widget>[
+      if (proposal.canAnswer) ...[
+        UmButton(
+          label: l10n.accept,
+          expand: true,
+          loading: _busy,
+          onPressed: () => _run(() => controller.accept(proposal.id)),
+        ),
+        // Côte à côte s'il y a la place, l'un sous l'autre sinon (texte agrandi).
+        OverflowBar(
+          alignment: MainAxisAlignment.spaceEvenly,
+          overflowAlignment: OverflowBarAlignment.center,
+          children: [
             UmButton(
-              label: l10n.seeOthers,
-              variant: UmButtonVariant.secondary,
-              expand: true,
+              label: l10n.decline,
+              variant: UmButtonVariant.ghost,
               onPressed: _busy
                   ? null
-                  : () => context.push(AppRoutes.alternatives(widget.week, proposal.id)),
+                  : () => _run(() => controller.decline(proposal.id), popAfter: true),
             ),
-          UmButton(
-            label: l10n.decline,
-            variant: UmButtonVariant.ghost,
-            expand: true,
-            onPressed: _busy
-                ? null
-                : () => _run(() => controller.decline(proposal.id), popAfter: true),
-          ),
-        ],
-        if (proposal.state == ProposalState.requested)
-          UmButton(
-            label: l10n.requestWithdraw,
-            variant: UmButtonVariant.ghost,
-            expand: true,
-            loading: _busy,
-            onPressed: () => _run(() => controller.decline(proposal.id), popAfter: true),
-          ),
-        if (proposal.state == ProposalState.confirmed) ...[
-          UmButton(
-            label: l10n.rideMapOpen,
-            expand: true,
-            onPressed: () => context.push(AppRoutes.ride(proposal.id)),
-          ),
-          // Trajet confirmé : la conversation du groupe est ouverte (cahier §6).
-          UmButton(
-            label: l10n.rideChatOpen,
-            icon: Icons.chat_bubble_outline_rounded,
-            variant: UmButtonVariant.secondary,
-            expand: true,
-            onPressed: () => _run(() => openRideChat(context, ref, proposal.id)),
-          ),
-        ],
-        // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
-        if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled && open)
-          UmButton(
-            label: proposal.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
-            variant: UmButtonVariant.ghost,
-            expand: true,
-            onPressed: _busy ? null : () => _cancel(proposal.id),
-          ),
-        // Le conducteur engagé peut proposer des places, même avant la confirmation.
-        if (proposal.isDriver &&
-            proposal.myStatus == 'accepted' &&
-            proposal.state != ProposalState.cancelled &&
-            open)
-          UmButton(
-            label: l10n.rideAddPassengers,
-            variant: UmButtonVariant.secondary,
-            expand: true,
-            onPressed: () => context.push(AppRoutes.rideSuggestions(proposal.id)),
-          ),
-      ],
-      children: [
-        if (status != null) ...[
-          Align(alignment: Alignment.centerLeft, child: status),
-          const SizedBox(height: UmSpace.s4),
-        ],
-        if (proposal.state == ProposalState.requested) ...[
-          Text(
-            l10n.requestPending(proposal.driver!.firstName),
-            style: UmText.body.copyWith(color: c.ink),
-          ),
-          const SizedBox(height: UmSpace.s4),
-        ],
-        Text(
-          proposal.isDriver ? l10n.proposalPassengersIntro : l10n.proposalDriverIntro,
-          style: UmText.label.copyWith(color: c.brandStrong),
+            if (!proposal.isDriver)
+              UmButton(
+                label: l10n.seeOthers,
+                variant: UmButtonVariant.ghost,
+                onPressed: _busy
+                    ? null
+                    : () => context.push(AppRoutes.alternatives(widget.week, proposal.id)),
+              ),
+          ],
         ),
-        const SizedBox(height: UmSpace.s2),
-        if (proposal.isDriver && proposal.passengers.isEmpty)
-          Text(l10n.proposalNoPassengers, style: UmText.body.copyWith(color: c.inkMuted)),
-        for (final person in proposal.isDriver ? proposal.passengers : [proposal.driver!])
-          Padding(
-            padding: const EdgeInsets.only(bottom: UmSpace.s3),
-            child: PersonCard(
-              person: person,
-              isDriver: !proposal.isDriver,
-              // Conducteur : une demande de place attend sa réponse.
-              actions: proposal.isDriver && person.isRequest
-                  ? [
-                      UmButton(
-                        label: l10n.requestApprove,
-                        loading: _busy,
-                        onPressed: () => _run(
-                          () => controller.answerRequest(proposal.id, person.userId, approve: true),
+      ],
+      if (proposal.state == ProposalState.requested)
+        UmButton(
+          label: l10n.requestWithdraw,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          loading: _busy,
+          onPressed: () => _run(() => controller.decline(proposal.id), popAfter: true),
+        ),
+      // Engagé (accepté) : annuler est une annulation avec pénalité, plus un simple refus.
+      if (proposal.myStatus == 'accepted' && proposal.state != ProposalState.cancelled && open)
+        UmButton(
+          label: proposal.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
+          variant: UmButtonVariant.ghost,
+          expand: true,
+          onPressed: _busy ? null : () => _cancel(proposal.id),
+        ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          tripTitle(l10n, proposal.direction, proposal.day),
+          style: UmText.h3.copyWith(color: c.ink),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: UmSize.mapHeight,
+              child: _PreviewMap(proposal: proposal),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(UmSpace.s5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            formatTime(proposal.time, l10n.localeName),
+                            style: UmText.h2.copyWith(color: c.ink),
+                          ),
+                        ),
+                        status,
+                      ],
+                    ),
+                    const SizedBox(height: UmSpace.s4),
+                    if (proposal.isDriver && people.isEmpty)
+                      Text(
+                        l10n.proposalNoPassengers,
+                        style: UmText.body.copyWith(color: c.inkMuted),
+                      ),
+                    for (final person in people)
+                      PersonRow(
+                        name: person.firstName,
+                        leading: proposal.isDriver ? null : UmAvatar(name: person.firstName),
+                        stats: personStats(l10n, person, isDriver: !proposal.isDriver),
+                        status: personStatusChip(l10n, person.status),
+                        // Conducteur : une demande de place attend sa réponse.
+                        actions: proposal.isDriver && person.isRequest
+                            ? [
+                                UmButton(
+                                  label: l10n.requestApprove,
+                                  loading: _busy,
+                                  onPressed: () => _run(
+                                    () => controller.answerRequest(
+                                      proposal.id,
+                                      person.userId,
+                                      approve: true,
+                                    ),
+                                  ),
+                                ),
+                                UmButton(
+                                  label: l10n.requestReject,
+                                  variant: UmButtonVariant.ghost,
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(
+                                          () => controller.answerRequest(
+                                            proposal.id,
+                                            person.userId,
+                                            approve: false,
+                                          ),
+                                        ),
+                                ),
+                              ]
+                            : const [],
+                      ),
+                    // Le conducteur engagé peut proposer des places, même avant la confirmation.
+                    if (proposal.isDriver && proposal.myStatus == 'accepted' && open)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: UmButton(
+                          label: l10n.rideAddPassengers,
+                          icon: Icons.person_add_alt_rounded,
+                          variant: UmButtonVariant.ghost,
+                          onPressed: () => context.push(AppRoutes.rideSuggestions(proposal.id)),
                         ),
                       ),
-                      UmButton(
-                        label: l10n.requestReject,
-                        variant: UmButtonVariant.ghost,
-                        onPressed: _busy
-                            ? null
-                            : () => _run(
-                                () => controller.answerRequest(
-                                  proposal.id,
-                                  person.userId,
-                                  approve: false,
-                                ),
-                              ),
-                      ),
-                    ]
-                  : const [],
+                    const SizedBox(height: UmSpace.s3),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.lock_outline_rounded, size: UmSize.iconSm, color: c.inkMuted),
+                        const SizedBox(width: UmSpace.s2),
+                        Expanded(
+                          child: Text(
+                            l10n.privacyNote,
+                            style: UmText.caption.copyWith(color: c.inkMuted),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_errorCode != null) ...[
+                      const SizedBox(height: UmSpace.s4),
+                      UmErrorText(apiErrorMessage(l10n, _errorCode)),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        // Le détour est déjà dans la carte ; un texte collé sous son ombre manquerait de contraste.
-        const SizedBox(height: UmSpace.s4),
-        Text(l10n.privacyNote, style: UmText.caption.copyWith(color: c.inkMuted)),
-        if (_errorCode != null) ...[
-          const SizedBox(height: UmSpace.s4),
-          UmErrorText(apiErrorMessage(l10n, _errorCode)),
-        ],
-      ],
+            if (footer.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(UmSpace.s5, 0, UmSpace.s5, UmSpace.s4),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < footer.length; i++) ...[
+                      if (i > 0) const SizedBox(height: UmSpace.s2),
+                      footer[i],
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-/// Personne avant acceptation : prénom, score, détour, secteur approximatif.
-class PersonCard extends StatelessWidget {
-  const PersonCard({
-    super.key,
-    required this.person,
-    this.isDriver = false,
-    this.actions = const [],
-  });
+/// Carte d'un trajet proposé : tracé du conducteur (sans les abords des domiciles), mon point,
+/// le campus, et chaque personne en zone de 750 m, provisoire tant qu'elle n'a pas accepté.
+class _PreviewMap extends ConsumerWidget {
+  const _PreviewMap({required this.proposal});
 
-  final PublicPerson person;
-
-  /// Conducteur vu par le passager : le détour est celui qu'il fait pour lui.
-  final bool isDriver;
-
-  /// Réponse à une demande de place (conducteur).
-  final List<Widget> actions;
+  final Proposal proposal;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final details = isDriver
-        ? l10n.personDetailsDriver(person.scoreOutOfFive, person.detourMinutes)
-        : l10n.personDetails(person.scoreOutOfFive, person.detourMinutes);
-    final sector = person.sector == null ? null : SectorMap(person: person);
-    return UmCard(
-      title: person.firstName,
-      body: person.isRequest ? '${l10n.requestFrom}\n$details' : details,
-      child: sector == null && actions.isEmpty
-          ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Secteur approximatif directement visible, sous les informations.
-                ?sector,
-                if (sector != null && actions.isNotEmpty) const SizedBox(height: UmSpace.s3),
-                if (actions.isNotEmpty)
-                  Wrap(spacing: UmSpace.s3, runSpacing: UmSpace.s3, children: actions),
-              ],
+    final async = ref.watch(ridePreviewProvider(proposal.id));
+    // Cadrage fait une fois, à la création de la carte : on attend le tracé (ou son échec).
+    if (async.isLoading && !async.hasValue) {
+      return ColoredBox(
+        color: context.umColors.surfaceTint,
+        child: Semantics(
+          label: l10n.loading,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    final preview = async.value;
+    final people = [
+      if (proposal.isDriver) ...proposal.passengers.where(personVisible) else ?proposal.driver,
+    ];
+    final me = preview?.me;
+    final campus = preview?.campus;
+    return RideMap(
+      route: preview?.route ?? const [],
+      dashed: preview?.estimated ?? false,
+      semanticLabel: l10n.proposalMapLabel(people.length),
+      stops: [
+        if (campus != null)
+          RideStop(
+            order: 0,
+            kind: StopKind.campus,
+            label: preview!.campusName,
+            lat: campus.$1,
+            lon: campus.$2,
+            isMeetingPoint: false,
+          ),
+        if (me != null && proposal.isDriver)
+          RideStop(
+            order: 0,
+            kind: StopKind.driver,
+            label: '',
+            lat: me.$1,
+            lon: me.$2,
+            isMeetingPoint: false,
+          ),
+      ],
+      pin: me == null || proposal.isDriver ? null : LatLng(me.$1, me.$2),
+      areas: [
+        for (final person in people)
+          if (person.sector case (final lat, final lon))
+            MapArea(
+              lat: lat,
+              lon: lon,
+              name: person.firstName,
+              driver: !proposal.isDriver,
+              provisional: person.status != 'accepted',
             ),
+      ],
     );
   }
 }

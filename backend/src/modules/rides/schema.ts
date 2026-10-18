@@ -15,6 +15,7 @@ const stop = z.strictObject({
   lon: z.number(),
   eta: z.date().nullable(),
   isMeetingPoint: z.boolean(),
+  approximate: z.boolean(),
   pickedUp: z.boolean(),
   presenceValidated: z.boolean(),
   arrived: z.boolean(),
@@ -84,4 +85,28 @@ export const navigationResponse = z.strictObject({
     waze: z.strictObject({ nextStop: z.string() }),
   }),
   supportsMultiStop: z.strictObject({ googleMaps: z.boolean(), appleMaps: z.boolean(), waze: z.boolean() }),
+});
+
+export const historyResponse = z.strictObject({
+  rides: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      day: z.iso.date(),
+      direction: z.enum(['to_campus', 'from_campus']),
+      time: z.date(),
+      role: z.enum(['driver', 'passenger']),
+      myStatus: z.string(),
+      amountCents: z.number().int().nullable(),
+      with: z.array(z.string()),
+    }),
+  ),
+});
+
+const point = z.strictObject({ lat: z.number(), lon: z.number() });
+
+export const previewResponse = z.strictObject({
+  route: z.array(z.tuple([z.number(), z.number()])),
+  estimated: z.boolean(),
+  campus: point.extend({ name: z.string() }),
+  me: point.nullable(),
 });

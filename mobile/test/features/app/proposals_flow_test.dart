@@ -6,7 +6,6 @@ import 'package:unimoov/core/storage/token_storage.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
-import 'package:unimoov/features/proposals/presentation/sector_sheet.dart';
 import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 import '../../support/app_harness.dart';
@@ -49,34 +48,32 @@ void main() {
     storage = MemoryTokenStorage()..tokens = const AuthTokens(accessToken: 'a', refreshToken: 'r');
   });
 
-  testWidgets('ma semaine : voir, accepter (en attente de l’autre)', (tester) async {
+  testWidgets('ma semaine : ouvrir un trajet, carte et personnes, accepter', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
     expect(find.text('Ta semaine'), findsOneWidget);
-    expect(find.textContaining('Avec Nathan'), findsOneWidget);
-    // Rôle visible d'un coup d'œil : passagère lundi matin, conductrice lundi soir.
-    expect(find.text('Passager'), findsOneWidget);
-    expect(find.text('Tu conduis'), findsOneWidget);
-    expect(find.text('1 passager'), findsOneWidget);
-
-    await tapText(tester, 'Voir', index: 0);
-    expect(find.text('Tu montes avec'), findsOneWidget);
+    // Domicile → campus, sans « près de chez toi » ; rôle d'un coup d'œil (icône et info-bulle).
+    expect(find.textContaining('Domicile', findRichText: true), findsNWidgets(2));
+    expect(find.textContaining('près de chez toi'), findsNothing);
+    expect(find.byTooltip('Passager'), findsOneWidget);
+    expect(find.byTooltip('Tu conduis'), findsOneWidget);
     expect(find.text('Nathan'), findsOneWidget);
-    expect(find.textContaining('Fiabilité 4,5 sur 5'), findsOneWidget);
-    expect(find.textContaining('Nom et adresse exacte'), findsOneWidget);
-    // Le détour est celui que fait le conducteur ; son secteur, un cercle sur une carte.
-    expect(find.textContaining('min de détour pour toi'), findsOneWidget);
-    // Secteur visible tout de suite en mini-carte ; un toucher l'agrandit.
+    expect(find.text('1/3'), findsOneWidget);
+
+    await openTrip(tester, index: 0);
+    // Un seul écran : la carte tout de suite, la personne dessous, en chiffres.
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(backend.previews, 1);
     expect(find.byType(CircleLayer), findsOneWidget);
-    await tester.tap(find.byType(SectorMap));
-    await tester.pumpAndSettle();
-    expect(find.text('Secteur de Nathan'), findsOneWidget);
-    expect(find.byType(CircleLayer), findsNWidgets(2));
-    Navigator.of(tester.element(find.text('Secteur de Nathan'))).pop();
-    await tester.pumpAndSettle();
+    expect(find.text('Nathan'), findsOneWidget);
+    expect(find.text('4,5'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fait 4 minutes de détour pour toi'), findsOneWidget);
+    expect(find.textContaining('Nom et adresse sont partagés'), findsOneWidget);
+    // Titre court dans la barre du haut.
+    expect(find.textContaining('Aller · '), findsOneWidget);
 
     await tapText(tester, 'Accepter');
-    expect(find.text('Tu as accepté. On attend la réponse de l\'autre.'), findsOneWidget);
     expect(find.text('Accepter'), findsNothing);
+    expect(find.text('En attente'), findsWidgets);
     await tester.tap(find.byTooltip('Retour'));
     await tester.pumpAndSettle();
     expect(find.text('En attente'), findsOneWidget);
@@ -85,7 +82,7 @@ void main() {
   testWidgets('solde insuffisant : explication, puis recharge en un geste', (tester) async {
     backend.requiredBalanceCents = 500;
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     await tapText(tester, 'Accepter');
     expect(find.text('Solde insuffisant'), findsOneWidget);
     await tapText(tester, 'Plus tard');
@@ -99,15 +96,15 @@ void main() {
     await tester.tap(find.byTooltip('Retour'));
     await tester.pumpAndSettle();
     await tapText(tester, 'Accepter');
-    expect(find.text('Tu as accepté. On attend la réponse de l\'autre.'), findsOneWidget);
+    expect(find.text('Accepter'), findsNothing);
   });
 
   testWidgets('conducteur : voit ses passagers, sans « voir d’autres »', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tester.tap(find.text('Voir').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Tes passagers'), findsOneWidget);
+    await openTrip(tester, index: -1);
     expect(find.text('Hugo'), findsOneWidget);
+    // Proposé, pas encore accepté : provisoire (dans la liste et sur la carte).
+    expect(find.text('En attente'), findsOneWidget);
     expect(find.text('Voir d\'autres voitures'), findsNothing);
   });
 
@@ -124,30 +121,29 @@ void main() {
       ],
     );
     await launchApp(tester, backend: backend, storage: storage);
-    await tester.tap(find.text('Voir').last);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Demande à monter avec toi.'), findsOneWidget);
+    await openTrip(tester, index: -1);
+    expect(find.text('Demande'), findsOneWidget);
     await tapText(tester, 'Accepter', index: 0);
     expect(backend.requestAnswers.single, (rideId: 'from-monday', userId: 'p9', approve: true));
-    expect(find.textContaining('Demande à monter avec toi.'), findsNothing);
+    expect(find.text('Demande'), findsNothing);
+    expect(find.text('Accepté'), findsOneWidget);
   });
 
   testWidgets('passager : demande en attente, puis retirée', (tester) async {
     backend.weeks[week]![0] = backend.weeks[week]![0].copyWith(myStatus: 'requested');
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     expect(find.text('Demande envoyée'), findsOneWidget);
-    expect(find.textContaining('Nathan doit accepter ta demande'), findsOneWidget);
     expect(find.text('Accepter'), findsNothing);
     await tapText(tester, 'Retirer ma demande');
-    expect(find.textContaining('Avec Nathan'), findsNothing);
+    expect(find.text('Nathan'), findsNothing);
   });
 
   testWidgets('refuser retire la proposition', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     await tapText(tester, 'Refuser');
-    expect(find.textContaining('Avec Nathan'), findsNothing);
+    expect(find.text('Nathan'), findsNothing);
   });
 
   testWidgets('voir d’autres voitures puis en choisir une', (tester) async {
@@ -168,7 +164,7 @@ void main() {
       ),
     ];
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     await tapText(tester, 'Voir d\'autres voitures');
     expect(find.text('Autres voitures'), findsOneWidget);
     expect(find.textContaining('avec Chloé'), findsOneWidget);
@@ -180,15 +176,15 @@ void main() {
 
   testWidgets('aucune autre voiture : état vide', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     await tapText(tester, 'Voir d\'autres voitures');
     expect(find.text('Aucune autre voiture compatible pour ce créneau.'), findsOneWidget);
   });
 
   testWidgets('recherche : quota atteint puis aucun résultat', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tester.ensureVisible(find.text('Chercher un trajet'));
-    await tapText(tester, 'Chercher un trajet');
+    await tester.tap(find.byTooltip('Chercher un trajet'));
+    await tester.pumpAndSettle();
     expect(find.text('Choisis un jour et un sens, puis lance la recherche.'), findsOneWidget);
     // Le titre et le bouton portent le même libellé : on vise le bouton.
     backend.failNext = const ApiException('search_quota_exceeded', '', statusCode: 429);
@@ -231,7 +227,7 @@ void main() {
 
   testWidgets('golden détail d’une proposition', (tester) async {
     await launchApp(tester, backend: backend, storage: storage);
-    await tapText(tester, 'Voir', index: 0);
+    await openTrip(tester, index: 0);
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/proposal_light.png'));
   });
 }

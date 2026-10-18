@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
@@ -16,5 +17,8 @@ void main() {
     debugPrint('Erreur non rattrapée : ${error.runtimeType}');
     return true;
   };
+  // Toujours en portrait (carte, listes et formulaires sont pensés pour un téléphone tenu droit).
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const ProviderScope(child: UniMoovApp()));
 }

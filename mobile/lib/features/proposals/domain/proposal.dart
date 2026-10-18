@@ -109,13 +109,19 @@ class Proposal {
     ('cancelled', _) || (_, 'cancelled') => ProposalState.cancelled,
     // Voiture choisie par le passager : le conducteur doit accepter la demande.
     (_, 'requested') => ProposalState.requested,
-    // Trajet commencé ou terminé : toujours confirmé (« Voir la carte »).
-    ('confirmed' || 'in_progress' || 'completed', _) => ProposalState.confirmed,
+    // Trajet confirmé, commencé ou terminé où je suis engagé : l'écran du trajet.
+    ('confirmed' || 'in_progress' || 'completed', 'accepted' || 'picked_up' || 'absent') =>
+      ProposalState.confirmed,
     (_, 'accepted') => ProposalState.waiting,
     _ => ProposalState.proposed,
   };
 
-  bool get canAnswer => myStatus == 'proposed' && state == ProposalState.proposed;
+  /// Proposition encore ouverte où je n'ai pas répondu (une voiture déjà confirmée peut encore
+  /// me proposer une place).
+  bool get canAnswer =>
+      myStatus == 'proposed' &&
+      state == ProposalState.proposed &&
+      (rideStatus == 'proposed' || rideStatus == 'confirmed');
 }
 
 /// Voiture où l'on peut monter (« voir d'autres », recherche).

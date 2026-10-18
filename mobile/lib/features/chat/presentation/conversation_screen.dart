@@ -9,6 +9,8 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../proposals/domain/proposal.dart';
+import '../../rides/presentation/trip_widgets.dart';
 import '../../profile/presentation/me_controller.dart';
 import '../../proposals/presentation/formatting.dart';
 import '../domain/chat.dart';
@@ -173,12 +175,6 @@ class _ConversationState extends ConsumerState<_Conversation> {
           ],
         ),
         actions: [
-          if (conversation.rideId != null)
-            IconButton(
-              tooltip: l10n.chatSeeRide,
-              icon: Icon(Icons.directions_car_outlined, color: c.brandStrong),
-              onPressed: () => context.push(AppRoutes.ride(conversation.rideId!)),
-            ),
           if (conversation.kind == ConversationKind.group)
             IconButton(
               tooltip: l10n.chatLeave,
@@ -191,6 +187,20 @@ class _ConversationState extends ConsumerState<_Conversation> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Chat de trajet : le trajet est à un toucher, épinglé en haut de la conversation.
+            if (conversation.rideId case final rideId?)
+              _RideBar(
+                label: conversation.rideDay == null
+                    ? l10n.chatRideBar
+                    : tripTitle(
+                        l10n,
+                        conversation.rideToCampus ?? true
+                            ? Direction.toCampus
+                            : Direction.fromCampus,
+                        conversation.rideDay!,
+                      ),
+                onTap: () => context.push(AppRoutes.ride(rideId)),
+              ),
             Expanded(
               child: messages.isEmpty
                   ? Center(
@@ -362,6 +372,56 @@ class _Bubble extends StatelessWidget {
                 Text(message.body, style: UmText.body.copyWith(color: foreground)),
                 Text(time, style: UmText.caption.copyWith(color: mine ? foreground : c.inkMuted)),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau du trajet en haut d'un chat de trajet : ouvre la carte et les détails.
+class _RideBar extends StatelessWidget {
+  const _RideBar({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    return Material(
+      color: c.lavender,
+      child: InkWell(
+        onTap: onTap,
+        child: Semantics(
+          button: true,
+          label: '$label. ${l10n.chatSeeRide}',
+          excludeSemantics: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: UmSize.tapTarget),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: UmSpace.s5, vertical: UmSpace.s2),
+              child: Row(
+                children: [
+                  Icon(Icons.directions_car_rounded, color: c.brandStrong),
+                  const SizedBox(width: UmSpace.s3),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: UmText.body.copyWith(
+                        color: c.brandStrong,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(l10n.chatSeeRide, style: UmText.button.copyWith(color: c.brandStrong)),
+                  Icon(Icons.chevron_right_rounded, color: c.brandStrong),
+                ],
+              ),
             ),
           ),
         ),

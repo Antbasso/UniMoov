@@ -26,14 +26,20 @@ import 'live_actions.dart';
 import '../../chat/presentation/open_ride_chat.dart';
 import 'live_controller.dart';
 import 'ride_map.dart';
+import 'trip_widgets.dart';
 import 'rides_controller.dart';
 
-/// Trajet confirmé (cahier §14) : carte, arrêts dans l'ordre avec l'heure de passage,
-/// prix estimé. Passager : point de rendez-vous. Conducteur : ajouter des passagers.
+/// Trajet confirmé (cahier §14), en un seul écran : la carte d'abord, puis qui monte et à
+/// quelle heure, le prix en puces. Le chat est une icône en haut ; les actions rares (annuler,
+/// signaler) sont dans le menu. Une fois terminé : la notation en tête, le reste replié.
 class RideScreen extends ConsumerWidget {
-  const RideScreen({super.key, required this.id});
+  const RideScreen({super.key, required this.id, this.proposal});
 
   final String id;
+
+  /// Proposition de la semaine (depuis l'accueil) : demandes et invitations encore en attente,
+  /// montrées au conducteur comme provisoires.
+  final Proposal? proposal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,7 +61,7 @@ class RideScreen extends ConsumerWidget {
           ),
         ],
       ),
-      AsyncValue(:final value?) => _RideContent(ride: value),
+      AsyncValue(:final value?) => _RideContent(ride: value, proposal: proposal),
       _ => UmPage(
         appBar: AppBar(),
         children: [
@@ -70,9 +76,10 @@ class RideScreen extends ConsumerWidget {
 }
 
 class _RideContent extends ConsumerStatefulWidget {
-  const _RideContent({required this.ride});
+  const _RideContent({required this.ride, this.proposal});
 
   final RideDetails ride;
+  final Proposal? proposal;
 
   @override
   ConsumerState<_RideContent> createState() => _RideContentState();
@@ -131,21 +138,43 @@ class _RideContentState extends ConsumerState<_RideContent> {
     }
   }
 
+  /// Conducteur : réponse à une demande de place encore en attente.
+  Future<void> _answer(String userId, {required bool approve}) => _act(() async {
+    final week = isoWeekOf(widget.ride.day);
+    await ref
+        .read(weekProposalsProvider(week).notifier)
+        .answerRequest(widget.ride.id, userId, approve: approve);
+    ref.invalidate(rideProvider(widget.ride.id));
+  });
+
   @override
   Widget build(BuildContext context) {
     final ride = widget.ride;
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
     final myId = ref.watch(meProvider.select((me) => me.value?.id));
-    final day = formatDayInline(ride.day, l10n.localeName);
-    final title = ride.direction == Direction.toCampus
-        ? l10n.proposalTitleTo(day)
-        : l10n.proposalTitleFrom(day);
     final myStop = ride.stopOf(myId);
     final live = ride.inProgress ? ref.watch(liveRideProvider(ride.id)) : null;
     final driverId = ride.driverStop?.userId;
     final driverLive = driverId == null ? null : live?.positions[driverId];
     final controller = ref.read(rideProvider(ride.id).notifier);
+    // Proposition à jour (demandes, invitations) si l'accueil l'a déjà chargée.
+    final week = isoWeekOf(ride.day);
+    final proposal =
+        ref.watch(weekProposalsProvider(week)).value?.where((p) => p.id == ride.id).firstOrNull ??
+        widget.proposal;
+    final aboard = {for (final s in ride.stops) ?s.userId};
+    final pending = ride.isDriver
+        ? [
+            for (final p in proposal?.passengers ?? const <PublicPerson>[])
+              if (personVisible(p) && p.status != 'accepted' && !aboard.contains(p.userId)) p,
+          ]
+        : const <PublicPerson>[];
+    final cancellable =
+        ride.editable ||
+        (ride.inProgress && !ride.isDriver && myStop != null && !myStop.presenceValidated);
+    final rate = ride.completed && !ride.markedAbsent;
+
     final footer = <Widget>[
       if (ride.isDriver && (ride.editable || ride.inProgress))
         UmButton(
@@ -161,8 +190,8 @@ class _RideContentState extends ConsumerState<_RideContent> {
           loading: _busy,
           onPressed: _busy ? null : () => _act(controller.confirmPresence, done: l10n.presenceDone),
         ),
-      // À bord, pas encore à destination : il peut terminer son trajet (et ne pas le payer),
-      // après un avertissement ; le conducteur est prévenu. Avant d'être à bord, il annule.
+      // À bord, pas encore à destination : il peut terminer son trajet (il paie sa part), après
+      // un avertissement ; le conducteur est prévenu. Avant d'être à bord, il annule (menu).
       if (!ride.isDriver &&
           ride.inProgress &&
           myStop != null &&
@@ -179,51 +208,165 @@ class _RideContentState extends ConsumerState<_RideContent> {
                   await _act(controller.finish, done: l10n.finishMyTripDone);
                 },
         ),
+    ];
+
+    final map = RideMap(
+      stops: ride.stops,
+      route: ride.route,
+      dashed: ride.routeEstimated,
+      semanticLabel: l10n.rideMapLabel(ride.stops.length),
+      live: driverLive == null ? null : LatLng(driverLive.lat, driverLive.lon),
+      areas: [
+        for (final p in pending)
+          if (p.sector case (final lat, final lon))
+            MapArea(lat: lat, lon: lon, name: p.firstName, provisional: true),
+      ],
+    );
+
+    final people = <Widget>[
+      for (final stop in ride.stops)
+        _StopRow(
+          stop: stop,
+          isMe: stop.userId == myId,
+          actions: [
+            if (stop.userId == myId && ride.editable && !ride.isDriver)
+              UmButton(
+                label: myStop!.isMeetingPoint
+                    ? l10n.rideChangeMeetingPoint
+                    : l10n.rideChooseMeetingPoint,
+                icon: Icons.place_outlined,
+                variant: UmButtonVariant.ghost,
+                onPressed: () => context.push(AppRoutes.rideMeetingPoint(ride.id)),
+              ),
+          ],
+        ),
+      for (final person in pending)
+        PersonRow(
+          name: person.firstName,
+          stats: personStats(l10n, person, isDriver: false),
+          status: personStatusChip(l10n, person.status),
+          actions: person.isRequest
+              ? [
+                  UmButton(
+                    label: l10n.requestApprove,
+                    loading: _busy,
+                    onPressed: () => _answer(person.userId, approve: true),
+                  ),
+                  UmButton(
+                    label: l10n.requestReject,
+                    variant: UmButtonVariant.ghost,
+                    onPressed: _busy ? null : () => _answer(person.userId, approve: false),
+                  ),
+                ]
+              : const [],
+        ),
       if (ride.editable && ride.isDriver)
-        UmButton(
-          label: l10n.rideAddPassengers,
-          variant: UmButtonVariant.secondary,
-          expand: true,
-          onPressed: () => context.push(AppRoutes.rideSuggestions(ride.id)),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: UmButton(
+            label: l10n.rideAddPassengers,
+            icon: Icons.person_add_alt_rounded,
+            variant: UmButtonVariant.ghost,
+            onPressed: () => context.push(AppRoutes.rideSuggestions(ride.id)),
+          ),
         ),
-      if (ride.editable && !ride.isDriver && myStop != null)
-        UmButton(
-          label: myStop.isMeetingPoint ? l10n.rideChangeMeetingPoint : l10n.rideChooseMeetingPoint,
-          variant: UmButtonVariant.secondary,
-          expand: true,
-          onPressed: () => context.push(AppRoutes.rideMeetingPoint(ride.id)),
+    ];
+
+    final details = <Widget>[
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              formatTime(ride.time, l10n.localeName),
+              style: UmText.h2.copyWith(color: c.ink),
+            ),
+          ),
+          switch (ride.status) {
+            'in_progress' => UmChip(
+              label: l10n.rideStatusLive,
+              icon: Icons.near_me_outlined,
+              tone: UmChipTone.success,
+            ),
+            'completed' => UmChip(label: l10n.rideCompleted, icon: Icons.flag_outlined),
+            _ => UmChip(
+              label: l10n.rideStatusConfirmed,
+              icon: Icons.check_circle_outline_rounded,
+              tone: UmChipTone.success,
+            ),
+          },
+        ],
+      ),
+      if (live != null && !ride.isDriver) ...[
+        const SizedBox(height: UmSpace.s3),
+        _LiveBanner(
+          onShare: live.sharing ? null : () => shareLocation(context, ref, ride.id),
+          live: live,
+          driver: driverLive,
+          myEta: myId == null ? null : live.etas[myId],
         ),
-      if (ride.editable ||
-          (ride.inProgress && !ride.isDriver && myStop != null && !myStop.presenceValidated))
-        UmButton(
-          label: ride.isDriver ? l10n.cancelRide : l10n.cancelMyPlace,
-          variant: UmButtonVariant.ghost,
-          expand: true,
-          onPressed: _cancel,
+      ],
+      if (myStop != null && !ride.isDriver && myStop.arrived) ...[
+        const SizedBox(height: UmSpace.s3),
+        TrustInfo(icon: Icons.where_to_vote_outlined, text: l10n.tripArrived),
+      ] else if (myStop != null && !ride.isDriver && myStop.leftEarly) ...[
+        const SizedBox(height: UmSpace.s3),
+        TrustInfo(icon: Icons.logout_rounded, text: l10n.tripLeftEarly),
+      ] else if (myStop != null &&
+          !ride.isDriver &&
+          myStop.presenceValidated &&
+          !ride.completed) ...[
+        const SizedBox(height: UmSpace.s3),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: UmChip(
+            label: l10n.presenceOnBoard,
+            icon: Icons.verified_outlined,
+            tone: UmChipTone.success,
+          ),
         ),
+      ],
+      if (ride.completed && ride.markedAbsent) ...[
+        const SizedBox(height: UmSpace.s3),
+        TrustInfo(icon: Icons.person_off_outlined, text: l10n.rideAbsent),
+      ],
+      if (_errorCode != null) ...[
+        const SizedBox(height: UmSpace.s3),
+        UmErrorText(apiErrorMessage(l10n, _errorCode)),
+      ],
+      const SizedBox(height: UmSpace.s4),
+      ...people,
+      const SizedBox(height: UmSpace.s3),
+      Divider(color: c.border),
+      const SizedBox(height: UmSpace.s3),
+      PriceBullets(price: ride.price, isDriver: ride.isDriver, distanceM: ride.distanceM),
+      if (ride.routeEstimated) ...[
+        const SizedBox(height: UmSpace.s3),
+        Text(l10n.rideRouteEstimated, style: UmText.caption.copyWith(color: c.inkMuted)),
+      ],
+    ];
+
+    final menu = <(String, VoidCallback)>[
       if (ride.completed) ...[
-        UmButton(
-          label: l10n.rideProblem,
-          variant: UmButtonVariant.secondary,
-          expand: true,
-          onPressed: () => context.push(
+        (
+          l10n.rideProblem,
+          () => context.push(
             AppRoutes.dispute(
               ride.id,
               reason: ride.markedAbsent ? DisputeReason.markedAbsent : null,
             ),
           ),
         ),
-        UmButton(
-          label: l10n.reportAction,
-          variant: UmButtonVariant.ghost,
-          expand: true,
-          onPressed: () => _report(myId),
-        ),
+        (l10n.reportAction, () => _report(myId)),
       ],
+      if (cancellable) (ride.isDriver ? l10n.cancelRide : l10n.cancelMyPlace, _cancel),
     ];
 
     return Scaffold(
       appBar: AppBar(
+        title: Text(
+          tripTitle(l10n, ride.direction, ride.day),
+          style: UmText.h3.copyWith(color: c.ink),
+        ),
         actions: [
           // Chat du trajet (cahier §6), créé à la confirmation.
           IconButton(
@@ -231,125 +374,68 @@ class _RideContentState extends ConsumerState<_RideContent> {
             icon: Icon(Icons.chat_bubble_outline_rounded, color: c.brandStrong),
             onPressed: _openChat,
           ),
+          if (menu.isNotEmpty)
+            PopupMenuButton<int>(
+              tooltip: l10n.moreActions,
+              icon: Icon(Icons.more_vert_rounded, color: c.ink),
+              onSelected: (i) => menu[i].$2(),
+              itemBuilder: (_) => [
+                for (final (i, (label, _)) in menu.indexed)
+                  PopupMenuItem(value: i, child: Text(label)),
+              ],
+            ),
         ],
       ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              height: UmSize.mapHeight,
-              child: RideMap(
-                stops: ride.stops,
-                route: ride.route,
-                dashed: ride.routeEstimated,
-                semanticLabel: l10n.rideMapLabel(ride.stops.length),
-                live: driverLive == null ? null : LatLng(driverLive.lat, driverLive.lon),
-              ),
-            ),
+            if (!rate) SizedBox(height: UmSize.mapHeight, child: map),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(UmSpace.s6),
+                padding: const EdgeInsets.all(UmSpace.s5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(title, style: UmText.h1.copyWith(color: c.ink)),
-                    ),
-                    const SizedBox(height: UmSpace.s3),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: switch (ride.status) {
-                        'in_progress' => UmChip(
-                          label: l10n.rideInProgress,
-                          icon: Icons.near_me_outlined,
-                          tone: UmChipTone.success,
-                        ),
-                        'completed' => UmChip(label: l10n.rideCompleted, icon: Icons.flag_outlined),
-                        _ => UmChip(
-                          label: l10n.proposalConfirmed,
-                          icon: Icons.check_circle_outline_rounded,
-                          tone: UmChipTone.success,
-                        ),
-                      },
-                    ),
-                    const SizedBox(height: UmSpace.s3),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: UmButton(
-                        label: l10n.rideChatOpen,
-                        icon: Icons.chat_bubble_outline_rounded,
-                        variant: UmButtonVariant.secondary,
-                        onPressed: _openChat,
-                      ),
-                    ),
-                    if (live != null && !ride.isDriver) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      _LiveBanner(
-                        onShare: live.sharing ? null : () => shareLocation(context, ref, ride.id),
-                        live: live,
-                        driver: driverLive,
-                        myEta: myId == null ? null : live.etas[myId],
-                      ),
-                    ],
-                    if (myStop != null && !ride.isDriver && myStop.arrived) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      TrustInfo(icon: Icons.where_to_vote_outlined, text: l10n.tripArrived),
-                    ] else if (myStop != null && !ride.isDriver && myStop.leftEarly) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      TrustInfo(icon: Icons.logout_rounded, text: l10n.tripLeftEarly),
-                    ] else if (myStop != null &&
-                        !ride.isDriver &&
-                        myStop.presenceValidated &&
-                        !ride.completed) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: UmChip(
-                          label: l10n.presenceOnBoard,
-                          icon: Icons.verified_outlined,
-                          tone: UmChipTone.success,
-                        ),
-                      ),
-                    ],
-                    if (ride.completed && ride.markedAbsent) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      TrustInfo(icon: Icons.person_off_outlined, text: l10n.rideAbsent),
-                    ],
-                    if (_errorCode != null) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      UmErrorText(apiErrorMessage(l10n, _errorCode)),
-                    ],
-                    if (ride.routeEstimated) ...[
-                      const SizedBox(height: UmSpace.s3),
-                      Text(
-                        l10n.rideRouteEstimated,
-                        style: UmText.caption.copyWith(color: c.inkMuted),
-                      ),
-                    ],
-                    // Arrêts d'abord : qui, où et à quelle heure est l'information principale.
-                    const SizedBox(height: UmSpace.s5),
-                    Semantics(
-                      header: true,
-                      child: Text(l10n.rideStopsTitle, style: UmText.h3.copyWith(color: c.ink)),
-                    ),
-                    const SizedBox(height: UmSpace.s3),
-                    for (final stop in ride.stops) _StopRow(stop: stop, isMe: stop.userId == myId),
-                    const SizedBox(height: UmSpace.s3),
-                    _PriceCard(price: ride.price, isDriver: ride.isDriver),
-                    if (ride.completed && !ride.markedAbsent) ...[
-                      const SizedBox(height: UmSpace.s4),
-                      RatingCard(rideId: ride.id),
-                    ],
-                  ],
+                  children: rate
+                      ? [
+                          // Trajet terminé : seule la notation compte, le reste est replié.
+                          RatingCard(rideId: ride.id),
+                          const SizedBox(height: UmSpace.s4),
+                          Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              tilePadding: EdgeInsets.zero,
+                              childrenPadding: EdgeInsets.zero,
+                              title: Text(
+                                l10n.rideDetailsTitle,
+                                style: UmText.body.copyWith(
+                                  color: c.ink,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              children: [
+                                SizedBox(height: UmSize.sectorMiniMap, child: map),
+                                const SizedBox(height: UmSpace.s4),
+                                ...details,
+                              ],
+                            ),
+                          ),
+                        ]
+                      : details,
                 ),
               ),
             ),
             if (footer.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(UmSpace.s6, 0, UmSpace.s6, UmSpace.s5),
-                child: Column(children: footer),
+                padding: const EdgeInsets.fromLTRB(UmSpace.s5, 0, UmSpace.s5, UmSpace.s4),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < footer.length; i++) ...[
+                      if (i > 0) const SizedBox(height: UmSpace.s2),
+                      footer[i],
+                    ],
+                  ],
+                ),
               ),
           ],
         ),
@@ -441,117 +527,64 @@ class _LiveBannerState extends ConsumerState<_LiveBanner> {
   }
 }
 
-class _PriceCard extends StatelessWidget {
-  const _PriceCard({required this.price, required this.isDriver});
-
-  final RidePrice? price;
-  final bool isDriver;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final p = price;
-    if (p == null) return UmCard(body: l10n.ridePriceUnknown);
-    final c = context.umColors;
-    String euros(int cents) => UmRideCard.formatPrice(cents, l10n.localeName);
-    final amount = euros((isDriver ? p.youReceiveCents : p.youPayCents) ?? 0);
-    return UmCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Prix en UniMoov Display, comme sur la carte de trajet.
-          Semantics(
-            label: isDriver ? l10n.ridePriceYouReceive(amount) : l10n.ridePriceYouPay(amount),
-            excludeSemantics: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isDriver ? l10n.ridePriceReceiveLabel : l10n.ridePricePayLabel,
-                  style: UmText.label.copyWith(color: c.inkMuted),
-                ),
-                Text(amount, style: UmText.h2.copyWith(color: c.brandStrong)),
-              ],
-            ),
-          ),
-          const SizedBox(height: UmSpace.s2),
-          Text(
-            l10n.ridePriceDetail(euros(p.totalCostCents), p.persons, euros(p.commissionCents)),
-            style: UmText.bodySm.copyWith(color: c.inkMuted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// Un arrêt sur une ligne : pastille (la même que sur la carte), qui, où, ⏱ heure, statut.
 class _StopRow extends StatelessWidget {
-  const _StopRow({required this.stop, required this.isMe});
+  const _StopRow({required this.stop, required this.isMe, this.actions = const []});
 
   final RideStop stop;
   final bool isMe;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final c = context.umColors;
     final name = switch (stop.kind) {
       StopKind.campus => stop.label,
       _ when isMe => l10n.rideYou,
       _ => stop.fullName ?? '',
     };
-    // Domicile d'un autre passager : le serveur ne donne que le secteur, sans adresse.
+    // Domicile d'un autre : le serveur ne donne que le secteur, sans adresse.
     final place = stop.kind == StopKind.campus
         ? null
         : (stop.label.isEmpty ? l10n.rideStopApproximate : stop.label);
     final time = stop.eta == null ? null : formatTime(stop.eta!, l10n.localeName);
-    // Fin de trajet d'un passager : arrivé (il paie) ou parti avant (il ne paie pas).
-    final (String, IconData)? done = stop.arrived
-        ? (l10n.stopArrived, Icons.where_to_vote_outlined)
+    // Fin de trajet d'un passager, à bord, ou point de rendez-vous.
+    final Widget? status = stop.arrived
+        ? UmChip(label: l10n.stopArrived, icon: Icons.where_to_vote_outlined)
         : stop.leftEarly
-        ? (l10n.stopLeftEarly, Icons.logout_rounded)
+        ? UmChip(label: l10n.stopLeftEarly, icon: Icons.logout_rounded)
+        : stop.presenceValidated
+        ? UmChip(
+            label: l10n.stopOnBoard,
+            icon: Icons.check_circle_rounded,
+            tone: UmChipTone.success,
+          )
+        : stop.isMeetingPoint
+        ? UmChip(label: l10n.rideMeetingPoint, icon: Icons.place_outlined)
         : null;
 
     return Semantics(
       container: true,
       label: [
         l10n.rideStopSemantic(stop.order + 1, name, place ?? '', time ?? ''),
-        ?done?.$1,
+        if (status case UmChip(:final label)) label,
       ].join(', '),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: UmSpace.s4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            StopBadge(stop: stop, size: UmSize.stopBadge),
-            const SizedBox(width: UmSpace.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: UmText.body.copyWith(color: c.ink, fontWeight: FontWeight.w600),
-                  ),
-                  if (place != null) Text(place, style: UmText.bodySm.copyWith(color: c.inkMuted)),
-                  if (stop.isMeetingPoint) ...[
-                    const SizedBox(height: UmSpace.s1),
-                    UmChip(label: l10n.rideMeetingPoint, icon: Icons.place_outlined),
-                  ],
-                  if (done != null) ...[
-                    const SizedBox(height: UmSpace.s1),
-                    UmChip(label: done.$1, icon: done.$2),
-                  ],
-                ],
-              ),
-            ),
-            if (time != null) ...[
-              const SizedBox(width: UmSpace.s3),
-              Text(l10n.rideStopAround(time), style: UmText.bodySm.copyWith(color: c.ink)),
-            ],
-          ],
+      excludeSemantics: actions.isEmpty,
+      child: PersonRow(
+        name: name,
+        leading: SizedBox.square(
+          dimension: UmSize.avatar,
+          child: Center(
+            child: StopBadge(stop: stop, size: UmSize.stopBadge),
+          ),
         ),
+        subtitle: place,
+        stats: [
+          if (time != null)
+            UmStat(icon: Icons.schedule_rounded, value: time, semantic: l10n.rideStopAround(time)),
+        ],
+        status: status,
+        actions: actions,
       ),
     );
   }

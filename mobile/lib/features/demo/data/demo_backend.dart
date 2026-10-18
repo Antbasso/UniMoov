@@ -862,7 +862,9 @@ class DemoBackend
       final userId = p.userId;
       final seat = userId == null ? null : r.seatOf(userId);
       final isDriverStop = userId == r.driverId;
-      // Entre passagers : prénom et secteur seulement (cahier §4).
+      // Entre passagers : prénom et secteur seulement (cahier §4) ; le départ du conducteur
+      // reste approximatif pour une passagère.
+      final masked = !r.driverIsMe && userId != null && userId != demoMeId && !p.meeting;
       final coPassenger = !r.driverIsMe && userId != null && !isDriverStop && userId != demoMeId;
       stops.add(
         RideStop(
@@ -873,11 +875,12 @@ class DemoBackend
           userId: userId,
           firstName: userId == null ? null : _firstName(userId),
           lastName: userId == null || coPassenger ? null : _lastName(userId),
-          label: coPassenger && !p.meeting ? '' : p.label,
-          lat: coPassenger && !p.meeting ? (p.lat * 100).round() / 100 : p.lat,
-          lon: coPassenger && !p.meeting ? (p.lon * 100).round() / 100 : p.lon,
+          label: masked ? '' : p.label,
+          lat: masked ? _sector(userId).$1 : p.lat,
+          lon: masked ? _sector(userId).$2 : p.lon,
           eta: eta,
           isMeetingPoint: p.meeting,
+          approximate: masked,
           pickedUp: seat?.pickedUp ?? false,
           presenceValidated: seat?.presenceValidated ?? false,
           arrived: seat?.arrived ?? false,
@@ -904,7 +907,6 @@ class DemoBackend
                 (p) =>
                     p.userId == null ||
                     p.userId == demoMeId ||
-                    p.userId == r.driverId ||
                     p.meeting ||
                     demoDistance(p.lat, p.lon, point.$1, point.$2) > 500,
               ))
@@ -934,6 +936,32 @@ class DemoBackend
       throw const ApiException('ride_not_confirmed', '', statusCode: 409);
     }
     return _details(r);
+  }
+
+  @override
+  Future<RidePreview> preview(String id) async {
+    await _wait();
+    final r = _rides[id];
+    if (r == null || !_involvesMe(r)) throw const ApiException('forbidden', '', statusCode: 403);
+    final path = _path(r, all: true);
+    final mine = path.where((p) => p.userId == demoMeId).firstOrNull;
+    return RidePreview(
+      route: [
+        for (final point in _road(path))
+          if (path.every(
+            (p) =>
+                p.userId == null ||
+                p.userId == demoMeId ||
+                p.meeting ||
+                demoDistance(p.lat, p.lon, point.$1, point.$2) > 500,
+          ))
+            point,
+      ],
+      estimated: false,
+      campus: (demoCampus.lat, demoCampus.lon),
+      campusName: demoCampus.label,
+      me: mine == null ? null : (mine.lat, mine.lon),
+    );
   }
 
   @override
@@ -1104,6 +1132,37 @@ class DemoBackend
     seat.ended = true;
     _closeLive(id, 4410);
     _close(r);
+  }
+
+  @override
+  Future<List<HistoryEntry>> history() async {
+    await _wait();
+    _me;
+    final done = _rides.values.where((r) => r.status == 'completed' && _involvesMe(r)).toList()
+      ..sort((a, b) => b.time.compareTo(a.time));
+    return [
+      for (final r in done)
+        () {
+          final present = r.activeSeats.where((s) => s.presenceValidated).toList();
+          final mine = r.seatOf(demoMeId);
+          final absent = !r.driverIsMe && !(mine?.presenceValidated ?? false);
+          final price = _priceOf(r, persons: present.length + 1);
+          return HistoryEntry(
+            id: r.id,
+            day: r.day,
+            direction: r.direction,
+            time: r.time,
+            isDriver: r.driverIsMe,
+            myStatus: absent ? 'absent' : 'accepted',
+            amountCents: absent
+                ? null
+                : (r.driverIsMe ? price.share * present.length : price.youPay),
+            withNames: r.driverIsMe
+                ? [for (final s in present) _firstName(s.personId)]
+                : [_firstName(r.driverId)],
+          );
+        }(),
+    ];
   }
 
   /// Clôture : prix final partagé entre les présents, payé par chaque passager pris en charge

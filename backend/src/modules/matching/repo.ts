@@ -24,6 +24,8 @@ export interface NeedRow {
   seats: number | null;
   maxDetourMinutes: number | null;
   reliability: number;
+  /** Trajets conduits dans les 28 jours avant ce jour (alternance en mode automatique). */
+  drivenRecently: number;
 }
 
 export interface ParticipantRow {
@@ -79,8 +81,13 @@ export class MatchingRepo {
       seats: number | null;
       max_detour: number | null;
       reliability: string;
+      driven: number;
     }>(sql`
       SELECT u.id AS user_id, u.campus_id,
+             (SELECT count(*)::int FROM ride_participants dp JOIN rides dr ON dr.id = dp.ride_id
+               WHERE dp.user_id = u.id AND dp.role = 'driver' AND dp.status IN ('accepted', 'picked_up')
+                 AND dr.status IN ('confirmed', 'in_progress', 'completed')
+                 AND dr.day < ${day}::date AND dr.day >= ${day}::date - 28) AS driven,
              ST_Y(u.home_location::geometry) AS lat, ST_X(u.home_location::geometry) AS lon,
              s.start_at, s.end_at, u.role_mode, v.default_seats AS seats,
              v.max_detour_minutes AS max_detour, u.reliability_score AS reliability
@@ -102,6 +109,7 @@ export class MatchingRepo {
       seats: r.seats,
       maxDetourMinutes: r.max_detour,
       reliability: Number(r.reliability),
+      drivenRecently: r.driven,
     }));
   }
 

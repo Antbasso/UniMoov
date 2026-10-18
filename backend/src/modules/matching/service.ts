@@ -172,6 +172,7 @@ export class MatchingService {
                   ? { seats: r.seats, maxDetourMinutes: r.maxDetourMinutes }
                   : null,
               reliability: r.reliability,
+              drivenRecently: r.drivenRecently,
             }));
           const params = await this.params(await this.repo.campusLocation(campusId, tx));
           const { rides } = matchSlot(needs, direction, params, (d, p) => declines.has(`${d}|${p}`));

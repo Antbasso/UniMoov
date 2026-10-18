@@ -12,6 +12,7 @@ class RideStop {
     required this.lat,
     required this.lon,
     required this.isMeetingPoint,
+    this.approximate = false,
     this.pickedUp = false,
     this.presenceValidated = false,
     this.arrived = false,
@@ -33,6 +34,7 @@ class RideStop {
     lon: (json['lon'] as num).toDouble(),
     eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String),
     isMeetingPoint: json['isMeetingPoint'] as bool,
+    approximate: json['approximate'] as bool? ?? false,
     pickedUp: json['pickedUp'] as bool? ?? false,
     presenceValidated: json['presenceValidated'] as bool? ?? false,
     arrived: json['arrived'] as bool? ?? false,
@@ -51,6 +53,10 @@ class RideStop {
   final double lon;
   final DateTime? eta;
   final bool isMeetingPoint;
+
+  /// Centre du secteur, pas l'adresse : montré comme une zone (domicile d'un autre passager,
+  /// départ du conducteur vu par un passager).
+  final bool approximate;
 
   /// Passager monté (signalé par le conducteur) ; présence validée par proximité.
   final bool pickedUp;
@@ -75,6 +81,7 @@ class RidePrice {
     required this.commissionCents,
     this.youPayCents,
     this.youReceiveCents,
+    this.myDistanceM,
   });
 
   factory RidePrice.fromJson(Map<String, dynamic> json) => RidePrice(
@@ -84,6 +91,7 @@ class RidePrice {
     commissionCents: json['commissionCents'] as int,
     youPayCents: json['youPayCents'] as int?,
     youReceiveCents: json['youReceiveCents'] as int?,
+    myDistanceM: json['myDistanceM'] as int?,
   );
 
   final int totalCostCents;
@@ -92,6 +100,10 @@ class RidePrice {
   final int commissionCents;
   final int? youPayCents;
   final int? youReceiveCents;
+
+  /// Passager : distance parcourue à bord (de sa prise en charge au campus, ou l'inverse) ;
+  /// sa part du carburant est au prorata (cahier §5).
+  final int? myDistanceM;
 }
 
 class RideDetails {
@@ -380,4 +392,78 @@ class LiveStatus extends LiveEvent {
   const LiveStatus(this.status);
 
   final String status;
+}
+
+/// Trajet terminé, dans l'historique du profil (`GET /rides/history`).
+class HistoryEntry {
+  const HistoryEntry({
+    required this.id,
+    required this.day,
+    required this.direction,
+    required this.time,
+    required this.isDriver,
+    required this.myStatus,
+    required this.withNames,
+    this.amountCents,
+  });
+
+  factory HistoryEntry.fromJson(Map<String, dynamic> json) => HistoryEntry(
+    id: json['id'] as String,
+    day: DateTime.parse(json['day'] as String),
+    direction: Direction.fromWire(json['direction'] as String),
+    time: DateTime.parse(json['time'] as String),
+    isDriver: json['role'] == 'driver',
+    myStatus: json['myStatus'] as String,
+    amountCents: json['amountCents'] as int?,
+    withNames: [for (final n in json['with'] as List<dynamic>) n as String],
+  );
+
+  final String id;
+  final DateTime day;
+  final Direction direction;
+  final DateTime time;
+  final bool isDriver;
+  final String myStatus;
+
+  /// Payé (passager) ou reçu (conducteur) ; null sans paiement.
+  final int? amountCents;
+  final List<String> withNames;
+
+  bool get absent => myStatus == 'absent';
+}
+
+/// Aperçu d'un trajet avant confirmation (`GET /rides/{id}/preview`) : tracé du conducteur sans
+/// les abords des domiciles des autres, campus, et mon point (le seul exact).
+class RidePreview {
+  const RidePreview({
+    required this.route,
+    required this.estimated,
+    required this.campus,
+    required this.campusName,
+    this.me,
+  });
+
+  factory RidePreview.fromJson(Map<String, dynamic> json) {
+    (double, double) point(Object? p) {
+      final map = p! as Map<String, dynamic>;
+      return ((map['lat'] as num).toDouble(), (map['lon'] as num).toDouble());
+    }
+
+    return RidePreview(
+      route: [
+        for (final p in json['route'] as List<dynamic>)
+          (((p as List<dynamic>)[0] as num).toDouble(), (p[1] as num).toDouble()),
+      ],
+      estimated: json['estimated'] as bool,
+      campus: point(json['campus']),
+      campusName: (json['campus'] as Map<String, dynamic>)['name'] as String,
+      me: json['me'] == null ? null : point(json['me']),
+    );
+  }
+
+  final List<(double, double)> route;
+  final bool estimated;
+  final (double, double) campus;
+  final String campusName;
+  final (double, double)? me;
 }
