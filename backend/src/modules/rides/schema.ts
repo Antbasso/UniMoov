@@ -15,8 +15,12 @@ const stop = z.strictObject({
   lon: z.number(),
   eta: z.date().nullable(),
   isMeetingPoint: z.boolean(),
+  approximate: z.boolean(),
   pickedUp: z.boolean(),
   presenceValidated: z.boolean(),
+  arrived: z.boolean(),
+  ended: z.boolean(),
+  proposedMeetingPoint: z.strictObject({ label: z.string(), lat: z.number(), lon: z.number() }).nullable(),
 });
 
 export const price = z.strictObject({
@@ -29,6 +33,16 @@ export const price = z.strictObject({
   driverReceivesCents: z.number().int(),
   youPayCents: z.number().int().nullable(),
   youReceiveCents: z.number().int().nullable(),
+  myDistanceM: z.number().int().nullable(),
+  breakdown: z
+    .strictObject({
+      consumptionLPer100km: z.number(),
+      fuelPriceCentsPerLitre: z.number(),
+      distanceM: z.number().int(),
+      portions: z.array(z.strictObject({ distanceM: z.number().int(), persons: z.number().int() })),
+      shares: z.array(z.strictObject({ userId: z.uuid(), firstName: z.string(), shareCents: z.number().int() })),
+    })
+    .nullable(),
 });
 
 export const ride = z.strictObject({
@@ -41,6 +55,7 @@ export const ride = z.strictObject({
   /** Statut de la personne qui lit : `absent` après une clôture sans validation de présence. */
   myStatus: z.string(),
   seatsTotal: z.number().int(),
+  vehicle: z.object({ model: z.string().nullable(), color: z.string().nullable() }).nullable(),
   distanceM: z.number().int().nullable(),
   durationS: z.number().int().nullable(),
   routeEstimated: z.boolean(),
@@ -60,7 +75,7 @@ export const pickupBody = z.object({
 });
 
 export const participantParams = z.object({ id: z.uuid(), userId: z.uuid() });
-export const presenceResponse = z.object({ payment: z.enum(['paid', 'failed', 'already']) });
+export const presenceResponse = z.object({ status: z.enum(['validated', 'already']) });
 
 export const navigationResponse = z.strictObject({
   stops: z.array(
@@ -83,3 +98,45 @@ export const navigationResponse = z.strictObject({
   }),
   supportsMultiStop: z.strictObject({ googleMaps: z.boolean(), appleMaps: z.boolean(), waze: z.boolean() }),
 });
+
+export const historyResponse = z.strictObject({
+  rides: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      day: z.iso.date(),
+      direction: z.enum(['to_campus', 'from_campus']),
+      time: z.date(),
+      role: z.enum(['driver', 'passenger']),
+      myStatus: z.string(),
+      amountCents: z.number().int().nullable(),
+      with: z.array(z.string()),
+    }),
+  ),
+});
+
+const point = z.strictObject({ lat: z.number(), lon: z.number() });
+
+export const previewResponse = z.strictObject({
+  route: z.array(z.tuple([z.number(), z.number()])),
+  estimated: z.boolean(),
+  campus: point.extend({ name: z.string() }),
+  me: point.nullable(),
+  /** Mon temps de trajet en secondes (voir `myDurationS`) ; null sans itinéraire. */
+  durationS: z.number().int().nullable(),
+  meetingPoints: z.array(
+    z.strictObject({
+      userId: z.uuid(),
+      kind: z.enum(['chosen', 'proposed']),
+      label: z.string(),
+      lat: z.number(),
+      lon: z.number(),
+    }),
+  ),
+});
+
+export const pickupProposalBody = z.object({
+  label: z.string().trim().min(1).max(120),
+  lat: z.number().min(-85).max(85),
+  lon: z.number().min(-180).max(180),
+});
+export const pickupAnswerBody = z.object({ accept: z.boolean() });

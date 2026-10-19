@@ -57,6 +57,104 @@
       "when": 1792222584080,
       "tag": "0007_chat_and_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792246575434,
+      "tag": "0008_security_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792296940988,
+      "tag": "0009_pause_recurrence",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792303464855,
+      "tag": "0010_earnings_release",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792318946977,
+      "tag": "0011_onboard_distance",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792319355754,
+      "tag": "0012_profile_about_photo",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792320208942,
+      "tag": "0013_carpool_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792325092190,
+      "tag": "0014_detour_stop_penalty",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792326509442,
+      "tag": "0015_carpool_request_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792335096317,
+      "tag": "0016_vehicle_look",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792336204885,
+      "tag": "0017_chat_reactions_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792337138183,
+      "tag": "0018_profile_preferences_leaderboard",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792351536204,
+      "tag": "0019_reactions_any_emoji",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792394581609,
+      "tag": "0020_message_replies",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792396046059,
+      "tag": "0021_meeting_point_proposals",
+      "breakpoints": true
     }
   ]
 }

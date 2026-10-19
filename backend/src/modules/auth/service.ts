@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { MailProvider } from '../../shared/mail/mail-provider.js';
 import { AppError } from '../../shared/errors.js';
@@ -49,6 +49,11 @@ export class AuthService {
     const last = await repo.latestCode(email);
     if (last && now.getTime() - last.createdAt.getTime() < AUTH_POLICY.codeResendCooldownSeconds * 1000) {
       throw new AppError(429, 'code_cooldown', 'Attends une minute avant de redemander un code');
+    }
+
+    // Plafond par adresse, quelle que soit l'IP : borne la recherche du code par force brute.
+    if ((await repo.codesSince(email, addMinutes(now, -24 * 60))) >= (await settings.get('auth.signupCodesPerDay'))) {
+      throw new AppError(429, 'code_daily_limit', 'Trop de codes demandés aujourd’hui pour cette adresse');
     }
 
     const existing = await repo.findUserByEmail(email);
@@ -108,15 +113,51 @@ export class AuthService {
     return this.issueTokens(userId, randomUUID());
   }
 
-  async login(input: { universityEmail: string; password: string }): Promise<TokensResponse> {
-    const user = await this.deps.repo.findUserByEmail(normalizeEmail(input.universityEmail));
-    if (!user?.passwordHash || user.deletedAt) {
-      // Même coût de calcul qu'un vrai essai : la durée ne révèle pas si le compte existe.
-      await verify(await this.getDummyHash(), input.password);
+  /**
+   * Connexion. Deux compteurs d'échecs : par adresse et IP (blocage court, sans gêner la vraie
+   * personne depuis son téléphone) et par adresse seule, plus haut, sur la journée (attaque
+   * répartie sur beaucoup d'IP). L'IP n'est gardée que hachée.
+   */
+  async login(input: { universityEmail: string; password: string; ip?: string }): Promise<TokensResponse> {
+    const { repo, settings, clock, secret } = this.deps;
+    const email = normalizeEmail(input.universityEmail);
+    const now = clock();
+    const ipKey = `${email}|${createHmac('sha256', secret).update(input.ip ?? '').digest('base64url').slice(0, 16)}`;
+    const dayKey = `${email}|jour`;
+    // Compte existant ou non : la réponse ne révèle rien.
+    if (await repo.loginLockedUntil([ipKey, dayKey], now)) {
+      throw new AppError(429, 'login_locked', 'Trop d’essais : réessaie dans quelques minutes');
+    }
+    const user = await repo.findUserByEmail(email);
+    const active = user?.passwordHash && !user.deletedAt ? user : null;
+    // Même coût de calcul qu'un vrai essai : la durée ne révèle pas si le compte existe.
+    const matches = await verify(active?.passwordHash ?? (await this.getDummyHash()), input.password);
+    if (!active || !matches) {
+      const lockMinutes = await settings.get('auth.loginLockMinutes');
+      await repo.recordLoginFailure(ipKey, now, {
+        maxFailures: await settings.get('auth.loginMaxFailures'),
+        windowMinutes: lockMinutes,
+        lockMinutes,
+      });
+      await repo.recordLoginFailure(dayKey, now, {
+        maxFailures: await settings.get('auth.loginDailyMaxFailures'),
+        windowMinutes: 24 * 60,
+        lockMinutes: 60,
+      });
       throw invalidCredentials();
     }
-    if (!(await verify(user.passwordHash, input.password))) throw invalidCredentials();
-    return this.issueTokens(user.id, randomUUID());
+    await repo.clearLoginFailures([ipKey]);
+    return this.issueTokens(active.id, randomUUID());
+  }
+
+  /** Confirmation d'une action sensible (suppression du compte) par le mot de passe. */
+  async checkPassword(userId: string, password: string): Promise<void> {
+    const passwordHash = await this.deps.repo.passwordHash(userId);
+    if (!passwordHash) {
+      await verify(await this.getDummyHash(), password);
+      throw new AppError(401, 'invalid_password', 'Mot de passe incorrect');
+    }
+    if (!(await verify(passwordHash, password))) throw new AppError(401, 'invalid_password', 'Mot de passe incorrect');
   }
 
   /** Rotation : chaque jeton ne sert qu'une fois ; une réutilisation révoque toute la famille. */

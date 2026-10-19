@@ -19,6 +19,9 @@ import {
 import type { DbOrTx, MatchingRepo, ParticipantRow, RideRow } from './repo.js';
 
 const DIRECTIONS: Direction[] = ['to_campus', 'from_campus'];
+/** Semaines générables à l'avance (la génération du vendredi couvre la suivante). */
+const MAX_WEEKS_AHEAD = 4;
+
 const ACTIVE = (p: ParticipantRow) => p.status !== 'declined' && p.status !== 'cancelled';
 
 /**
@@ -46,6 +49,7 @@ export interface ProposalView {
   seatsTotal: number;
   seatsTaken: number;
   detourMinutes: number;
+  priceCents: number | null;
   driver: PublicPerson | null;
   passengers: PublicPerson[];
 }
@@ -56,6 +60,7 @@ export interface JoinableRide {
   direction: Direction;
   time: Date;
   seatsLeft: number;
+  priceCents: number | null;
   driver: PublicPerson;
 }
 
@@ -114,7 +119,31 @@ export class MatchingService {
     private readonly onRideChanged: (rideId: string) => Promise<void> = () => Promise.resolve(),
     private readonly policy?: CancellationPolicy,
     private readonly notifier: Notifier = silentNotifier,
+    /**
+     * Solde du passager suffisant pour le prix maximal du trajet (`402 insufficient_funds`
+     * sinon) : pas de trajet avec un solde nul ou trop faible (décision du 17/10/2026).
+     */
+    private readonly requireFunds: (userId: string, rideId: string, detourS: number | null) => Promise<void> = () =>
+      Promise.resolve(),
+    /** Prix indicatif d'un trajet pour une personne (`RidesService.quote`). */
+    private readonly quote: (rideId: string, userId: string, joiningDetourS?: number) => Promise<number | null> = () =>
+      Promise.resolve(null),
   ) {}
+
+  /** Ajoute le prix indicatif à une proposition (hors transaction : simple lecture). */
+  async priced(userId: string, view: ProposalView): Promise<ProposalView> {
+    return { ...view, priceCents: await this.quote(view.id, userId).catch(() => null) };
+  }
+
+  /** Prix que paierait le passager dans chaque voiture trouvée (son détour compris). */
+  private async pricedRides(userId: string, rides: JoinableRide[]): Promise<JoinableRide[]> {
+    return Promise.all(
+      rides.map(async (r) => ({
+        ...r,
+        priceCents: await this.quote(r.rideId, userId, r.driver.detourMinutes * 60).catch(() => null),
+      })),
+    );
+  }
 
   private today(): string {
     return parisDateOf(this.clock());
@@ -127,6 +156,7 @@ export class MatchingService {
       avgSpeedKmh: await this.settings.get('matching.avgSpeedKmh'),
       arrivalWindowMinutes: await this.settings.get('matching.arrivalWindowMinutes'),
       reliabilityWeightSeconds: await this.settings.get('matching.reliabilityWeightSeconds'),
+      stopPenaltySeconds: await this.settings.get('matching.stopPenaltySeconds'),
     };
   }
 
@@ -146,6 +176,9 @@ export class MatchingService {
       const available = rows.filter((r) => !isPausedOn(pauses.get(r.userId) ?? [], day));
       const campuses = [...new Set(available.map((r) => r.campusId))];
 
+      // Même rôle à l'aller et au retour (on ne repart pas en passager quand on est venu en
+      // voiture) : rôles des trajets déjà engagés, puis ceux décidés pour l'aller.
+      const dayRoles = await this.repo.dayRoles(day, tx);
       for (const direction of DIRECTIONS) {
         await this.repo.deleteOpenRides(day, direction, tx);
         const locked = await this.repo.lockedUsers(day, direction, tx);
@@ -163,9 +196,11 @@ export class MatchingService {
                   ? { seats: r.seats, maxDetourMinutes: r.maxDetourMinutes }
                   : null,
               reliability: r.reliability,
+              drivenRecently: r.drivenRecently,
             }));
           const params = await this.params(await this.repo.campusLocation(campusId, tx));
-          const { rides } = matchSlot(needs, direction, params, (d, p) => declines.has(`${d}|${p}`));
+          const { rides, roles } = matchSlot(needs, direction, params, (d, p) => declines.has(`${d}|${p}`), dayRoles);
+          for (const [userId, role] of roles) if (!dayRoles.has(userId)) dayRoles.set(userId, role);
           for (const planned of rides) await this.repo.insertRide(planned, { day, direction, campusId }, tx);
         }
       }
@@ -184,10 +219,13 @@ export class MatchingService {
     const today = this.today();
     for (const day of days) {
       if (day < today) continue;
-      await this.repo.transaction(async (tx) => {
+      const cancelled = await this.repo.transaction(async (tx) => {
         await this.repo.lockDay(tx, day);
-        await this.repo.releaseUnconfirmed(userId, day, tx);
+        return this.repo.releaseUnconfirmed(userId, day, this.clock(), tx);
       });
+      for (const ride of cancelled) {
+        await this.notifier.notify(ride.passengers, { type: 'ride_cancelled', rideId: ride.rideId, by: 'driver' }).catch(() => undefined);
+      }
       if (await this.repo.isWeekGenerated(isoWeekOf(day))) await this.regenerateDay(day);
     }
   }
@@ -202,11 +240,17 @@ export class MatchingService {
   }
 
   async listProposals(userId: string, week: string): Promise<ProposalView[]> {
-    await this.ensureWeek(week);
+    // Génération seulement pour les semaines utiles : passées en lecture seule, futur borné.
+    const monday = weekDays(week)[0]!;
+    const today = this.today();
+    if (monday > addDaysIso(today, MAX_WEEKS_AHEAD * 7)) {
+      throw new AppError(400, 'week_out_of_range', 'Semaine trop lointaine');
+    }
+    if (addDaysIso(monday, 6) >= today) await this.ensureWeek(week);
     const days = weekDays(week);
     const rides = await this.repo.ridesForUser(userId, days[0]!, addDaysIso(days[6]!, 1));
     const participants = await this.repo.participants(rides.map((r) => r.id));
-    return rides.flatMap((ride) => {
+    const views = rides.flatMap((ride) => {
       const view = this.view(
         userId,
         ride,
@@ -214,6 +258,7 @@ export class MatchingService {
       );
       return view ? [view] : [];
     });
+    return Promise.all(views.map((v) => this.priced(userId, v)));
   }
 
   private view(userId: string, ride: RideRow, parts: ParticipantRow[]): ProposalView | null {
@@ -232,6 +277,7 @@ export class MatchingService {
       seatsTotal: ride.seatsTotal,
       seatsTaken: passengers.length,
       detourMinutes: minutes(me.detourS),
+      priceCents: null,
       driver: me.role === 'passenger' ? publicPerson(driver, me.detourS) : null,
       passengers: me.role === 'driver' ? passengers.map((p) => publicPerson(p)) : [],
     };
@@ -261,20 +307,26 @@ export class MatchingService {
   async accept(userId: string, rideId: string): Promise<ProposalView> {
     // Toujours le verrou du jour avant celui du trajet (même ordre que la régénération).
     const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const mine = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
+    if (mine?.role === 'passenger' && mine.status === 'proposed') await this.requireFunds(userId, rideId, null);
     const result = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
       const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
 
+      let requested = false;
+      await this.assertSameRoleOtherWay(userId, ride.day, ride.direction, me?.role ?? 'passenger', tx);
       if (me) {
         if (!ACTIVE(me)) throw new AppError(409, 'proposal_declined', 'Tu as refusé cette proposition');
-        await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
+        // Demande déjà envoyée : c'est au conducteur de répondre.
+        if (me.status !== 'requested') await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
       } else {
         // Sans créneau ce jour-là (trajet trouvé par la recherche) : l'heure du trajet choisi.
         const joinable = await this.joinable(userId, ride.day, ride.direction, null, tx, undefined, ride.targetTime);
         const match = joinable.find((j) => j.rideId === rideId);
         if (!match) throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+        await this.requireFunds(userId, rideId, match.driver.detourMinutes * 60);
         for (const other of await this.repo.otherActiveRides(userId, ride.day, ride.direction, rideId, tx)) {
           const otherParts = await this.repo.participants([other.ride_id], tx);
           const mine = otherParts.find((p) => p.userId === userId)!;
@@ -282,7 +334,10 @@ export class MatchingService {
           if (mine.status === 'accepted') throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
           await this.repo.setParticipantStatus(other.ride_id, userId, 'declined', tx);
         }
-        await this.repo.addPassenger(rideId, userId, match.driver.detourMinutes * 60, tx);
+        // Voiture choisie par le passager (recherche, « voir d'autres ») : le conducteur ne l'a
+        // pas encore accepté, donc ni nom ni adresse échangés avant sa réponse (cahier §4).
+        await this.repo.addPassenger(rideId, userId, match.driver.detourMinutes * 60, tx, 'requested');
+        requested = true;
       }
 
       const updated = await this.repo.participants([rideId], tx);
@@ -291,13 +346,53 @@ export class MatchingService {
       if (driverAccepted && passengerAccepted && ride.status === 'proposed') {
         await this.repo.setRideStatus(rideId, 'confirmed', tx);
       }
-      const confirmed = driverAccepted && passengerAccepted;
+      // Tracé à refaire seulement si cette réponse ajoute quelqu'un d'accepté (pas pour une demande
+      // en attente ni un second appui : appel d'itinéraire inutile).
+      const accepting = me !== undefined && me.status === 'proposed';
+      const confirmed = accepting && driverAccepted && passengerAccepted;
       if (confirmed) await this.repo.invalidatePlan(rideId, tx);
-      return { view: await this.viewFor(userId, rideId, tx), confirmed };
+      return { view: await this.viewFor(userId, rideId, tx), confirmed, requested, driverId: ride.driverId };
     });
     // Après la transaction (appel d'itinéraire) ; en cas d'échec, le plan sera calculé à la lecture.
     if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
+    if (result.requested) {
+      await this.notifier.notify([result.driverId], { type: 'ride_requested', rideId }).catch(() => undefined);
+    }
     return result.view;
+  }
+
+  /**
+   * Réponse du conducteur à une demande de place (passager venu par la recherche ou « voir
+   * d'autres »). Acceptée : le passager est accepté des deux côtés, le conducteur aussi
+   * (s'il ne l'était pas) et le trajet est confirmé. Refusée : la paire n'est plus reproposée ce jour-là et on lui cherche une autre voiture.
+   */
+  async answerRequest(driverId: string, rideId: string, passengerId: string, approve: boolean): Promise<ProposalView> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const result = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      const parts = await this.repo.participants([rideId], tx);
+      if (ride.driverId !== driverId) throw new AppError(403, 'forbidden', 'Réservé au conducteur');
+      const request = parts.find((p) => p.userId === passengerId && p.role === 'passenger');
+      if (request?.status !== 'requested') throw new AppError(404, 'not_found', 'Ressource introuvable');
+      if (!approve) {
+        await this.repo.setParticipantStatus(rideId, passengerId, 'declined', tx);
+        await this.repo.recordDecline(passengerId, driverId, ride.day, ride.direction, tx);
+        return { ride, confirmed: false };
+      }
+      await this.repo.setParticipantStatus(rideId, passengerId, 'accepted', tx);
+      // Accepter un passager vaut acceptation du trajet : il est confirmé tout de suite, sans
+      // seconde validation, et d'autres passagers peuvent encore s'ajouter.
+      const driver = parts.find((p) => p.role === 'driver');
+      if (driver && driver.status === 'proposed') await this.repo.setParticipantStatus(rideId, driverId, 'accepted', tx);
+      if (ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
+      await this.repo.invalidatePlan(rideId, tx);
+      return { ride, confirmed: true };
+    });
+    await this.notifier.notify([passengerId], { type: 'request_answered', rideId, approved: approve }).catch(() => undefined);
+    if (result.confirmed) await this.onRideChanged(rideId).catch(() => undefined);
+    if (!approve) await this.rehome(passengerId, result.ride).catch(() => undefined);
+    return this.viewFor(driverId, rideId);
   }
 
   /**
@@ -313,7 +408,8 @@ export class MatchingService {
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
       if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
-      if (me.status !== 'proposed') {
+      // Une demande de place encore sans réponse se retire comme une proposition.
+      if (me.status !== 'proposed' && me.status !== 'requested') {
         throw new AppError(409, 'already_answered', 'Tu as déjà répondu à cette proposition');
       }
       if (me.role === 'passenger') {
@@ -338,9 +434,21 @@ export class MatchingService {
   }
 
   /** Avant d'annuler : palier de pénalité si l'annulation avait lieu maintenant (cahier §8). */
+  /**
+   * Trajet annulable : ouvert, ou en cours pour un passager pas encore à bord (présence non
+   * validée) ; une fois à bord, il termine son trajet au lieu d'annuler.
+   */
+  private assertCancellable(ride: RideRow | undefined, me: ParticipantRow | undefined): RideRow {
+    if (ride?.status === 'in_progress' && me?.role === 'passenger' && me.status === 'accepted' && !me.presenceValidated) {
+      return ride;
+    }
+    return this.assertOpen(ride);
+  }
+
   async cancellation(userId: string, rideId: string): Promise<{ role: 'driver' | 'passenger'; tier: CancelTier }> {
-    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    const found = await this.repo.findRide(rideId);
     const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
+    const ride = this.assertCancellable(found, me);
     if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
     return { role: me.role, tier: await this.requirePolicy().cancellationTier(ride.targetTime) };
@@ -354,12 +462,16 @@ export class MatchingService {
    */
   async cancel(userId: string, rideId: string): Promise<{ tier: CancelTier }> {
     const policy = this.requirePolicy();
-    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const peek = await this.repo.peekRide(rideId);
+    if (!peek) throw new AppError(404, 'not_found', 'Ressource introuvable');
     const outcome = await this.repo.transaction(async (tx) => {
       await this.repo.lockDay(tx, peek.day);
-      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      const found = await this.repo.findRide(rideId, tx);
       const parts = await this.repo.participants([rideId], tx);
       const me = parts.find((p) => p.userId === userId);
+      // Relu sous le verrou du trajet : une validation de présence simultanée l'emporte.
+      const ride = this.assertCancellable(found, me);
+      const started = ride.status === 'in_progress';
       if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
       if (me.status !== 'accepted') throw new AppError(409, 'not_accepted', "Tu n'as pas accepté ce trajet");
       const now = this.clock();
@@ -373,8 +485,9 @@ export class MatchingService {
         if (ride.status === 'confirmed' && !others.some((p) => p.role === 'passenger')) {
           await this.repo.setRideStatus(rideId, 'proposed', tx);
         }
-        await this.repo.invalidatePlan(rideId, tx);
-        return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed: [] as string[] };
+        // Trajet en cours : plan figé (prix retenu), retenue libérée à la clôture.
+        if (!started) await this.repo.invalidatePlan(rideId, tx);
+        return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed: [] as string[], started };
       }
       await this.repo.setRideStatus(rideId, 'cancelled', tx);
       await this.repo.cancelParticipants(rideId, now, tx);
@@ -382,7 +495,7 @@ export class MatchingService {
         await this.repo.recordDecline(userId, p.userId, ride.day, ride.direction, tx);
       }
       const freed = parts.filter((p) => p.role === 'passenger' && ACTIVE(p)).map((p) => p.userId);
-      return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed };
+      return { ride, tier, role: me.role, notify: others.map((p) => p.userId), freed, started };
     });
 
     // Après la transaction : rien de ce qui suit ne remet l'annulation en cause.
@@ -391,7 +504,8 @@ export class MatchingService {
     }
     if (outcome.role === 'passenger') {
       await this.onRideChanged(rideId).catch(() => undefined);
-      await this.proposeReplacement(rideId).catch(() => undefined);
+      // Voiture déjà partie : pas de remplaçant.
+      if (!outcome.started) await this.proposeReplacement(rideId).catch(() => undefined);
     } else {
       await this.regenerateDay(outcome.ride.day).catch(() => undefined);
       for (const passengerId of outcome.freed) {
@@ -441,17 +555,19 @@ export class MatchingService {
     const me = (await this.repo.participants([rideId])).find((p) => p.userId === userId);
     if (!me) throw new AppError(404, 'not_found', 'Ressource introuvable');
     if (me.role !== 'passenger') return [];
-    return this.joinable(userId, ride.day, ride.direction, rideId);
+    await this.assertSameRoleOtherWay(userId, ride.day, ride.direction, 'passenger');
+    return this.pricedRides(userId, await this.joinable(userId, ride.day, ride.direction, rideId));
   }
 
   /** Recherche manuelle (cahier §4), limitée par un quota quotidien. */
   async search(userId: string, query: { day: string; direction: Direction; time?: string | undefined }) {
     if (query.day < this.today()) throw new AppError(400, 'day_in_past', 'Choisis une date à venir');
+    await this.assertSameRoleOtherWay(userId, query.day, query.direction, 'passenger');
     const quota = await this.settings.get('search.dailyQuota');
     if ((await this.repo.incrementSearch(userId, this.today())) > quota) {
       throw new AppError(429, 'search_quota_exceeded', 'Tu as atteint le nombre de recherches du jour');
     }
-    return this.joinable(userId, query.day, query.direction, null, undefined, query.time);
+    return this.pricedRides(userId, await this.joinable(userId, query.day, query.direction, null, undefined, query.time));
   }
 
   /**
@@ -462,6 +578,94 @@ export class MatchingService {
     const ride = this.assertOpen(await this.repo.findRide(rideId));
     await this.assertAcceptedDriver(userId, rideId);
     return this.suggestionsFor(ride);
+  }
+
+  /**
+   * Trajet créé à la main par un conducteur (depuis une conversation) : jour, sens, heure ; il
+   * l'accepte d'office et des passagers peuvent le rejoindre. Ses propositions encore ouvertes
+   * sur ce créneau sont refusées ; impossible s'il est déjà engagé.
+   */
+  async createRide(userId: string, input: { day: string; direction: Direction; time: string }): Promise<ProposalView> {
+    if (input.day < this.today()) throw new AppError(400, 'validation_error', 'Choisis un jour à venir');
+    const targetTime = parisToUtc(input.day, input.time);
+    if (targetTime.getTime() <= this.clock().getTime()) throw new AppError(400, 'validation_error', 'Choisis une heure à venir');
+    const setup = await this.repo.driverSetup(userId);
+    if (setup.seats === null) throw new AppError(409, 'vehicle_required', 'Déclare ton véhicule pour conduire');
+    if (!setup.hasHome || !setup.campusId) throw new AppError(409, 'profile_incomplete', 'Ajoute ton adresse pour trouver un trajet');
+    await this.assertSameRoleOtherWay(userId, input.day, input.direction, 'driver');
+    for (const mine of await this.repo.mySlot(userId, input.day, input.direction)) {
+      if (mine.status === 'accepted' || mine.status === 'picked_up' || mine.status === 'requested') {
+        throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
+      }
+      // Simple proposition : refusée (pour un conducteur, sa voiture proposée est annulée).
+      await this.decline(userId, mine.ride_id);
+    }
+    return this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, input.day);
+      const rideId = await this.repo.insertRide(
+        { driverId: userId, passengers: [], totalDetourSeconds: 0, seats: setup.seats!, targetTime },
+        { day: input.day, direction: input.direction, campusId: setup.campusId! },
+        tx,
+      );
+      await this.repo.setParticipantStatus(rideId, userId, 'accepted', tx);
+      return this.viewFor(userId, rideId, tx);
+    });
+  }
+
+  /**
+   * Accord dans une conversation (proposition de trajet ou demande publiée dans un groupe) : le
+   * conducteur et le passager ont tous deux dit oui, le passager est donc accepté directement.
+   * Mêmes contrôles qu'une place demandée (trajet ouvert, place libre, solde, pas déjà engagé ce
+   * jour-là), sans limite de détour : le conducteur a choisi de prendre cette personne.
+   */
+  async joinByAgreement(rideId: string, passengerId: string): Promise<void> {
+    const peek = this.assertOpen(await this.repo.peekRide(rideId));
+    const detourS = await this.agreedDetour(rideId, passengerId);
+    await this.requireFunds(passengerId, rideId, detourS);
+    const result = await this.repo.transaction(async (tx) => {
+      await this.repo.lockDay(tx, peek.day);
+      const ride = this.assertOpen(await this.repo.findRide(rideId, tx));
+      if (ride.driverId === passengerId) throw new AppError(409, 'own_ride', "C'est ta propre voiture");
+      const parts = await this.repo.participants([rideId], tx);
+      if (parts.find((p) => p.role === 'driver')?.status !== 'accepted') {
+        throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+      }
+      const me = parts.find((p) => p.userId === passengerId);
+      if (me?.status === 'accepted') return null; // déjà à bord : rien à refaire
+      await this.assertSameRoleOtherWay(passengerId, ride.day, ride.direction, 'passenger', tx);
+      const taken = parts.filter((p) => p.role === 'passenger' && ACTIVE(p) && p.userId !== passengerId).length;
+      if (taken >= ride.seatsTotal) throw new AppError(409, 'ride_full', 'Cette voiture est complète');
+      for (const other of await this.repo.otherActiveRides(passengerId, ride.day, ride.direction, rideId, tx)) {
+        const theirs = (await this.repo.participants([other.ride_id], tx)).find((p) => p.userId === passengerId)!;
+        if (theirs.role === 'driver') throw new AppError(409, 'already_driving', 'Tu conduis déjà ce jour-là');
+        if (theirs.status === 'accepted') throw new AppError(409, 'already_committed', 'Tu as déjà un trajet ce jour-là');
+        await this.repo.setParticipantStatus(other.ride_id, passengerId, 'declined', tx);
+      }
+      await this.repo.addPassenger(rideId, passengerId, detourS, tx, 'accepted');
+      if (ride.status === 'proposed') await this.repo.setRideStatus(rideId, 'confirmed', tx);
+      await this.repo.invalidatePlan(rideId, tx);
+      return { driverId: ride.driverId };
+    });
+    if (!result) return;
+    await this.onRideChanged(rideId).catch(() => undefined);
+    await this.notifier.notify([result.driverId, passengerId], { type: 'carpool_joined', rideId }).catch(() => undefined);
+  }
+
+  /** Détour ajouté par ce passager au trajet (estimé, comme pour les suggestions). */
+  private async agreedDetour(rideId: string, passengerId: string): Promise<number> {
+    const ride = this.assertOpen(await this.repo.findRide(rideId));
+    const passengers = (await this.repo.participants([rideId])).filter(
+      (p) => p.role === 'passenger' && ACTIVE(p) && p.userId !== passengerId,
+    );
+    const homes = await this.repo.homesAndVehicles([ride.driverId, passengerId, ...passengers.map((p) => p.userId)]);
+    const driver = homes.get(ride.driverId);
+    const mine = homes.get(passengerId);
+    if (!mine) throw new AppError(409, 'profile_incomplete', 'Ajoute ton adresse pour trouver un trajet');
+    if (!driver) throw new AppError(409, 'ride_unavailable', 'Cette voiture ne peut plus te prendre');
+    const params = await this.params(await this.repo.campusLocation(ride.campusId));
+    const others = passengers.map((p) => homes.get(p.userId)).filter((h): h is NonNullable<typeof h> => Boolean(h));
+    const home = { lat: driver.lat, lon: driver.lon };
+    return Math.round(detourSeconds(home, [...others, mine], params) - detourSeconds(home, others, params));
   }
 
   /** Le conducteur propose une place : le passager reçoit une proposition à accepter. */
@@ -475,9 +679,30 @@ export class MatchingService {
       if (view.seatsLeft <= 0) throw new AppError(409, 'ride_full', 'Ta voiture est complète');
       const pick = view.suggestions.find((s) => s.person.userId === passengerId);
       if (!pick) throw new AppError(409, 'suggestion_unavailable', 'Cette personne ne peut plus être proposée');
+      await this.assertSameRoleOtherWay(passengerId, ride.day, ride.direction, 'passenger', tx);
       await this.repo.addPassenger(rideId, passengerId, pick.person.detourMinutes * 60, tx, 'proposed');
       return this.viewFor(userId, rideId, tx);
     });
+  }
+
+  /**
+   * Même rôle à l'aller et au retour : venu en voiture, on repart en voiture ; venu en
+   * passager, on n'a pas sa voiture pour repartir conducteur.
+   */
+  private async assertSameRoleOtherWay(
+    userId: string,
+    day: string,
+    direction: Direction,
+    role: 'driver' | 'passenger',
+    db?: DbOrTx,
+  ): Promise<void> {
+    const other = await this.repo.roleOtherWay(userId, day, direction, db);
+    if (other === 'driver' && role === 'passenger') {
+      throw new AppError(409, 'drives_other_way', "Tu conduis l'autre trajet ce jour-là : tu repars avec ta voiture");
+    }
+    if (other === 'passenger' && role === 'driver') {
+      throw new AppError(409, 'passenger_other_way', "Tu es passager sur l'autre trajet ce jour-là : tu n'as pas ta voiture");
+    }
   }
 
   private async assertAcceptedDriver(userId: string, rideId: string, db?: DbOrTx): Promise<void> {
@@ -625,6 +850,7 @@ export class MatchingService {
         direction: ride.direction,
         time: ride.targetTime,
         seatsLeft: ride.seatsTotal - others.length,
+        priceCents: null,
         driver: publicPerson(driver, after - before),
         cost: rankingCost(after - before, [driver.reliability], params.reliabilityWeightSeconds),
       });

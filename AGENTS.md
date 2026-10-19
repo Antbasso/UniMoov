@@ -23,7 +23,7 @@ assets/     logo
 ```
 
 ## Contrainte de coût (prioritaire)
-Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, pièces jointes de chat).
+Projet étudiant à commission limitée : coût de fonctionnement visé d'environ 5 à 7 € par mois et temps de développement minimal. Lis `docs/couts.md` avant de choisir un service ou une dépendance. Règles courtes : un seul VPS en Docker Compose, aucun service payant ou managé sans validation, fournisseurs derrière des interfaces, appels externes minimisés et mis en cache, rien de v1.1 en v1 (connexion Google/Apple, agenda Google/Microsoft, pièces jointes de chat autres que les photos).
 
 ## Stack imposée
 - Mobile : Flutter stable, Dart null-safe, Riverpod (état), go_router, dio, freezed + json_serializable, flutter_secure_storage, geolocator, url_launcher, firebase_messaging, flutter_map + flutter_map_pmtiles pour la carte (fond OSM en PMTiles statique, voir `docs/couts.md`).
@@ -45,16 +45,20 @@ cd backend && npm run lint && npm run typecheck
 cd backend && npm test                        # unitaires (vitest, sans base)
 cd backend && npm run test:integration        # PostGIS requis : TEST_DATABASE_URL (base effacée)
 cd mobile && flutter pub get && flutter analyze && flutter test
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build   # production derrière Caddy (docs/deploiement.md)
+./deploy/backup.sh                            # sauvegarde chiffrée de la base (cron quotidien en production)
+./deploy/restore.sh backups/<fichier>.dump.enc   # restauration (remplace la base)
 cd mobile && dart run tool/generate_tokens.dart   # après modification de tokens.json
 cd mobile && flutter gen-l10n                 # après modification de lib/l10n/app_fr.arb
 cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+adb reverse tcp:3000 tcp:3000 && cd mobile && flutter run --dart-define=API_BASE_URL=http://localhost:3000   # téléphone réel branché en USB
 cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000 --dart-define=PMTILES_URL=http://10.0.2.2:8080/annecy.pmtiles   # fond vectoriel OpenMapTiles (facultatif, voir README)
 ```
 Avant de déclarer un travail terminé, lance lint, typecheck et tests des parties touchées et donne le résultat réel. Si une commande n'existe pas encore, crée-la dans le même changement.
 
 ## Règles non négociables
 **Confidentialité et RGPD**
-- Avant acceptation mutuelle, n'expose jamais le nom complet ni l'adresse exacte : uniquement prénom, photo, secteur approximatif, horaire, score, détour. C'est le serveur qui filtre (les champs sensibles ne quittent pas l'API), jamais le client.
+- Avant acceptation mutuelle, n'expose jamais le nom complet ni l'adresse exacte : uniquement prénom, photo, secteur approximatif, horaire, score, détour, et le profil facultatif que la personne a choisi de montrer (formation, âge, centres d'intérêt). C'est le serveur qui filtre (les champs sensibles ne quittent pas l'API), jamais le client.
 - La position en direct n'est collectée et diffusée que pendant un trajet confirmé, uniquement aux participants de ce trajet, et supprimée à la clôture (garde au plus la trace nécessaire aux litiges, durée dans `docs/decisions.md`).
 - Consentement explicite avant connexion d'un agenda ; ne stocke que les créneaux utiles (début/fin de journée, lieu), pas les titres ni descriptions d'événements.
 - Aucune donnée personnelle dans les logs, aucune clé ou secret dans le code.

@@ -33,14 +33,34 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
     final week = isoWeekOf(_next ? now.add(const Duration(days: 7)) : now);
     final proposals = ref.watch(weekProposalsProvider(week));
 
+    final value = proposals.value;
+    // Trajet en cours d'abord, à part ; les trajets terminés passent dans l'historique (profil).
+    final live = value?.where(_isLive).toList() ?? const <Proposal>[];
+    final upcoming = value?.where((p) => !_isLive(p) && p.rideStatus != 'completed').toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: Text(l10n.weekTitle, style: UmText.h2.copyWith(color: c.ink)),
+        for (final p in live) ...[
+          _card(context, l10n, week, p),
+          const SizedBox(height: UmSpace.s5),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(l10n.weekTitle, style: UmText.h2.copyWith(color: c.ink)),
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.searchAction,
+              icon: Icon(Icons.search_rounded, color: c.brandStrong),
+              onPressed: () => context.push(AppRoutes.search),
+            ),
+          ],
         ),
-        const SizedBox(height: UmSpace.s3),
+        const SizedBox(height: UmSpace.s2),
         SegmentedButton<bool>(
           segments: [
             ButtonSegment(value: false, label: Text(l10n.weekThis)),
@@ -50,12 +70,12 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
           showSelectedIcon: false,
           onSelectionChanged: (selection) => setState(() => _next = selection.first),
         ),
-        const SizedBox(height: UmSpace.s4),
+        const SizedBox(height: UmSpace.s3),
         ...switch (proposals) {
-          AsyncData(:final value) when value.isEmpty => [
+          AsyncData() when upcoming!.isEmpty && live.isEmpty => [
             _Empty(onSearch: () => context.push(AppRoutes.search)),
           ],
-          AsyncData(:final value) => _byDay(context, l10n, week, value),
+          AsyncData() => _byDay(context, l10n, week, upcoming!),
           AsyncError(:final error) => [
             UmErrorText(apiErrorMessage(l10n, error is ApiException ? error.code : null)),
             const SizedBox(height: UmSpace.s2),
@@ -72,14 +92,33 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
             ),
           ],
         },
-        const SizedBox(height: UmSpace.s4),
-        UmButton(
-          label: l10n.searchAction,
-          icon: Icons.search_rounded,
-          variant: UmButtonVariant.secondary,
-          onPressed: () => context.push(AppRoutes.search),
-        ),
       ],
+    );
+  }
+
+  static bool _isLive(Proposal p) => p.rideStatus == 'in_progress' && p.myStatus == 'accepted';
+
+  Widget _card(BuildContext context, AppLocalizations l10n, String week, Proposal p) {
+    final (from, to) = endpoints(l10n, p.direction, driver: p.isDriver);
+    return UmRideCard(
+      from: from,
+      to: to,
+      time: formatTime(p.time, l10n.localeName),
+      driverFirstName: p.driver?.firstName ?? '',
+      seatsLeft: p.seatsLeft,
+      // Passager : ce qu'il paie ; conducteur : ce qu'il reçoit au total (estimations).
+      priceCents: p.priceCents,
+      priceLabel: p.isDriver ? l10n.rideCardReceive : null,
+      status: rideStatusOf(p),
+      role: p.isDriver ? UmRideRole.driver : UmRideRole.passenger,
+      live: _isLive(p),
+      meta: [
+        if (p.isDriver)
+          (Icons.people_outline_rounded, l10n.rideSeatsTaken(p.seatsTaken, p.seatsTotal))
+        else if (p.driver != null)
+          (Icons.person_outline_rounded, p.driver!.firstName),
+      ],
+      onTap: () => context.push(AppRoutes.proposal(week, p.id)),
     );
   }
 
@@ -102,29 +141,16 @@ class _WeekSectionState extends ConsumerState<WeekSection> {
               header: true,
               child: Text(
                 formatDay(p.day, l10n.localeName),
-                style: UmText.h3.copyWith(color: c.ink),
+                style: UmText.label.copyWith(color: c.inkMuted),
               ),
             ),
           ),
         );
       }
-      final (from, to) = endpoints(l10n, p.direction, driver: p.isDriver);
-      final time = formatTime(p.time, l10n.localeName);
       widgets.add(
         Padding(
           padding: const EdgeInsets.only(bottom: UmSpace.s3),
-          child: UmRideCard(
-            from: from,
-            to: to,
-            time: time,
-            driverFirstName: p.driver?.firstName ?? '',
-            seatsLeft: p.seatsLeft,
-            status: rideStatusOf(p),
-            metaText: p.isDriver ? l10n.rideMetaDriver(time, p.seatsTaken) : null,
-            actionLabel: l10n.see,
-            actionVariant: UmButtonVariant.secondary,
-            onAction: () => context.push(AppRoutes.proposal(week, p.id)),
-          ),
+          child: _card(context, l10n, week, p),
         ),
       );
     }
@@ -150,13 +176,19 @@ class _Empty extends ConsumerWidget {
           noSchedule ? l10n.weekEmptyNoSchedule : l10n.weekEmpty,
           style: UmText.body.copyWith(color: c.inkMuted),
         ),
-        if (noSchedule) ...[
-          const SizedBox(height: UmSpace.s3),
+        const SizedBox(height: UmSpace.s3),
+        if (noSchedule)
           UmButton(
             label: l10n.addSchedule,
             onPressed: () => context.push(AppRoutes.profileSchedule),
+          )
+        else
+          UmButton(
+            label: l10n.searchAction,
+            icon: Icons.search_rounded,
+            variant: UmButtonVariant.secondary,
+            onPressed: onSearch,
           ),
-        ],
       ],
     );
   }

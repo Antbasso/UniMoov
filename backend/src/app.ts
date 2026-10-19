@@ -12,6 +12,9 @@ import {
 } from 'fastify-type-provider-zod';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
+import { AccountRepo } from './modules/account/repo.js';
+import { accountRoutes } from './modules/account/routes.js';
+import { AccountService } from './modules/account/service.js';
 import { AuthRepo } from './modules/auth/repo.js';
 import { CalendarRepo } from './modules/calendar/repo.js';
 import { calendarRoutes } from './modules/calendar/routes.js';
@@ -36,6 +39,9 @@ import { ridesRoutes } from './modules/rides/routes.js';
 import { RidesService } from './modules/rides/service.js';
 import { ProfileRepo } from './modules/profile/repo.js';
 import { profileRoutes } from './modules/profile/routes.js';
+import { GamificationRepo } from './modules/gamification/repo.js';
+import { gamificationRoutes } from './modules/gamification/routes.js';
+import { GamificationService } from './modules/gamification/service.js';
 import { ProfileService } from './modules/profile/service.js';
 import { SettingsService } from './modules/settings/service.js';
 import { TrustRepo } from './modules/trust/repo.js';
@@ -55,6 +61,9 @@ import { SecretBox } from './shared/crypto.js';
 import { AppError, errorBody } from './shared/errors.js';
 import { fetchPublicText } from './shared/safe-fetch.js';
 import type { GeocodingProvider } from './shared/geocoding/geocoding-provider.js';
+import type { PlacesProvider } from './shared/places/places-provider.js';
+import { placesRoutes } from './modules/places/routes.js';
+import { PlacesService } from './modules/places/service.js';
 import type { MailProvider } from './shared/mail/mail-provider.js';
 import { EstimateRoutingProvider } from './shared/routing/estimate.js';
 import { GuardedRoutingProvider } from './shared/routing/guarded-routing-provider.js';
@@ -71,6 +80,8 @@ declare module 'fastify' {
       trust: TrustService;
       chat: ChatService;
       notifications: NotificationService;
+      account: AccountService;
+      wallet: WalletService;
     };
   }
 }
@@ -81,6 +92,8 @@ export interface AppModules {
   jwtSecret: string;
   mail: MailProvider;
   geocoding: GeocodingProvider;
+  /** Parkings publics et aires de covoiturage (OpenStreetMap) ; absent : aucun lieu montré. */
+  places?: PlacesProvider;
   /** Clé AES-256 (base64) des liens d'agenda. */
   calendarKey: string;
   /** Fournisseur d'itinéraires (OpenRouteService) ; absent : estimation locale seulement. */
@@ -111,7 +124,8 @@ export interface AppDeps {
 export async function buildApp({ config, pingDb, logStream, modules }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     // Derrière Caddy en production : l'IP réelle sert à la limite de débit, jamais aux journaux.
-    trustProxy: config.TRUST_PROXY ?? false,
+    // Un seul saut de confiance (Caddy) : un X-Forwarded-For forgé par le client est ignoré.
+    trustProxy: config.TRUST_PROXY ? (_address: string, hop: number) => hop === 0 : false,
     logger: {
       level: config.LOG_LEVEL,
       ...(logStream ? { stream: logStream } : {}),
@@ -122,6 +136,8 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
           method: request.method,
           route: request.routeOptions.url ?? 'unknown',
         }),
+        // Sans les champs annexes (le `detail` de PostgreSQL recopie les valeurs fautives).
+        err: logError,
       },
     },
   }).withTypeProvider<ZodTypeProvider>();
@@ -152,6 +168,19 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
 
   await app.register(rateLimit, {
     global: false,
+    // Par utilisateur quand le jeton est valide (tout un campus partage une IP) ; sinon par IP.
+    // Le jeton est vérifié : un identifiant inventé ne donne pas un nouveau quota.
+    keyGenerator: (request) => {
+      const header = request.headers.authorization;
+      if (header?.startsWith('Bearer ') && app.hasDecorator('jwt')) {
+        try {
+          return `user:${app.jwt.verify<{ sub: string }>(header.slice(7)).sub}`;
+        } catch {
+          // Jeton invalide : la route le refusera ; compté sur l'IP.
+        }
+      }
+      return request.ip;
+    },
     ...(modules?.rateLimit === false ? { allowList: () => true } : {}),
   });
 
@@ -194,7 +223,6 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         })
       : estimate;
     const ridesRepo = new RidesRepo(modules.db);
-    const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing));
     const wallet = new WalletService(new PaymentsRepo(modules.db), modules.payments, settings);
     const hub = new TrackingHub();
     const trust = new TrustService(new TrustRepo(modules.db), settings, modules.mail, clock);
@@ -208,12 +236,24 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
     const notifier: Notifier = extra
       ? { notify: async (userIds, event) => void (await Promise.all([extra.notify(userIds, event), notifications.notify(userIds, event)])) }
       : notifications;
+    const ridesService = new RidesService(ridesRepo, routing, settings, clock, Boolean(modules.routing), notifier);
     const userHub = new UserHub();
-    const chat = new ChatService(new ChatRepo(modules.db), userHub, settings, notifier, clock);
+    // Accord dans une conversation : le matching ajoute le passager (déclaré plus bas, appelé
+    // seulement pendant une requête).
+    const chat = new ChatService(
+      new ChatRepo(modules.db),
+      userHub,
+      settings,
+      notifier,
+      clock,
+      (rideId, passengerId) => matchingService.joinByAgreement(rideId, passengerId),
+      async (driverId, input) => (await matchingService.createRide(driverId, input)).id,
+    );
     // Le suivi relit l'état d'un trajet quand le cycle de vie le modifie (appel différé).
     const lifecycle = new RideLifecycle(ridesRepo, ridesService, wallet, hub, settings, clock, (rideId) =>
       tracking.invalidate(rideId),
       trust,
+      notifier,
     );
     const tracking = new TrackingService(hub, lifecycle, ridesRepo, settings, () => clock().getTime());
     const matchingService = new MatchingService(
@@ -225,15 +265,30 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         // indépendant du calcul d'itinéraire (appel externe qui peut échouer).
         await chat.syncRideChat(rideId).catch((err: unknown) => app.log.error({ err }, 'ride chat sync'));
         await ridesService.onRideChanged(rideId);
+        await lifecycle.onParticipantsChanged(rideId);
       },
       trust,
       notifier,
+      async (userId, rideId, detourS) => {
+        const max = await ridesService.maxPassengerPrice(rideId, userId, detourS);
+        if (max !== null && (await wallet.wallet(userId)).balanceCents < max) {
+          throw new AppError(402, 'insufficient_funds', 'Solde insuffisant pour ce trajet : recharge ton portefeuille');
+        }
+      },
+      (rideId, userId, joiningDetourS) => ridesService.quote(rideId, userId, joiningDetourS),
     );
-    const profileService = new ProfileService(new ProfileRepo(modules.db), modules.geocoding, clock, async (userId) => {
-      await matchingService.onProfileChanged(userId);
-      // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
-      await ridesService.onUserChanged(userId);
-    });
+    const gamification = new GamificationService(new GamificationRepo(modules.db), clock);
+    const profileService = new ProfileService(
+      new ProfileRepo(modules.db),
+      modules.geocoding,
+      clock,
+      async (userId) => {
+        await matchingService.onProfileChanged(userId);
+        // Adresse ou véhicule modifié : tracé, heures et prix des trajets confirmés à jour.
+        await ridesService.onUserChanged(userId);
+      },
+      (userId) => gamification.publicSummary(userId),
+    );
     const calendarService = new CalendarService({
       repo: new CalendarRepo(modules.db),
       box: new SecretBox(modules.calendarKey),
@@ -242,19 +297,40 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
       clock,
       onScheduleChanged: (userId, days) => matchingService.onScheduleChanged(userId, days),
     });
-    app.decorate('services', { calendar: calendarService, matching: matchingService, lifecycle, trust, chat, notifications });
+    const accountService = new AccountService({
+      repo: new AccountRepo(modules.db),
+      checkPassword: (userId, password) => authService.checkPassword(userId, password),
+      cancelRide: (userId, rideId) => matchingService.cancel(userId, rideId),
+      declineRide: (userId, rideId) => matchingService.decline(userId, rideId),
+      disconnect: (userId) => userHub.disconnect(userId),
+      clock,
+      log: (data, message) => app.log.error(data, message),
+    });
+    app.decorate('services', {
+      calendar: calendarService,
+      matching: matchingService,
+      lifecycle,
+      trust,
+      chat,
+      notifications,
+      account: accountService,
+      wallet,
+    });
     await app.register(websocket, { options: { maxPayload: 4096 } });
 
     await app.register(
       async (api) => {
         await api.register(authRoutes, { service: authService });
         await api.register(profileRoutes, { service: profileService });
+        await api.register(gamificationRoutes, { service: gamification });
+        await api.register(accountRoutes, { service: accountService });
         await api.register(calendarRoutes, { service: calendarService });
         await api.register(matchingRoutes, { service: matchingService });
         await api.register(ridesRoutes, { service: ridesService, lifecycle });
-        await api.register(walletRoutes, { service: wallet });
+        await api.register(walletRoutes, { service: wallet, clock });
         await api.register(trustRoutes, { service: trust });
         await api.register(chatRoutes, { service: chat });
+        await api.register(placesRoutes, { service: new PlacesService(modules.places ?? null) });
         await api.register(notificationRoutes, { service: notifications });
         await api.register(userSocketRoutes, { hub: userHub, isActiveUser: (userId) => authRepo.isActiveUser(userId) });
         await api.register(trackingRoutes, {
@@ -267,6 +343,18 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
   }
 
   return app;
+}
+
+/** Erreur réduite au type, au code, au message et à la pile. */
+export function logError(error: unknown): { type: string; message: string; stack: string; code?: string } {
+  if (!(error instanceof Error)) return { type: typeof error, message: '', stack: '' };
+  const code = (error as { code?: unknown }).code;
+  return {
+    type: error.name,
+    message: error.message,
+    stack: error.stack ?? '',
+    ...(typeof code === 'string' ? { code } : {}),
+  };
 }
 
 function clientError(status: number): { code: string; message: string } {

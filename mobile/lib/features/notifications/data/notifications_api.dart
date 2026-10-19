@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
+import '../../demo/demo_mode.dart';
 
 /// Préférences par catégorie (cahier §11) ; toutes activées par défaut.
 class NotificationPreferences {
@@ -79,5 +80,5 @@ class DioNotificationsApi implements NotificationsApi {
 }
 
 final notificationsApiProvider = Provider<NotificationsApi>(
-  (ref) => DioNotificationsApi(ref.watch(dioProvider)),
+  (ref) => ref.watch(demoProvider) ?? DioNotificationsApi(ref.watch(dioProvider)),
 );

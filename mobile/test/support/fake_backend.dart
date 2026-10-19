@@ -1,3 +1,10 @@
+import 'package:unimoov/features/achievements/data/achievements_api.dart';
+import 'package:unimoov/features/achievements/domain/achievements.dart';
+
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:unimoov/features/account/data/account_api.dart';
 import 'package:unimoov/features/chat/data/chat_api.dart';
 import 'package:unimoov/features/chat/domain/chat.dart';
 import 'package:unimoov/features/notifications/data/notifications_api.dart';
@@ -32,11 +39,14 @@ class FakeBackend
         WalletApi,
         TrustApi,
         ChatApi,
-        NotificationsApi {
+        NotificationsApi,
+        AccountApi,
+        AchievementsApi {
   static const code = '123456';
   static const knownAddress = '12 rue de la Paix, Annecy';
+  static const knownLabel = '12 Rue de la Paix 74000 Annecy';
 
-  final Map<String, _Account> _accounts = {};
+  final Map<String, FakeAccount> _accounts = {};
   final Map<String, String> _refreshToEmail = {};
   String? _currentEmail;
   int _tokenCounter = 0;
@@ -58,7 +68,10 @@ class FakeBackend
     return AuthTokens(accessToken: 'access-$_tokenCounter', refreshToken: refresh);
   }
 
-  _Account get _me {
+  /// Compte connecté (vérifications des tests).
+  FakeAccount get me => _me;
+
+  FakeAccount get _me {
     final account = _accounts[_currentEmail];
     if (account == null) throw const ApiException('unauthorized', '', statusCode: 401);
     return account;
@@ -90,7 +103,7 @@ class FakeBackend
     if (_accounts.containsKey(universityEmail)) {
       throw const ApiException('account_exists', '', statusCode: 409);
     }
-    _accounts[universityEmail] = _Account(universityEmail, firstName, lastName, password);
+    _accounts[universityEmail] = FakeAccount(universityEmail, firstName, lastName, password);
     return _issue(universityEmail);
   }
 
@@ -134,13 +147,138 @@ class FakeBackend
   }
 
   @override
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
+  }) async {
+    _maybeFail();
+    _me
+      ..studyProgram = studyProgram
+      ..birthYear = birthYear
+      ..interests = interests
+      ..bio = bio
+      ..preferences = preferences;
+    return _me.toMe();
+  }
+
+  // Gamification : réussites d'exemple, classement avec quelques prénoms.
+  @override
+  Future<Achievements> achievements() async {
+    await Future<void>.value();
+    return Achievements(
+      points: 245,
+      levelKey: 'regular',
+      levelMin: 100,
+      nextKey: 'pillar',
+      nextMin: 300,
+      badges: const [
+        AchievementBadge(key: 'first_ride', goal: 1, progress: 1, earned: true),
+        AchievementBadge(key: 'ten_rides', goal: 10, progress: 10, earned: true),
+        AchievementBadge(key: 'fifty_rides', goal: 50, progress: 18, earned: false),
+        AchievementBadge(key: 'loyal_driver', goal: 10, progress: 4, earned: false),
+        AchievementBadge(key: 'full_week', goal: 5, progress: 5, earned: true),
+        AchievementBadge(key: 'sociable', goal: 10, progress: 7, earned: false),
+        AchievementBadge(key: 'eco', goal: 100, progress: 41, earned: false),
+        AchievementBadge(key: 'reliable', goal: 5, progress: 5, earned: true),
+      ],
+      rides: 18,
+      sharedKm: 212,
+      co2SavedKg: 41,
+      paidCents: 3460,
+      receivedCents: 0,
+      monthPoints: 85,
+      monthRank: 3,
+      ranked: 14,
+      leaderboardVisible: _me.leaderboardVisible,
+    );
+  }
+
+  @override
+  Future<Leaderboard> leaderboard() async {
+    await Future<void>.value();
+    return Leaderboard(
+      month: DateTime(2026, 10),
+      ranked: 14,
+      myRank: 3,
+      myPoints: 85,
+      entries: [
+        const LeaderEntry(rank: 1, firstName: 'Léa', points: 140, levelKey: 'pillar', me: false),
+        const LeaderEntry(rank: 2, points: 95, levelKey: 'regular', me: false),
+        LeaderEntry(rank: 3, firstName: _me.firstName, points: 85, levelKey: 'regular', me: true),
+        const LeaderEntry(rank: 4, firstName: 'Hugo', points: 60, levelKey: 'regular', me: false),
+        const LeaderEntry(rank: 5, points: 35, levelKey: 'newcomer', me: false),
+      ],
+    );
+  }
+
+  @override
+  Future<Me> setLeaderboardVisible(bool visible) async {
+    _me.leaderboardVisible = visible;
+    return _me.toMe();
+  }
+
+  @override
+  Future<Me> setPhoto(Uint8List bytes, String contentType) async {
+    _maybeFail();
+    _me.photo = bytes;
+    return _me.toMe();
+  }
+
+  @override
+  Future<void> removePhoto() async => _me.photo = null;
+
+  /// Photos servies par l'API simulée (une image PNG valide d'un pixel).
+  @override
+  Future<Uint8List> photo(String url) async =>
+      _me.photo ?? (throw const ApiException('not_found', ''));
+
+  /// Profils des personnes croisées, par identifiant.
+  final Map<String, PublicProfile> profiles = {
+    'driver-1': const PublicProfile(
+      id: 'driver-1',
+      firstName: 'Nathan',
+      reliabilityScore: 0.9,
+      ridesCompleted: 14,
+      age: 20,
+      studyProgram: 'BUT Génie mécanique',
+      interests: ['Ski', 'Rock'],
+      bio: 'Rendez-vous habituel : arrêt Seynod Centre.',
+      preferences: CarpoolPreferences(chat: 'depends', music: 'yes', smoking: 'no'),
+      ratingsCount: 9,
+      cancellationRate: 2,
+      levelKey: 'super',
+      points: 760,
+      badges: ['first_ride', 'loyal_driver'],
+      co2SavedKg: 85,
+    ),
+  };
+
+  @override
+  Future<PublicProfile> publicProfile(String userId) async {
+    _maybeFail();
+    return profiles[userId] ?? (throw const ApiException('not_found', '', statusCode: 404));
+  }
+
+  @override
   Future<Me> setAddress(String address) async {
     _maybeFail();
-    if (address != knownAddress) {
+    if (address != knownAddress && address != knownLabel) {
       throw const ApiException('address_not_found', '', statusCode: 422);
     }
     _me.home = const Home(address: '12 Rue de la Paix 74000 Annecy', lat: 45.9, lon: 6.12);
     return _me.toMe();
+  }
+
+  final List<String> addressQueries = [];
+
+  @override
+  Future<List<String>> suggestAddresses(String query) async {
+    _maybeFail();
+    addressQueries.add(query);
+    return query.toLowerCase().contains('paix') ? [knownLabel] : [];
   }
 
   @override
@@ -181,16 +319,20 @@ class FakeBackend
   @override
   Future<List<Pause>> listPauses() async => List.of(_me.pauses);
 
+  Pause? lastPause;
+
   @override
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks) async {
+  Future<Pause> addPause(PauseDraft draft) async {
     _maybeFail();
     final pause = Pause(
       id: 'pause-${_me.pauses.length + 1}',
-      startsOn: startsOn,
-      endsOn: endsOn,
-      everyWeeks: everyWeeks,
+      startsOn: draft.startsOn,
+      endsOn: draft.endsOn,
+      repeat: draft.repeat,
+      repeatUntil: draft.repeatUntil,
     );
     _me.pauses.add(pause);
+    lastPause = pause;
     return pause;
   }
 
@@ -253,15 +395,42 @@ class FakeBackend
     throw const ApiException('not_found', '', statusCode: 404);
   }
 
+  /// Solde exigé pour accepter en passager (prix maximal du trajet), à 0 sans vérification.
+  int requiredBalanceCents = 0;
+
   @override
   Future<Proposal> accept(String id) async {
     _maybeFail();
+    if (balanceCents < requiredBalanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 402);
+    }
     final isJoin = weeks.values.every((list) => list.every((p) => p.id != id));
     if (isJoin) {
+      // Voiture choisie par le passager : demande en attente du conducteur.
       joined.add(id);
-      return proposalFixture(id: id, myStatus: 'accepted');
+      return proposalFixture(id: id, myStatus: 'requested');
     }
     return _replace(id, (p) => p.copyWith(myStatus: 'accepted'));
+  }
+
+  final List<({String rideId, String userId, bool approve})> requestAnswers = [];
+
+  @override
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve}) async {
+    _maybeFail();
+    requestAnswers.add((rideId: rideId, userId: userId, approve: approve));
+    return _replace(
+      rideId,
+      (p) => p.copyWith(
+        passengers: [
+          for (final person in p.passengers)
+            if (person.userId != userId)
+              person
+            else if (approve)
+              person.copyWith(status: 'accepted'),
+        ],
+      ),
+    );
   }
 
   @override
@@ -306,11 +475,82 @@ class FakeBackend
     return ride;
   }
 
+  /// Aperçu d'un trajet proposé : un tracé simple de Seynod au campus.
+  int previews = 0;
+
+  @override
+  Future<RidePreview> preview(String id) async {
+    _maybeFail();
+    previews++;
+    return RidePreview(
+      route: const [(45.8865, 6.089), (45.905, 6.12), (45.9195, 6.158)],
+      estimated: false,
+      campus: (45.9195, 6.158),
+      campusName: "Campus d'Annecy",
+      me: (45.8865, 6.089),
+      durationS: 1500,
+      meetingPoints: previewMeetingPoints,
+    );
+  }
+
+  /// Points de rencontre renvoyés dans l'aperçu (choisis ou proposés).
+  List<MeetingPointEntry> previewMeetingPoints = const [];
+
+  /// Points proposés par le conducteur : (trajet, passager, point) ; réponses du passager.
+  final List<(String, String, MeetingPoint)> proposedPoints = [];
+  final List<bool> meetingAnswers = [];
+
+  @override
+  Future<void> proposeMeetingPoint(String id, String userId, MeetingPoint point) async {
+    _maybeFail();
+    proposedPoints.add((id, userId, point));
+  }
+
+  @override
+  Future<void> answerMeetingPoint(String id, {required bool accept}) async {
+    _maybeFail();
+    meetingAnswers.add(accept);
+    previewMeetingPoints = [
+      for (final m in previewMeetingPoints)
+        if (!m.proposed)
+          m
+        else if (accept)
+          MeetingPointEntry(userId: m.userId, proposed: false, point: m.point),
+    ];
+  }
+
+  @override
+  Future<List<MeetingSpot>> meetingSpots(MapBounds bounds) async {
+    _maybeFail();
+    return const [
+      MeetingSpot(
+        kind: SpotKind.parking,
+        name: 'Parking des Marquisats',
+        lat: 45.8952,
+        lon: 6.1365,
+      ),
+      MeetingSpot(
+        kind: SpotKind.carpool,
+        name: 'Aire de covoiturage de Seynod',
+        lat: 45.8848,
+        lon: 6.0921,
+      ),
+    ];
+  }
+
   @override
   Future<void> setMeetingPoint(String id, MeetingPoint? point) async {
     _maybeFail();
-    final ride = rides[id]!;
+    final ride = rides[id];
     final myId = idOf(_me.email);
+    // Comme le serveur : mon point choisi remplace aussi une proposition du conducteur.
+    previewMeetingPoints = [
+      for (final m in previewMeetingPoints)
+        if (m.userId != myId) m,
+      if (point != null) MeetingPointEntry(userId: myId, proposed: false, point: point),
+    ];
+    // Trajet pas encore confirmé : seul l'aperçu change.
+    if (ride == null) return;
     rides[id] = ride.copyWithStops([
       for (final s in ride.stops)
         s.userId != myId
@@ -387,20 +627,23 @@ class FakeBackend
     );
   }
 
-  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated}) => RideStop(
-    order: s.order,
-    kind: s.kind,
-    userId: s.userId,
-    firstName: s.firstName,
-    lastName: s.lastName,
-    label: s.label,
-    lat: s.lat,
-    lon: s.lon,
-    eta: s.eta,
-    isMeetingPoint: s.isMeetingPoint,
-    pickedUp: pickedUp ?? s.pickedUp,
-    presenceValidated: presenceValidated ?? s.presenceValidated,
-  );
+  RideStop _stopWith(RideStop s, {bool? pickedUp, bool? presenceValidated, bool? ended}) =>
+      RideStop(
+        order: s.order,
+        kind: s.kind,
+        userId: s.userId,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        label: s.label,
+        lat: s.lat,
+        lon: s.lon,
+        eta: s.eta,
+        isMeetingPoint: s.isMeetingPoint,
+        pickedUp: pickedUp ?? s.pickedUp,
+        presenceValidated: presenceValidated ?? s.presenceValidated,
+        arrived: s.arrived,
+        ended: ended ?? s.ended,
+      );
 
   @override
   Future<void> start(String id) async {
@@ -454,7 +697,7 @@ class FakeBackend
   }
 
   @override
-  Future<bool> presence(String id) async {
+  Future<void> presence(String id) async {
     _maybeFail();
     final ride = rides[id]!;
     final me = idOf(_me.email);
@@ -466,14 +709,33 @@ class FakeBackend
       ],
     );
     actions.add('presence');
-    return true;
+  }
+
+  /// Historique des trajets terminés (profil).
+  List<HistoryEntry> historyEntries = [];
+
+  @override
+  Future<List<HistoryEntry>> history() async {
+    _maybeFail();
+    return historyEntries;
   }
 
   @override
   Future<void> finish(String id) async {
     _maybeFail();
     actions.add('finish');
-    _withStatus(id, 'completed');
+    final ride = rides[id]!;
+    if (ride.isDriver) {
+      _withStatus(id, 'completed');
+      return;
+    }
+    // Passager : son trajet seulement (parti avant l'arrivée, il ne paie pas).
+    final me = idOf(_me.email);
+    _withStatus(
+      id,
+      ride.status,
+      stops: [for (final s in ride.stops) s.userId == me ? _stopWith(s, ended: true) : s],
+    );
   }
 
   // --- Portefeuille ---
@@ -502,6 +764,27 @@ class FakeBackend
         WalletEntry(kind: 'topup', amountCents: amountCents, at: DateTime(2026, 10, 15, 9)),
       );
     }
+    return _wallet;
+  }
+
+  final List<({PayoutRequest request, String key})> payouts = [];
+
+  @override
+  Future<Wallet> payout(PayoutRequest request, String idempotencyKey) async {
+    _maybeFail();
+    if (payouts.any((p) => p.key == idempotencyKey)) return _wallet;
+    if (!request.iban.startsWith('FR76')) {
+      throw const ApiException('iban_invalid', '', statusCode: 400);
+    }
+    if (request.amountCents > balanceCents) {
+      throw const ApiException('insufficient_funds', '', statusCode: 409);
+    }
+    payouts.add((request: request, key: idempotencyKey));
+    balanceCents -= request.amountCents;
+    walletHistory.insert(
+      0,
+      WalletEntry(kind: 'payout', amountCents: -request.amountCents, at: DateTime(2026, 10, 16, 9)),
+    );
     return _wallet;
   }
 
@@ -665,6 +948,7 @@ class FakeBackend
   @override
   Future<Conversation> conversation(String id) async {
     _maybeFail();
+    conversationCalls++;
     final c = conversationsById[id];
     if (c == null) throw const ApiException('not_found', '', statusCode: 404);
     return c;
@@ -723,20 +1007,175 @@ class FakeBackend
   }
 
   @override
-  Future<ChatMessage> send(String id, String body) async {
+  Future<ChatMessage> send(String id, String body, {String? replyToId}) async {
     _maybeFail();
     final c = conversationsById[id]!;
     if (c.archived) throw const ApiException('conversation_archived', '', statusCode: 409);
+    final quoted = messagesById[id]?.where((m) => m.id == replyToId).firstOrNull;
     final message = ChatMessage(
       id: 'msg-${++_chatCounter}',
       conversationId: id,
       senderId: idOf(_me.email),
       body: body,
       createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      replyTo: quoted == null ? null : MessageQuote.of(quoted),
     );
     messagesById.putIfAbsent(id, () => []).add(message);
     conversationsById[id] = c.copyWith(lastMessage: message);
     return message;
+  }
+
+  /// Gestion des groupes faite depuis l'app : (conversation, action).
+  final List<(String, String)> groupActions = [];
+
+  @override
+  Future<Conversation> renameGroup(String id, String title) async {
+    _maybeFail();
+    groupActions.add((id, 'rename:$title'));
+    return conversationsById[id] = conversationsById[id]!.copyWith(title: title);
+  }
+
+  @override
+  Future<Conversation> addMembers(String id, List<String> userIds) async {
+    _maybeFail();
+    groupActions.add((id, 'add:${userIds.join(',')}'));
+    final c = conversationsById[id]!;
+    return conversationsById[id] = c.copyWith(
+      members: [
+        ...c.members,
+        for (final u in userIds) ChatMember(userId: u, firstName: u),
+      ],
+    );
+  }
+
+  @override
+  Future<Conversation> removeMember(String id, String userId) async {
+    _maybeFail();
+    groupActions.add((id, 'remove:$userId'));
+    final c = conversationsById[id]!;
+    return conversationsById[id] = c.copyWith(
+      members: [
+        for (final m in c.members)
+          if (m.userId != userId) m,
+      ],
+    );
+  }
+
+  /// Photos envoyées dans les conversations : (conversation, légende, octets).
+  final List<(String, String, Uint8List)> chatPhotos = [];
+
+  @override
+  Future<ChatMessage> sendPhoto(
+    String id,
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+    String? replyToId,
+  }) async {
+    _maybeFail();
+    chatPhotos.add((id, caption, bytes));
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: id,
+      senderId: idOf(_me.email),
+      body: caption,
+      createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      photoUrl: '/api/v1/conversations/$id/messages/msg-$_chatCounter/photo',
+    );
+    messagesById.putIfAbsent(id, () => []).add(message);
+    conversationsById[id] = conversationsById[id]!.copyWith(lastMessage: message);
+    return message;
+  }
+
+  /// Réactions envoyées : (message, emoji ou null).
+  final List<(String, String?)> reactionsSent = [];
+
+  @override
+  Future<ChatMessage> react(String id, String messageId, String? emoji) async {
+    _maybeFail();
+    reactionsSent.add((messageId, emoji));
+    final list = messagesById[id]!;
+    final i = list.indexWhere((m) => m.id == messageId);
+    final me = idOf(_me.email);
+    return list[i] = list[i].copyWith(
+      reactions: [
+        for (final r in list[i].reactions)
+          if (r.userId != me) r,
+        if (emoji != null) (userId: me, emoji: emoji),
+      ],
+    );
+  }
+
+  /// Propositions publiées depuis l'app.
+  final List<({String? rideId, DateTime? day, bool toCampus, String? time, bool create})>
+  carpoolPosts = [];
+
+  /// Lectures d'une conversation seule (la liste la donne déjà en général).
+  int conversationCalls = 0;
+
+  /// Propositions de covoiturage acceptées : (conversation, message).
+  final List<(String, String)> carpoolAccepted = [];
+
+  @override
+  Future<ChatMessage> postCarpool(
+    String id, {
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+    String? time,
+    bool create = false,
+  }) async {
+    _maybeFail();
+    carpoolPosts.add((rideId: rideId, day: day, toCampus: toCampus, time: time, create: create));
+    if (create) rideId = 'created-${carpoolPosts.length}';
+    final c = conversationsById[id]!;
+    final message = ChatMessage(
+      id: 'msg-${++_chatCounter}',
+      conversationId: id,
+      senderId: idOf(_me.email),
+      body: rideId != null ? 'Je propose un trajet.' : 'Je cherche un trajet.',
+      createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      carpool: Carpool(
+        isOffer: rideId != null,
+        rideId: rideId,
+        day: day ?? DateTime(2026, 10, 19),
+        toCampus: toCampus,
+        time: rideId == null ? null : DateTime.utc(2026, 10, 19, 6),
+      ),
+    );
+    messagesById.putIfAbsent(id, () => []).add(message);
+    conversationsById[id] = c.copyWith(lastMessage: message);
+    return message;
+  }
+
+  @override
+  Future<ChatMessage> acceptCarpool(String id, String messageId) async {
+    _maybeFail();
+    carpoolAccepted.add((id, messageId));
+    final list = messagesById[id]!;
+    final i = list.indexWhere((m) => m.id == messageId);
+    final m = list[i];
+    final c = m.carpool!;
+    final updated = ChatMessage(
+      id: m.id,
+      conversationId: id,
+      senderId: m.senderId,
+      body: m.body,
+      createdAt: m.createdAt,
+      carpool: Carpool(
+        isOffer: c.isOffer,
+        rideId: c.rideId,
+        day: c.day,
+        toCampus: c.toCampus,
+        time: c.time,
+        joined: [
+          ...c.joined,
+          (userId: idOf(_me.email), firstName: _me.firstName, rideId: c.rideId ?? 'ride-1'),
+        ],
+      ),
+    );
+    list[i] = updated;
+    return updated;
   }
 
   @override
@@ -793,6 +1232,38 @@ class FakeBackend
     return preferencesState = prefs;
   }
 
+  // --- Compte (RGPD) ---
+
+  final List<String> deletedAccounts = [];
+
+  /// Refus du serveur à la suppression (portefeuille non vide, trajet en cours).
+  String? deleteRefusal;
+
+  @override
+  Future<Uint8List> exportData() async {
+    _maybeFail();
+    final me = _me;
+    return Uint8List.fromList(
+      utf8.encode(
+        jsonEncode({
+          'profile': {'universityEmail': me.email, 'firstName': me.firstName},
+        }),
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    _maybeFail();
+    final me = _me;
+    if (password != me.password) throw const ApiException('invalid_password', '', statusCode: 401);
+    final refusal = deleteRefusal;
+    if (refusal != null) throw ApiException(refusal, '', statusCode: 409);
+    _accounts.remove(me.email);
+    deletedAccounts.add(me.email);
+    devices.clear();
+  }
+
   /// Identifiant serveur d'un compte (pour les arrêts « Toi »).
   String idOf(String email) => 'id-$email';
 
@@ -803,7 +1274,7 @@ class FakeBackend
     Map<OnboardingStep, StepStatus>? steps,
     bool withHome = false,
   }) {
-    _accounts[email] = _Account(email, firstName, 'Martin', 'motdepasse-solide')
+    _accounts[email] = FakeAccount(email, firstName, 'Martin', 'motdepasse-solide')
       ..steps.addAll(steps ?? {})
       ..home = withHome
           ? const Home(address: '12 Rue de la Paix 74000 Annecy', lat: 45.9, lon: 6.12)
@@ -811,8 +1282,8 @@ class FakeBackend
   }
 }
 
-class _Account {
-  _Account(this.email, this.firstName, this.lastName, this.password);
+class FakeAccount {
+  FakeAccount(this.email, this.firstName, this.lastName, this.password);
 
   final String email;
   String firstName;
@@ -824,6 +1295,13 @@ class _Account {
   String? defaultNavApp;
   final Map<OnboardingStep, StepStatus> steps = {};
   final List<Pause> pauses = [];
+  String? studyProgram;
+  int? birthYear;
+  List<String> interests = const [];
+  String? bio;
+  CarpoolPreferences preferences = const CarpoolPreferences();
+  bool leaderboardVisible = false;
+  Uint8List? photo;
 
   Me toMe() {
     final next = OnboardingStep.values.where((s) => !steps.containsKey(s)).firstOrNull;
@@ -842,11 +1320,19 @@ class _Account {
       discoveryMode: home == null,
       pausedToday: pauses.any((p) => !today.isBefore(p.startsOn) && !today.isAfter(p.endsOn)),
       defaultNavApp: defaultNavApp,
+      photoUrl: photo == null ? null : '/api/v1/users/id-$email/photo?v=1',
+      studyProgram: studyProgram,
+      birthYear: birthYear,
+      interests: interests,
+      bio: bio,
+      preferences: preferences,
+      leaderboardVisible: leaderboardVisible,
     );
   }
 }
 
 const _driver = PublicPerson(
+  sector: (45.8653, 6.1407),
   userId: 'driver-1',
   firstName: 'Nathan',
   reliabilityScore: 0.9,
@@ -993,6 +1479,17 @@ RideDetails rideFixture({
       commissionCents: 20,
       youPayCents: isDriver ? null : 76,
       youReceiveCents: isDriver ? 112 : null,
+      breakdown: PriceBreakdown(
+        consumptionLPer100km: 5.8,
+        fuelPriceCentsPerLitre: 180,
+        distanceM: 15900,
+        portions: isDriver
+            ? const [(distanceM: 9000, persons: 3), (distanceM: 6900, persons: 2)]
+            : const [(distanceM: 9000, persons: 3)],
+        shares: isDriver
+            ? const [(firstName: 'Inès', shareCents: 56), (firstName: 'Hugo', shareCents: 56)]
+            : const [],
+      ),
     ),
   );
 }
@@ -1077,3 +1574,13 @@ Reliability reliabilityFixture({List<ReliabilityEvent>? events}) => Reliability(
         ),
       ],
 );
+
+extension PublicPersonCopy on PublicPerson {
+  PublicPerson copyWith({String? status}) => PublicPerson(
+    userId: userId,
+    firstName: firstName,
+    reliabilityScore: reliabilityScore,
+    detourMinutes: detourMinutes,
+    status: status ?? this.status,
+  );
+}

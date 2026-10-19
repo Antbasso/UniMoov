@@ -18,19 +18,26 @@ String formatDay(DateTime day, String locale) {
 String formatTime(DateTime time, String locale) =>
     DateFormat("H 'h' mm", locale).format(time.toLocal());
 
-UmRideStatus rideStatusOf(Proposal p) => switch (p.state) {
+UmRideStatus rideStatusOf(Proposal p) => switch (p.rideStatus) {
+  'in_progress' when p.state == ProposalState.confirmed => UmRideStatus.inProgress,
+  'completed' when p.state == ProposalState.confirmed => UmRideStatus.completed,
+  _ => _byState(p),
+};
+
+UmRideStatus _byState(Proposal p) => switch (p.state) {
   ProposalState.proposed => UmRideStatus.proposed,
-  ProposalState.waiting => UmRideStatus.waiting,
+  ProposalState.waiting || ProposalState.requested => UmRideStatus.waiting,
   ProposalState.confirmed => UmRideStatus.confirmed,
   ProposalState.cancelled => UmRideStatus.cancelled,
 };
 
-/// Départ et arrivée affichés sur la carte de trajet, sans adresse exacte.
+/// Départ et arrivée affichés sur la carte de trajet, sans adresse exacte : « Domicile » et
+/// le campus, dans le sens du trajet.
 (String from, String to) endpoints(
   AppLocalizations l10n,
   Direction direction, {
   required bool driver,
 }) {
-  final home = driver ? l10n.yourHome : l10n.nearYourHome;
+  final home = l10n.homePlace;
   return direction == Direction.toCampus ? (home, l10n.campusName) : (l10n.campusName, home);
 }

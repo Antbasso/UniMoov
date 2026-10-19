@@ -58,23 +58,80 @@ void main() {
   });
 
   group('Pause', () {
-    test('lit la récurrence et produit le corps de requête', () {
+    test('lit les trois formes de répétition et produit le corps de requête', () {
       final pause = Pause.fromJson({
         'id': 'p',
         'startsOn': '2026-11-02',
-        'endsOn': '2027-06-30',
+        'endsOn': '2026-11-08',
         'recurrence': 'weekly:2',
+        'repeatUntil': '2027-06-30',
       });
-      expect(pause.everyWeeks, 2);
-      expect(Pause.requestBody(DateTime(2026, 1, 5), DateTime(2026, 2, 1), null), {
+      expect((pause.repeat! as RepeatWeekly).every, 2);
+      expect(pause.repeatUntil, DateTime(2027, 6, 30));
+      expect((PauseRepeat.fromWire('days:3,1')! as RepeatDays).weekdays, {1, 3});
+      expect((PauseRepeat.fromWire('monthly:1')! as RepeatMonthly).every, 1);
+      expect(PauseRepeat.fromWire(null), isNull);
+      expect(PauseDraft(startsOn: DateTime(2026, 1, 5), endsOn: DateTime(2026, 2, 1)).toJson(), {
         'startsOn': '2026-01-05',
         'endsOn': '2026-02-01',
         'recurrence': null,
+        'repeatUntil': null,
       });
       expect(
-        Pause.requestBody(DateTime(2026, 1, 5), DateTime(2026, 2, 1), 2)['recurrence'],
-        'weekly:2',
+        PauseDraft(
+          startsOn: DateTime(2026, 1, 5),
+          endsOn: DateTime(2026, 1, 5),
+          repeat: const RepeatDays({5, 1}),
+          repeatUntil: DateTime(2026, 3, 1),
+        ).toJson(),
+        containsPair('recurrence', 'days:1,5'),
       );
+    });
+
+    test('la première pause doit tenir dans sa période', () {
+      final first = DateTime(2026, 11, 2);
+      expect(
+        PauseDraft(
+          startsOn: first,
+          endsOn: DateTime(2026, 11, 8),
+          repeat: const RepeatWeekly(1),
+        ).fitsPeriod,
+        isTrue,
+      );
+      expect(
+        PauseDraft(
+          startsOn: first,
+          endsOn: DateTime(2026, 11, 9),
+          repeat: const RepeatWeekly(1),
+        ).fitsPeriod,
+        isFalse,
+      );
+      expect(
+        PauseDraft(
+          startsOn: first,
+          endsOn: DateTime(2026, 12, 2),
+          repeat: const RepeatMonthly(1),
+        ).fitsPeriod,
+        isFalse,
+      );
+    });
+
+    test('pauseCovers suit les mêmes règles que le serveur', () {
+      bool on(PauseRepeat? repeat, DateTime day, {DateTime? end}) => pauseCovers(
+        startsOn: DateTime(2026, 11, 2),
+        endsOn: end ?? DateTime(2026, 11, 2),
+        repeat: repeat,
+        repeatUntil: repeat == null ? null : DateTime(2027, 6, 30),
+        day: day,
+      );
+      expect(on(null, DateTime(2026, 11, 2)), isTrue);
+      expect(on(null, DateTime(2026, 11, 3)), isFalse);
+      expect(on(const RepeatWeekly(1), DateTime(2026, 11, 9)), isTrue); // tous les lundis
+      expect(on(const RepeatWeekly(2), DateTime(2026, 11, 9)), isFalse);
+      expect(on(const RepeatWeekly(2), DateTime(2026, 11, 22), end: DateTime(2026, 11, 8)), isTrue);
+      expect(on(const RepeatDays({3}), DateTime(2026, 11, 4)), isTrue); // mercredi
+      expect(on(const RepeatMonthly(1), DateTime(2026, 12, 2)), isTrue);
+      expect(on(const RepeatMonthly(1), DateTime(2027, 7, 2)), isFalse); // après la fin
     });
   });
 

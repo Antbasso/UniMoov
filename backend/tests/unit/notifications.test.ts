@@ -12,11 +12,13 @@ const events: NotificationEvent[] = [
   { type: 'proposals_ready', week: '2026-W43' },
   { type: 'ride_reminder', rideId: 'r1', minutes: 58 },
   { type: 'chat_message', conversationId: 'c1', senderFirstName: 'Léa' },
+  { type: 'rating_requested', rideId: 'r1' },
+  { type: 'carpool_joined', rideId: 'r1' },
 ];
 
 describe('catégories de préférence (cahier §11)', () => {
   it('chaque événement a sa catégorie ; le chat se coupe sans toucher aux rappels', () => {
-    expect(events.map(categoryOf)).toEqual(['ride_update', 'ride_update', 'match', 'match', 'ride_reminder', 'chat']);
+    expect(events.map(categoryOf)).toEqual(['ride_update', 'ride_update', 'match', 'match', 'ride_reminder', 'chat', 'ride_update', 'match']);
   });
 });
 
@@ -35,6 +37,19 @@ describe('texte des notifications', () => {
       body: 'Ton trajet part dans 58 min.',
       data: { type: 'ride_reminder', rideId: 'r1' },
     });
+  });
+
+  it('nouvelle heure de passage : conducteur ou passager, avancée ou retardée', () => {
+    const driver = pushMessage({ type: 'pickup_time_changed', rideId: 'r1', time: '07:24', earlier: true, role: 'driver' });
+    expect(driver.title).toBe('Départ avancé');
+    expect(driver.body).toContain('07:24');
+    const passenger = pushMessage({ type: 'pickup_time_changed', rideId: 'r1', time: '07:48', earlier: false, role: 'passenger' });
+    expect(passenger).toEqual({
+      title: 'Départ décalé',
+      body: 'Ton conducteur passe maintenant te prendre à 07:48.',
+      data: { type: 'pickup_time_changed', rideId: 'r1' },
+    });
+    expect(categoryOf({ type: 'pickup_time_changed', rideId: 'r1', time: '07:48', earlier: false, role: 'passenger' })).toBe('ride_update');
   });
 
   it('ton éditorial : phrases courtes, au plus une exclamation, pas d’emoji', () => {

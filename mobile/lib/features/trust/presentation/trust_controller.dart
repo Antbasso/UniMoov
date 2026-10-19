@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../achievements/presentation/achievements_controller.dart';
 import '../data/trust_api.dart';
 import '../domain/trust.dart';
 
@@ -20,6 +21,8 @@ class RatingsController extends AsyncNotifier<RideRatings> {
 
   Future<void> rate(String userId, int stars) async {
     await ref.read(trustApiProvider).rate(rideId, userId, stars);
+    // Donner un avis rapporte des points (et peut-être un badge).
+    if (ref.mounted) ref.invalidate(achievementsProvider);
     final current = state.value;
     if (!ref.mounted || current == null) return;
     state = AsyncData(

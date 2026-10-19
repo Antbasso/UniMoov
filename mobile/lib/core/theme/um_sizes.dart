@@ -21,6 +21,17 @@ abstract final class UmSize {
   static const double fieldMaxWidth = 360;
   static const double rideCardMaxWidth = 420;
 
+  /// Bord coloré d'une carte de trajet (teinte de l'état).
+  static const double rideAccent = 4;
+
+  /// Pastille du rôle (voiture ou siège) sur une carte de trajet.
+  static const double roleBadge = 32;
+
+  /// Photo de profil : liste, puis en-tête de profil.
+  static const double avatar = 40;
+  static const double avatarLg = 64;
+  static const double avatarXl = 96;
+
   /// Repères de trajet de la carte : pastille pleine et anneau d'arrivée.
   static const double routeDot = 12;
   static const double routeRing = 3;
@@ -31,17 +42,37 @@ abstract final class UmSize {
   static const double routeStroke = 5;
   static const double mapMaxZoom = 16;
 
+  /// Mini-carte du secteur d'une personne, dans sa fiche.
+  static const double sectorMiniMap = 160;
+
   /// Pastille numérotée d'un arrêt dans la liste.
   static const double stopBadge = 32;
 
   /// Logo complet : largeur affichée (minimum 120 px, logo.md).
   static const double logoWidth = 160;
 
+  /// Logo de l'écran d'accueil (avant connexion), au plus.
+  static const double logoHero = 220;
+
   /// Inclinaison du sticker manuscrit, en degrés.
   static const double noteAngleDegrees = -4;
 
   /// Opacité d'un contrôle désactivé (reste lisible).
   static const double disabledOpacity = 0.45;
+
+  /// Barre du haut : hauteur et icônes (retour, actions), plus grandes que les icônes du texte.
+  static const double appBarHeight = 64;
+  static const double appBarIcon = 28;
+
+  /// Largeur maximale d'une bulle de message, en part de l'écran.
+  static const double bubbleWidthFactor = 0.86;
+
+  /// Hauteur maximale d'une photo dans une conversation.
+  static const double chatPhotoMaxHeight = 280;
+
+  /// Emoji d'une réaction (pastille sous la bulle, et choix).
+  static const double reactionEmoji = 16;
+  static const double reactionChoice = 28;
 }
 
 abstract final class UmMotion {

@@ -20,6 +20,12 @@ class WeekProposalsController extends AsyncNotifier<List<Proposal>> {
     state = AsyncData([for (final p in state.value ?? <Proposal>[]) p.id == id ? updated : p]);
   }
 
+  /// Conducteur : accepte ou refuse une demande de place.
+  Future<void> answerRequest(String id, String userId, {required bool approve}) async {
+    final updated = await _api.answerRequest(id, userId, approve: approve);
+    state = AsyncData([for (final p in state.value ?? <Proposal>[]) p.id == id ? updated : p]);
+  }
+
   Future<void> decline(String id) async {
     await _api.decline(id);
     state = AsyncData(await _api.week(week));

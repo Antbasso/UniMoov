@@ -4,11 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/proposal.dart';
+import '../../demo/demo_mode.dart';
 
 abstract interface class ProposalsApi {
   Future<List<Proposal>> week(String week);
   Future<Proposal> accept(String id);
   Future<void> decline(String id);
+
+  /// Conducteur : réponse à une demande de place.
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve});
   Future<List<JoinableRide>> alternatives(String id);
   Future<List<JoinableRide>> search({
     required DateTime day,
@@ -46,6 +50,15 @@ class DioProposalsApi implements ProposalsApi {
   });
 
   @override
+  Future<Proposal> answerRequest(String rideId, String userId, {required bool approve}) =>
+      guardApi(() async {
+        final response = await _dio.post<Map<String, dynamic>>(
+          '/api/v1/rides/$rideId/requests/$userId/${approve ? 'approve' : 'reject'}',
+        );
+        return Proposal.fromJson(response.data!);
+      });
+
+  @override
   Future<void> decline(String id) =>
       guardApi(() => _dio.post<void>('/api/v1/proposals/$id/decline'));
 
@@ -75,5 +88,5 @@ class DioProposalsApi implements ProposalsApi {
 }
 
 final proposalsApiProvider = Provider<ProposalsApi>(
-  (ref) => DioProposalsApi(ref.watch(dioProvider)),
+  (ref) => ref.watch(demoProvider) ?? DioProposalsApi(ref.watch(dioProvider)),
 );

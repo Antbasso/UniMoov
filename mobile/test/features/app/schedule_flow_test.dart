@@ -73,7 +73,7 @@ void main() {
     await launchApp(tester, backend: backend, storage: storage);
     await tester.tap(find.byTooltip('Mon profil'));
     await tester.pumpAndSettle();
-    await tapText(tester, 'Modifier', index: 3); // section « Emploi du temps »
+    await tapText(tester, 'Emploi du temps');
     expect(find.textContaining('Agenda connecté'), findsOneWidget);
     await tapText(tester, 'Mettre à jour');
     expect(find.text('Emploi du temps mis à jour.'), findsOneWidget);

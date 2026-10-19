@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'tokens.g.dart';
+import 'um_sizes.dart';
 
 export 'tokens.g.dart';
 export 'um_sizes.dart';
@@ -57,6 +58,18 @@ abstract final class UmText {
 extension UmThemeContext on BuildContext {
   UmColorTokens get umColors => Theme.of(this).extension<UmColors>()!.tokens;
   List<BoxShadow> get umShadowSoft => Theme.of(this).extension<UmColors>()!.shadowSoft;
+
+  /// Couleur propre à une personne (prénom dans un groupe), stable d'une ouverture à l'autre :
+  /// une teinte tirée de son identifiant, à une luminosité qui garde le contraste 4.5:1 sur
+  /// les bulles en clair (foncée) comme en sombre (claire).
+  Color umPersonColor(String id) {
+    var hash = 0;
+    for (final unit in id.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7fffffff;
+    }
+    final dark = Theme.of(this).brightness == Brightness.dark;
+    return HSLColor.fromAHSL(1, (hash % 360).toDouble(), 0.65, dark ? 0.72 : 0.34).toColor();
+  }
 }
 
 /// Construit le ThemeData Material à partir des tokens.
@@ -120,6 +133,20 @@ ThemeData buildUmTheme(Brightness brightness) {
     materialTapTargetSize: MaterialTapTargetSize.padded,
     // Pastille (messages non lus) aux couleurs de la marque, pas le rouge d'erreur de Material.
     badgeTheme: BadgeThemeData(backgroundColor: c.brand, textColor: c.onBrand),
+    // Même barre partout : retour et titre à la taille du reste de l'app, et un haut qui reste
+    // de la couleur du fond quand on fait défiler (pas de teinte violette Material 3).
+    appBarTheme: AppBarTheme(
+      backgroundColor: c.surface,
+      foregroundColor: c.ink,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      toolbarHeight: UmSize.appBarHeight,
+      titleTextStyle: UmText.h2.copyWith(color: c.ink),
+      iconTheme: IconThemeData(color: c.ink, size: UmSize.appBarIcon),
+      actionsIconTheme: IconThemeData(color: c.brandStrong, size: UmSize.appBarIcon),
+    ),
     extensions: [ext],
   );
 }

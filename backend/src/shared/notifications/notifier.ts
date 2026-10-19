@@ -6,8 +6,18 @@
 export type NotificationEvent =
   | { type: 'ride_cancelled'; rideId: string; by: 'driver' | 'passenger' }
   | { type: 'replacement_proposed'; rideId: string }
+  | { type: 'ride_requested'; rideId: string }
+  | { type: 'request_answered'; rideId: string; approved: boolean }
+  | { type: 'carpool_joined'; rideId: string }
+  | { type: 'meeting_point_proposed'; rideId: string }
+  | { type: 'meeting_point_answered'; rideId: string; accepted: boolean }
+  | { type: 'rating_requested'; rideId: string }
+  | { type: 'payment_required'; rideId: string }
+  | { type: 'passenger_left'; rideId: string }
   | { type: 'proposals_ready'; week: string }
   | { type: 'ride_reminder'; rideId: string; minutes: number }
+  /** Heure de passage décalée (passager ajouté ou retiré) : la nouvelle heure, `HH:MM` à Paris. */
+  | { type: 'pickup_time_changed'; rideId: string; time: string; earlier: boolean; role: 'driver' | 'passenger' }
   | { type: 'chat_message'; conversationId: string; senderFirstName: string };
 
 export interface Notifier {

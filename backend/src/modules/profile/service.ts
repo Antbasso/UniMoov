@@ -1,3 +1,4 @@
+import { imageTypeOf } from '../../shared/images.js';
 import { AppError } from '../../shared/errors.js';
 import type { GeocodingProvider } from '../../shared/geocoding/geocoding-provider.js';
 import { GeocodingUnavailableError } from '../../shared/geocoding/geocoding-provider.js';
@@ -11,15 +12,15 @@ import {
   type OnboardingStep,
   type Pause,
   parisDate,
-  pauseLengthDays,
+  pauseProblem,
   type RoleMode,
   type StepStatus,
 } from './domain.js';
 import type { ProfileRepo } from './repo.js';
-import type { MeResponse } from './schema.js';
+import type { z } from 'zod';
+import type { MeResponse, preferences } from './schema.js';
 
 const MAX_PAUSES = 20;
-const MAX_PAUSE_DAYS = 366;
 
 /** Retire les clés absentes du corps PATCH (exactOptionalPropertyTypes). */
 function withoutUndefined<T extends object>(values: T): { [K in keyof T]?: Exclude<T[K], undefined> } {
@@ -37,6 +38,12 @@ export class ProfileService {
     private readonly clock: () => Date,
     /** Adresse, véhicule, rôle ou pause modifiés : le matching recalcule (cahier §3). */
     private readonly onMatchingInputsChanged: (userId: string) => Promise<void> = () => Promise.resolve(),
+    /** Niveau, badges gagnés et CO₂ évité (gamification), pour le profil public. */
+    private readonly achievements: (userId: string) => Promise<{
+      level: { key: string; points: number };
+      badges: string[];
+      co2SavedKg: number;
+    }> = () => Promise.resolve({ level: { key: 'newcomer', points: 0 }, badges: [], co2SavedKg: 0 }),
   ) {}
 
   async getMe(userId: string): Promise<MeResponse> {
@@ -55,6 +62,12 @@ export class ProfileService {
       firstName: user.firstName,
       lastName: user.lastName,
       photoUrl: user.photoUrl,
+      studyProgram: user.studyProgram,
+      birthYear: user.birthYear,
+      interests: user.interests,
+      bio: user.bio,
+      preferences: preferencesOf(user),
+      leaderboardVisible: user.leaderboardVisible,
       campusId: user.campusId,
       home: hasHome
         ? { address: user.homeAddress!, lat: user.homeLat!, lon: user.homeLon!, sector: user.homeSector ?? '' }
@@ -67,6 +80,8 @@ export class ProfileService {
             consumptionLPer100km: Number(vehicle.consumptionLPer100km),
             defaultSeats: vehicle.defaultSeats,
             maxDetourMinutes: vehicle.maxDetourMinutes,
+            model: vehicle.model,
+            color: vehicle.color,
           }
         : null,
       onboarding: { steps, nextStep, completed: nextStep === null },
@@ -75,9 +90,51 @@ export class ProfileService {
     };
   }
 
-  async updateNames(userId: string, values: { firstName?: string | undefined; lastName?: string | undefined }): Promise<MeResponse> {
-    await this.repo.updateUser(userId, withoutUndefined(values));
+  async updateNames(
+    userId: string,
+    values: {
+      firstName?: string | undefined;
+      lastName?: string | undefined;
+      studyProgram?: string | null | undefined;
+      birthYear?: number | null | undefined;
+      interests?: string[] | undefined;
+      bio?: string | null | undefined;
+      leaderboardVisible?: boolean | undefined;
+      preferences?:
+        | { chat?: string | null | undefined; music?: string | null | undefined; smoking?: string | null | undefined; pets?: string | null | undefined }
+        | undefined;
+    },
+  ): Promise<MeResponse> {
+    const { preferences, ...rest } = values;
+    const clean = withoutUndefined({
+      ...rest,
+      prefChat: preferences?.chat,
+      prefMusic: preferences?.music,
+      prefSmoking: preferences?.smoking,
+      prefPets: preferences?.pets,
+    });
+    // Centres d'intérêt : sans doublon (casse ignorée), dans l'ordre saisi.
+    if (clean.interests) {
+      const seen = new Set<string>();
+      clean.interests = clean.interests.filter((i) => !seen.has(i.toLowerCase()) && seen.add(i.toLowerCase()));
+    }
+    await this.repo.updateUser(userId, clean);
     return this.getMe(userId);
+  }
+
+  /**
+   * Adresses proposées pendant la saisie (cahier §1) : l'utilisateur choisit une adresse qui
+   * existe. Seuls les libellés partent vers le client.
+   */
+  async suggestAddresses(query: string): Promise<{ label: string }[]> {
+    try {
+      return (await this.geocoding.suggest(query, 5)).map(({ label }) => ({ label }));
+    } catch (error) {
+      if (error instanceof GeocodingUnavailableError) {
+        throw new AppError(503, 'geocoding_unavailable', 'Recherche d’adresse indisponible pour l’instant');
+      }
+      throw error;
+    }
   }
 
   /** Géocode côté serveur et calcule le secteur : le client n'envoie que le texte. */
@@ -99,13 +156,21 @@ export class ProfileService {
 
   async setVehicle(
     userId: string,
-    vehicle: { consumptionLPer100km: number; defaultSeats: number; maxDetourMinutes: number },
+    vehicle: {
+      consumptionLPer100km: number;
+      defaultSeats: number;
+      maxDetourMinutes: number;
+      model?: string | null | undefined;
+      color?: string | null | undefined;
+    },
   ): Promise<MeResponse> {
     await this.repo.upsertVehicle(userId, {
       // numeric(4,1) : une décimale, passée en texte pour éviter toute erreur d'arrondi.
       consumptionLPer100km: vehicle.consumptionLPer100km.toFixed(1),
       defaultSeats: vehicle.defaultSeats,
       maxDetourMinutes: vehicle.maxDetourMinutes,
+      model: vehicle.model ?? null,
+      color: vehicle.color ?? null,
     });
     await this.onMatchingInputsChanged(userId);
     return this.getMe(userId);
@@ -144,12 +209,8 @@ export class ProfileService {
   }
 
   async addPause(userId: string, pause: Pause) {
-    if (pause.endsOn < pause.startsOn) {
-      throw new AppError(400, 'invalid_pause', 'La fin de la pause précède son début');
-    }
-    if (pauseLengthDays(pause) > MAX_PAUSE_DAYS) {
-      throw new AppError(400, 'invalid_pause', 'Une pause dure au plus un an');
-    }
+    const problem = pauseProblem(pause);
+    if (problem) throw new AppError(400, 'invalid_pause', problem);
     if ((await this.repo.countPauses(userId)) >= MAX_PAUSES) {
       throw new AppError(409, 'too_many_pauses', 'Trop de pauses programmées');
     }
@@ -163,9 +224,58 @@ export class ProfileService {
     await this.onMatchingInputsChanged(userId);
   }
 
-  async getPublicProfile(userId: string) {
+  /** Profil d'une personne croisée (même trajet ou conversation), sinon 404 comme un inconnu. */
+  async getPublicProfile(viewerId: string, userId: string) {
+    if (viewerId !== userId && !(await this.repo.related(viewerId, userId))) throw notFound();
     const user = await this.repo.findPublicUser(userId);
     if (!user) throw notFound();
-    return { ...user, reliabilityScore: Number(user.reliabilityScore) };
+    const { birthYear, prefChat, prefMusic, prefSmoking, prefPets, cancellations, ...rest } = user;
+    // Taux d'annulation : annulations sur trajets engagés (terminés ou annulés par la personne).
+    const engaged = user.ridesCompleted + cancellations;
+    return {
+      ...rest,
+      ...(await this.achievements(userId)),
+      preferences: preferencesOf({ prefChat, prefMusic, prefSmoking, prefPets }),
+      cancellationRate: engaged === 0 ? 0 : Math.round((cancellations * 100) / engaged),
+      reliabilityScore: Number(user.reliabilityScore),
+      // Âge approché à l'année : seule l'année de naissance est gardée.
+      age: birthYear === null ? null : Number(parisDate(this.clock()).slice(0, 4)) - birthYear,
+    };
   }
+
+  /**
+   * Photo de profil (JPEG ou PNG, 600 Ko au plus, contrôlée sur ses premiers octets) : gardée
+   * en base, servie par `GET /users/{id}/photo` ; l'URL change à chaque photo (cache des apps).
+   */
+  async setPhoto(userId: string, contentType: string, data: Buffer): Promise<MeResponse> {
+    const type = imageTypeOf(data);
+    if (!type || type !== contentType) {
+      throw new AppError(400, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+    }
+    await this.repo.setPhoto(userId, { contentType, data, url: `/api/v1/users/${userId}/photo?v=${this.clock().getTime()}` });
+    return this.getMe(userId);
+  }
+
+  async removePhoto(userId: string): Promise<void> {
+    await this.repo.setPhoto(userId, null);
+  }
+
+  async getPhoto(viewerId: string, userId: string): Promise<{ contentType: string; data: Buffer }> {
+    if (viewerId !== userId && !(await this.repo.related(viewerId, userId))) throw notFound();
+    const photo = await this.repo.photo(userId);
+    if (!photo) throw notFound();
+    return photo;
+  }
+}
+
+type Preferences = z.infer<typeof preferences>;
+
+/** Préférences de covoiturage, telles que gardées en base (colonnes `pref_*`). */
+function preferencesOf(u: { prefChat: string | null; prefMusic: string | null; prefSmoking: string | null; prefPets: string | null }): Preferences {
+  return {
+    chat: u.prefChat as Preferences['chat'],
+    music: u.prefMusic as Preferences['music'],
+    smoking: u.prefSmoking as Preferences['smoking'],
+    pets: u.prefPets as Preferences['pets'],
+  };
 }

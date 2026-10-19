@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,11 +11,16 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../proposals/domain/proposal.dart';
+import '../../rides/presentation/trip_widgets.dart';
 import '../../profile/presentation/me_controller.dart';
-import '../../proposals/presentation/formatting.dart';
 import '../domain/chat.dart';
+import '../../profile/presentation/person_avatar.dart';
+import 'carpool_widgets.dart';
+import 'message_bubble.dart';
 import 'chat_controller.dart';
 import 'chat_labels.dart';
+import 'conversations_screen.dart';
 
 /// Conversation : messages en direct, envoi ; chat de trajet archivé en lecture seule (§6).
 class ConversationScreen extends ConsumerWidget {
@@ -63,8 +70,17 @@ class _Conversation extends ConsumerStatefulWidget {
 
 class _ConversationState extends ConsumerState<_Conversation> {
   final _text = TextEditingController();
+  final _focus = FocusNode();
   bool _sending = false;
   String? _errorCode;
+
+  /// Message auquel je réponds, cité au-dessus de la saisie.
+  ChatMessage? _replyTo;
+
+  void _startReply(ChatMessage message) {
+    setState(() => _replyTo = message);
+    _focus.requestFocus();
+  }
 
   @override
   void initState() {
@@ -76,6 +92,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
   @override
   void dispose() {
     _text.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -89,8 +106,81 @@ class _ConversationState extends ConsumerState<_Conversation> {
       _errorCode = null;
     });
     try {
-      await ref.read(conversationProvider(_id).notifier).send(body);
+      await ref.read(conversationProvider(_id).notifier).send(body, replyToId: _replyTo?.id);
       _text.clear();
+      if (mounted) setState(() => _replyTo = null);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _react(String messageId, String me, String? emoji) async {
+    setState(() => _errorCode = null);
+    try {
+      await ref.read(conversationProvider(_id).notifier).react(messageId, me, emoji);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _errorCode = error.code);
+    }
+  }
+
+  /// « + » : photo de la galerie, photo prise sur le moment, ou trajet (groupe et privé).
+  Future<void> _attach(Conversation conversation) async {
+    final l10n = AppLocalizations.of(context);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.photoFromGallery),
+              onTap: () => Navigator.of(sheet).pop('gallery'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l10n.photoFromCamera),
+              onTap: () => Navigator.of(sheet).pop('camera'),
+            ),
+            // Groupe ou privé : proposer un trajet ou en chercher un, accepté d'un toucher.
+            if (conversation.kind != ConversationKind.ride)
+              ListTile(
+                leading: const Icon(Icons.directions_car_outlined),
+                title: Text(l10n.carpoolTitle),
+                onTap: () => Navigator.of(sheet).pop('carpool'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'carpool') {
+      await showCarpoolSheet(context, conversation.id);
+      return;
+    }
+    Uint8List? bytes;
+    try {
+      bytes = await ref.read(photoPickerProvider)(camera: choice == 'camera', large: true);
+    } on Object {
+      if (mounted) setState(() => _errorCode = 'photo_unavailable');
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    // Le texte en cours devient la légende de la photo.
+    final caption = _text.text.trim();
+    setState(() {
+      _sending = true;
+      _errorCode = null;
+    });
+    try {
+      await ref
+          .read(conversationProvider(_id).notifier)
+          .sendPhoto(bytes, imageContentType(bytes), caption: caption, replyToId: _replyTo?.id);
+      _text.clear();
+      if (mounted) setState(() => _replyTo = null);
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
     } finally {
@@ -107,35 +197,6 @@ class _ConversationState extends ConsumerState<_Conversation> {
     }
   }
 
-  Future<void> _leave() async {
-    final router = GoRouter.of(context);
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.chatLeaveTitle),
-        content: Text(l10n.chatLeaveBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.chatLeaveCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.chatLeaveConfirm),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref.read(conversationProvider(_id).notifier).leave();
-      router.pop();
-    } on ApiException catch (error) {
-      if (mounted) setState(() => _errorCode = error.code);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -145,52 +206,88 @@ class _ConversationState extends ConsumerState<_Conversation> {
     final conversation = widget.state.conversation;
     final messages = widget.state.messages;
     final showSender = conversation.kind != ConversationKind.direct;
-    String nameOf(String userId) =>
-        conversation.members.where((m) => m.userId == userId).firstOrNull?.firstName ??
-        l10n.chatFormerMember;
+    ChatMember? memberOf(String userId) =>
+        conversation.members.where((m) => m.userId == userId).firstOrNull;
+    String nameOf(String userId) => memberOf(userId)?.firstName ?? l10n.chatFormerMember;
+    // Auteur d'un message cité : « Toi » pour moi.
+    String quoteName(String userId) => userId == me ? l10n.chatGroupYou : nameOf(userId);
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                conversationTitle(l10n, conversation, me),
-                style: UmText.h3.copyWith(color: c.ink),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+        // Toucher l'en-tête, comme dans une messagerie : infos du groupe (ou du trajet), ou le
+        // profil de la personne en privé.
+        title: Semantics(
+          button: true,
+          hint: conversation.kind == ConversationKind.direct
+              ? l10n.chatDirectInfo
+              : (conversation.kind == ConversationKind.group
+                    ? l10n.chatGroupInfo
+                    : l10n.chatRideInfo),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(UmRadius.sm),
+            onTap: () {
+              final person = conversation.kind == ConversationKind.direct
+                  ? conversation.others(me).firstOrNull
+                  : null;
+              context.push(
+                person != null
+                    ? AppRoutes.person(person.userId)
+                    : AppRoutes.conversationInfo(conversation.id),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: UmSpace.s1),
+              child: Row(
+                children: [
+                  ConversationAvatar(conversation: conversation, me: me),
+                  const SizedBox(width: UmSpace.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            conversationTitle(l10n, conversation, me),
+                            style: UmText.h3.copyWith(color: c.ink),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          conversationMembers(l10n, conversation, me),
+                          style: UmText.bodySm.copyWith(color: c.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              conversationMembers(l10n, conversation, me),
-              style: UmText.bodySm.copyWith(color: c.inkMuted),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
-        actions: [
-          if (conversation.rideId != null)
-            IconButton(
-              tooltip: l10n.chatSeeRide,
-              icon: Icon(Icons.directions_car_outlined, color: c.brandStrong),
-              onPressed: () => context.push(AppRoutes.ride(conversation.rideId!)),
-            ),
-          if (conversation.kind == ConversationKind.group)
-            IconButton(
-              tooltip: l10n.chatLeave,
-              icon: Icon(Icons.group_remove_outlined, color: c.brandStrong),
-              onPressed: _leave,
-            ),
-        ],
       ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Chat de trajet : le trajet est à un toucher, épinglé en haut de la conversation.
+            if (conversation.rideId case final rideId?)
+              _RideBar(
+                label: conversation.rideDay == null
+                    ? l10n.chatRideBar
+                    : tripTitle(
+                        l10n,
+                        conversation.rideToCampus ?? true
+                            ? Direction.toCampus
+                            : Direction.fromCampus,
+                        conversation.rideDay!,
+                      ),
+                onTap: () => context.push(AppRoutes.ride(rideId)),
+              ),
             Expanded(
               child: messages.isEmpty
                   ? Center(
@@ -207,7 +304,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                       // Les plus récents en bas, visibles à l'ouverture.
                       reverse: true,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: UmSpace.s6,
+                        horizontal: UmSpace.s3,
                         vertical: UmSpace.s3,
                       ),
                       itemCount: messages.length + (widget.state.hasMore ? 1 : 0),
@@ -224,11 +321,59 @@ class _ConversationState extends ConsumerState<_Conversation> {
                         final position = messages.length - 1 - index;
                         final message = messages[position];
                         final mine = message.senderId == me;
-                        final bubble = _Bubble(
-                          message: message,
-                          mine: mine,
-                          sender: showSender && !mine ? nameOf(message.senderId) : null,
-                        );
+                        // Série : messages consécutifs du même auteur, le même jour. Prénom en
+                        // tête de série, photo à côté du dernier message (comme une messagerie).
+                        bool sameRun(ChatMessage? other) =>
+                            other != null &&
+                            other.senderId == message.senderId &&
+                            other.carpool == null &&
+                            sameDay(other.createdAt, message.createdAt);
+                        final previous = position > 0 ? messages[position - 1] : null;
+                        final next = position < messages.length - 1 ? messages[position + 1] : null;
+                        final firstOfRun = !sameRun(previous);
+                        final lastOfRun = !sameRun(next);
+                        final author = memberOf(message.senderId);
+                        final sender = showSender && !mine && firstOfRun
+                            ? (author?.firstName ?? l10n.chatFormerMember)
+                            : null;
+                        final Widget bubble = message.carpool != null
+                            ? CarpoolCard(
+                                message: message,
+                                mine: mine,
+                                myId: me,
+                                sender: showSender && !mine ? nameOf(message.senderId) : null,
+                              )
+                            : MessageBubble(
+                                message: message,
+                                mine: mine,
+                                myId: me,
+                                sender: sender,
+                                senderColor: context.umPersonColor(message.senderId),
+                                replyAuthor: message.replyTo == null
+                                    ? null
+                                    : quoteName(message.replyTo!.senderId),
+                                replyColor: message.replyTo == null
+                                    ? null
+                                    : context.umPersonColor(message.replyTo!.senderId),
+                                // Plus d'air entre deux séries qu'à l'intérieur d'une série.
+                                gapAfter: lastOfRun ? UmSpace.s4 : UmSpace.s2,
+                                avatarSlot: showSender,
+                                avatar: showSender && !mine && lastOfRun
+                                    ? GestureDetector(
+                                        onTap: () =>
+                                            context.push(AppRoutes.person(message.senderId)),
+                                        child: PersonAvatar(
+                                          name: author?.firstName ?? '?',
+                                          photoUrl: author?.photoUrl,
+                                        ),
+                                      )
+                                    : null,
+                                onReact: conversation.archived || me == null
+                                    ? null
+                                    : (emoji) => _react(message.id, me, emoji),
+                                onReply: conversation.archived ? null : () => _startReply(message),
+                                onOpenPhoto: (url) => showChatPhoto(context, url),
+                              );
                         // Liste inversée : le séparateur de jour vient au-dessus du premier message du jour.
                         final firstOfDay =
                             position == 0 ||
@@ -268,47 +413,107 @@ class _ConversationState extends ConsumerState<_Conversation> {
                   ],
                 ),
               )
-            else
+            else ...[
+              if (_replyTo case final quoted?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(UmSpace.s4, UmSpace.s2, UmSpace.s1, 0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.reply_rounded, color: c.brandStrong),
+                      const SizedBox(width: UmSpace.s2),
+                      Expanded(
+                        child: Semantics(
+                          liveRegion: true,
+                          label: l10n.chatReplyingTo(quoteName(quoted.senderId)),
+                          child: QuoteBlock(
+                            quote: MessageQuote.of(quoted),
+                            author: l10n.chatReplyingTo(quoteName(quoted.senderId)),
+                            color: context.umPersonColor(quoted.senderId),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.chatReplyCancel,
+                        icon: Icon(Icons.close_rounded, color: c.inkMuted),
+                        onPressed: () => setState(() => _replyTo = null),
+                      ),
+                    ],
+                  ),
+                ),
+              // Saisie compacte : « + » (photo, appareil, trajet), champ arrondi, envoi.
               Padding(
-                padding: const EdgeInsets.fromLTRB(UmSpace.s6, UmSpace.s2, UmSpace.s3, UmSpace.s4),
+                padding: const EdgeInsets.fromLTRB(UmSpace.s1, UmSpace.s2, UmSpace.s1, UmSpace.s3),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    IconButton(
+                      tooltip: l10n.chatAttach,
+                      constraints: const BoxConstraints(
+                        minWidth: UmSize.tapTarget,
+                        minHeight: UmSize.tapTarget,
+                      ),
+                      icon: Icon(Icons.add_rounded, color: c.brandStrong),
+                      onPressed: _sending ? null : () => _attach(conversation),
+                    ),
                     Expanded(
-                      child: UmField(
-                        label: l10n.chatMessageLabel,
+                      child: TextField(
                         controller: _text,
-                        maxLines: 4,
+                        focusNode: _focus,
+                        minLines: 1,
+                        maxLines: 5,
                         maxLength: 2000,
-                        counterFrom: 1800,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: UmText.body.copyWith(color: c.ink),
+                        decoration: InputDecoration(
+                          hintText: l10n.chatMessageLabel,
+                          hintStyle: UmText.body.copyWith(color: c.inkMuted),
+                          counterText: '',
+                          isDense: true,
+                          filled: true,
+                          fillColor: c.surfaceRaised,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: UmSpace.s4,
+                            vertical: UmSpace.s3,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(UmRadius.lg),
+                            borderSide: BorderSide(color: c.focus, width: UmSize.controlBorder),
+                          ),
+                        ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: UmSpace.s5),
-                      child: IconButton(
-                        tooltip: l10n.chatSend,
-                        constraints: const BoxConstraints(
-                          minWidth: UmSize.tapTarget,
-                          minHeight: UmSize.tapTarget,
-                        ),
-                        icon: _sending
-                            ? SizedBox.square(
-                                dimension: UmSize.iconMd,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: UmSize.iconStroke,
-                                  color: c.brandStrong,
-                                ),
-                              )
-                            : Icon(
-                                Icons.send_rounded,
-                                color: _text.text.trim().isEmpty ? c.inkMuted : c.brandStrong,
-                              ),
-                        onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
+                    IconButton(
+                      tooltip: l10n.chatSend,
+                      constraints: const BoxConstraints(
+                        minWidth: UmSize.tapTarget,
+                        minHeight: UmSize.tapTarget,
                       ),
+                      icon: _sending
+                          ? SizedBox.square(
+                              dimension: UmSize.iconMd,
+                              child: CircularProgressIndicator(
+                                strokeWidth: UmSize.iconStroke,
+                                color: c.brandStrong,
+                              ),
+                            )
+                          : Icon(
+                              Icons.send_rounded,
+                              color: _text.text.trim().isEmpty ? c.inkMuted : c.brandStrong,
+                            ),
+                      onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
                     ),
                   ],
                 ),
               ),
+            ],
           ],
         ),
       ),
@@ -316,52 +521,48 @@ class _ConversationState extends ConsumerState<_Conversation> {
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine, this.sender});
+/// Bandeau du trajet en haut d'un chat de trajet : ouvre la carte et les détails.
+class _RideBar extends StatelessWidget {
+  const _RideBar({required this.label, required this.onTap});
 
-  final ChatMessage message;
-  final bool mine;
-  final String? sender;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
-    final time = formatTime(message.createdAt, l10n.localeName);
-    final background = mine ? c.brand : c.surfaceRaised;
-    final foreground = mine ? c.onBrand : c.ink;
-    return Semantics(
-      container: true,
-      label: mine
-          ? l10n.chatMineSemantic(message.body, time)
-          : l10n.chatTheirsSemantic(sender ?? '', message.body, time),
-      excludeSemantics: true,
-      child: Align(
-        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: UmSpace.s2),
-            padding: const EdgeInsets.symmetric(horizontal: UmSpace.s4, vertical: UmSpace.s2),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(UmRadius.md),
-              border: mine ? null : Border.all(color: c.border),
-            ),
-            child: Column(
-              crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                if (sender != null)
-                  Text(
-                    sender!,
-                    style: UmText.caption.copyWith(
-                      color: c.brandStrong,
-                      fontWeight: FontWeight.w600,
+    return Material(
+      color: c.lavender,
+      child: InkWell(
+        onTap: onTap,
+        child: Semantics(
+          button: true,
+          label: '$label. ${l10n.chatSeeRide}',
+          excludeSemantics: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: UmSize.tapTarget),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: UmSpace.s5, vertical: UmSpace.s2),
+              child: Row(
+                children: [
+                  Icon(Icons.directions_car_rounded, color: c.brandStrong),
+                  const SizedBox(width: UmSpace.s3),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: UmText.body.copyWith(
+                        color: c.brandStrong,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                Text(message.body, style: UmText.body.copyWith(color: foreground)),
-                Text(time, style: UmText.caption.copyWith(color: mine ? foreground : c.inkMuted)),
-              ],
+                  Text(l10n.chatSeeRide, style: UmText.button.copyWith(color: c.brandStrong)),
+                  Icon(Icons.chevron_right_rounded, color: c.brandStrong),
+                ],
+              ),
             ),
           ),
         ),

@@ -7,12 +7,14 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../domain/ride.dart';
+import '../../demo/demo_mode.dart';
 
 /// Connexion de suivi d'un trajet en cours (une salle par trajet, docs/api.md).
 abstract interface class LiveConnection {
   Stream<LiveEvent> get events;
 
-  /// Code de fermeture du serveur (4403 hors trajet, 4409 pas commencé, 4410 clôturé).
+  /// Code de fermeture du serveur (4403 hors trajet, 4408 remplacé par un autre appareil,
+  /// 4409 pas commencé, 4410 clôturé).
   Future<int?> get closeCode;
   void sendPosition({required double lat, required double lon, required DateTime at});
   Future<void> close();
@@ -24,7 +26,7 @@ abstract interface class LiveConnector {
 
 /// Codes après lesquels on ne se reconnecte pas. 4401 (jeton expiré) n'en fait pas partie :
 /// la reconnexion renouvelle le jeton.
-const liveFinalCodes = {4403, 4409, 4410};
+const liveFinalCodes = {4403, 4408, 4409, 4410};
 
 class WebSocketLiveConnector implements LiveConnector {
   const WebSocketLiveConnector(this._tokens);
@@ -74,5 +76,5 @@ class _WebSocketLiveConnection implements LiveConnection {
 }
 
 final liveConnectorProvider = Provider<LiveConnector>(
-  (ref) => WebSocketLiveConnector(ref.watch(tokenStorageProvider)),
+  (ref) => ref.watch(demoProvider)?.live ?? WebSocketLiveConnector(ref.watch(tokenStorageProvider)),
 );

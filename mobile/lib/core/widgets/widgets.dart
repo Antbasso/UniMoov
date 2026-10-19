@@ -1,7 +1,10 @@
+export 'um_avatar.dart';
 export 'um_benefit.dart';
 export 'um_button.dart';
+export 'um_calendar.dart';
 export 'um_card.dart';
 export 'um_chip.dart';
 export 'um_field.dart';
 export 'um_page.dart';
 export 'um_ride_card.dart';
+export 'um_section_title.dart';

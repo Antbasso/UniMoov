@@ -134,6 +134,17 @@ describe('inscription par code', () => {
     expect(ctx.mail.lastTo(email)?.text).not.toMatch(/\d{6}/);
   });
 
+  it('plafond quotidien de codes par adresse', async () => {
+    const email = freshEmail();
+    for (let i = 0; i < 10; i++) {
+      expect((await post('/auth/signup/request-code', { universityEmail: email })).statusCode).toBe(202);
+      ctx.clock.advance(61_000);
+    }
+    const capped = await post('/auth/signup/request-code', { universityEmail: email });
+    expect(capped.statusCode).toBe(429);
+    expect(capped.json<{ error: { code: string } }>().error.code).toBe('code_daily_limit');
+  });
+
   it('refuse un mot de passe trop court', async () => {
     const email = freshEmail();
     await post('/auth/signup/request-code', { universityEmail: email });
@@ -183,6 +194,44 @@ describe('connexion', () => {
     expect(wrong.statusCode).toBe(401);
     expect(unknown.statusCode).toBe(401);
     expect(wrong.json()).toEqual(unknown.json());
+  });
+
+  it('trop d’échecs depuis une IP : bloquée pour elle seulement, la vraie personne se connecte ailleurs', async () => {
+    const target = freshEmail();
+    await signUp(ctx, target);
+    const from = (ip: string, password: string) =>
+      ctx.app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { universityEmail: target, password }, remoteAddress: ip });
+    for (let i = 0; i < 10; i++) expect((await from('198.51.100.7', `essai-${i}`)).statusCode).toBe(401);
+    const locked = await from('198.51.100.7', 'motdepasse-solide');
+    expect(locked.statusCode).toBe(429);
+    expect(locked.json<{ error: { code: string } }>().error.code).toBe('login_locked');
+    // Même blocage pour une adresse inconnue : rien n'indique si le compte existe.
+    for (let i = 0; i < 10; i++) await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' });
+    expect((await post('/auth/login', { universityEmail: 'personne@etu.univ-smb.fr', password: 'x' })).statusCode).toBe(429);
+    // Le téléphone de la vraie personne (autre IP) n'est pas bloqué par l'attaquant.
+    expect((await from('203.0.113.20', 'motdepasse-solide')).statusCode).toBe(200);
+    ctx.clock.advance(16 * 60_000);
+    expect((await from('198.51.100.7', 'motdepasse-solide')).statusCode).toBe(200);
+  });
+
+  it('attaque répartie sur beaucoup d’IP : plafond quotidien par adresse', async () => {
+    const target = freshEmail();
+    await signUp(ctx, target);
+    for (let i = 0; i < 100; i++) {
+      await ctx.app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { universityEmail: target, password: `essai-${i}` },
+        remoteAddress: `10.0.${Math.floor(i / 9)}.${i % 9}`,
+      });
+    }
+    const response = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { universityEmail: target, password: 'motdepasse-solide' },
+      remoteAddress: '203.0.113.99',
+    });
+    expect(response.statusCode).toBe(429);
   });
 });
 

@@ -25,9 +25,14 @@ services:
       CALENDAR_ENCRYPTION_KEY: ${CALENDAR_ENCRYPTION_KEY:?définis CALENDAR_ENCRYPTION_KEY dans .env}
       JOBS_ENABLED: ${JOBS_ENABLED:-true}
       MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-ban}
+      PLACES_PROVIDER: ${PLACES_PROVIDER:-overpass}
+      OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-estimate}
       ORS_API_KEY: ${ORS_API_KEY:-}
+      OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}
       ROUTING_DAILY_QUOTA: ${ROUTING_DAILY_QUOTA:-2000}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
       PUSH_PROVIDER: ${PUSH_PROVIDER:-log}
@@ -35,10 +40,11 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-unimoov}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-unimoov}
     ports:
-      - "${API_PORT:-3000}:3000"
+      - "127.0.0.1:${API_PORT:-3000}:3000"
     volumes:
-      # Clé du compte de service Firebase, posée à la main sur le serveur (jamais commitée).
-      - ./secrets:/run/secrets:ro
+      # Secrets de l'API seulement (clé Firebase), posés à la main (jamais commités) ; la phrase
+      # de passe des sauvegardes reste hors de portée de l'API.
+      - ./secrets/api:/run/secrets:ro
     depends_on:
       db:
         condition: service_healthy

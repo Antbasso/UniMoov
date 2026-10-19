@@ -33,14 +33,6 @@
       }
     }
   },
-  "rideSeats": "{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}",
-  "@rideSeats": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "ridePriceLabel": "Prix estimé : {price}",
   "@ridePriceLabel": {
     "placeholders": {
@@ -49,23 +41,37 @@
       }
     }
   },
-  "rideStatusProposed": "Proposé",
+  "rideStatusProposed": "À confirmer",
   "rideStatusConfirmed": "Confirmé",
   "rideStatusCancelled": "Annulé",
   "welcomeTitle": "Ton emploi du temps organise aussi tes trajets.",
   "welcomeSubtitle": "Covoiturage domicile-campus pour les étudiants d'Annecy",
-  "welcomeNote": "Inscris-toi en deux minutes !",
   "welcomeBenefitSchedule": "Trajets calés sur tes cours",
   "welcomeBenefitPrice": "Frais partagés au juste prix",
   "welcomeBenefitConfirm": "Confirmé à deux, toujours",
   "welcomeSignup": "Créer mon compte",
   "welcomeLogin": "J'ai déjà un compte",
+  "demoTry": "Essayer la démo",
+  "demoSheetTitle": "Essayer Uni-Moov sans compte",
+  "demoSheetBody": "Des données fictives autour du campus d'Annecy, sans réseau : rien n'est envoyé ni payé.",
+  "demoReady": "Compte prêt : Camille",
+  "demoReadyHelp": "Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.",
+  "demoSignup": "Parcours d'inscription",
+  "demoSignupHelp": "De l'adresse mail à la semaine type, avec n'importe quelle adresse en univ-smb.fr.",
+  "demoBanner": "DÉMO",
+  "demoCodeHint": "Démo : le code est {code}.",
+  "@demoCodeHint": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "back": "Retour",
   "loading": "Chargement…",
   "continueAction": "Continuer",
   "skipForNow": "Passer pour l'instant",
   "save": "Enregistrer",
-  "edit": "Modifier",
   "errorGeneric": "Une erreur est survenue. Réessaie.",
   "errorNetwork": "Connexion impossible pour l'instant. Vérifie ton réseau.",
   "errorRateLimited": "Trop de tentatives. Réessaie dans quelques minutes.",
@@ -140,6 +146,9 @@
   "addressTitle": "Où habites-tu ?",
   "addressBody": "Ton adresse sert à trouver des trajets près de chez toi. Avant un trajet confirmé à deux, les autres ne voient qu'un secteur approximatif.",
   "addressLabel": "Adresse",
+  "addressPickHelp": "Commence à taper, puis choisis ton adresse dans la liste.",
+  "addressPickRequired": "Choisis une adresse dans la liste proposée.",
+  "addressNoSuggestion": "Aucune adresse trouvée : vérifie le numéro et la commune.",
   "addressPlaceholder": "12 rue de la Paix, Annecy",
   "addressFound": "Adresse enregistrée : {address}",
   "@addressFound": {
@@ -161,7 +170,6 @@
   "roleTitle": "Quel rôle préfères-tu ?",
   "roleBody": "Tu pourras le changer quand tu veux depuis ton profil.",
   "roleAuto": "Automatique",
-  "roleAutoHelp": "Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.",
   "roleDriver": "Toujours au volant",
   "rolePassenger": "Toujours côté passager",
   "roleNoVehicle": "Sans voiture, tu voyages côté passager. Tu peux ajouter un véhicule plus tard dans ton profil.",
@@ -175,15 +183,29 @@
     }
   },
   "homeProfileTooltip": "Mon profil",
+  "navMessages": "Messages",
+  "navHome": "Accueil",
+  "navProfile": "Profil",
+  "badgeDriver": "Tu conduis",
+  "badgePassenger": "Passager",
+  "liveBannerTitle": "Trajet en cours · {role} · {time}",
+  "@liveBannerTitle": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "liveBannerAction": "Voir",
   "discoveryTitle": "Mode découverte",
   "discoveryBody": "Ajoute ton adresse pour recevoir des propositions de trajets.",
   "discoveryAction": "Compléter mon profil",
   "pausedToday": "En pause aujourd'hui",
   "pauseAction": "Mettre en pause",
-  "pauseManage": "Gérer mes pauses",
   "weekTitle": "Ta semaine",
-  "profileTitle": "Mon profil",
-  "profileIdentity": "Identité",
   "profileAddress": "Adresse",
   "profileNoAddress": "Aucune adresse enregistrée.",
   "profileVehicle": "Véhicule",
@@ -202,7 +224,6 @@
       }
     }
   },
-  "profileRemoveVehicle": "Retirer le véhicule",
   "profileRole": "Rôle",
   "profilePauses": "Pauses",
   "profileNoPauses": "Aucune pause programmée.",
@@ -217,14 +238,47 @@
       }
     }
   },
-  "pauseAlternating": "une semaine sur {weeks}",
-  "@pauseAlternating": {
+  "pauseOn": "Le {date}",
+  "@pauseOn": {
     "placeholders": {
-      "weeks": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseUntil": "jusqu'au {date}",
+  "@pauseUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseEveryWeekdays": "Tous les {days}",
+  "@pauseEveryWeekdays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseEveryWeeks": "{count, plural, =1{chaque semaine} other{toutes les {count} semaines}}",
+  "@pauseEveryWeeks": {
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
   },
+  "pauseEveryMonths": "{count, plural, =1{chaque mois} other{tous les {count} mois}}",
+  "@pauseEveryMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "and": "et",
   "pauseDelete": "Supprimer la pause du {start}",
   "@pauseDelete": {
     "placeholders": {
@@ -234,27 +288,32 @@
     }
   },
   "pauseSheetTitle": "Mettre en pause",
-  "pauseSheetBody": "Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n'est pas touché.",
+  "pauseSheetBody": "Pas de propositions pendant la pause. Ton score n'est pas touché.",
   "pauseChooseDates": "Choisir les dates",
-  "pauseAlternatingToggle": "Une semaine sur deux (alternance)",
+  "pauseModeDates": "Dates",
+  "pauseModeDays": "Jours",
+  "pauseModeRepeat": "Répéter",
+  "pauseModeLabel": "Type de pause",
+  "pauseDatesLabel": "Période de pause",
+  "pauseDaysLabel": "Chaque semaine, les jours :",
+  "pauseFrequencyLabel": "Revient",
+  "pauseUntilLabel": "Jusqu'au",
+  "pauseChooseUntil": "Choisir la date de fin",
+  "pauseTooLongForPeriod": "La pause est plus longue que sa fréquence : raccourcis-la.",
   "pauseSave": "Enregistrer la pause",
   "rideStatusWaiting": "En attente",
   "campusName": "Campus d'Annecy",
-  "nearYourHome": "Près de chez toi",
-  "yourHome": "Chez toi",
   "calendarBody": "Uni-Moov lit ton emploi du temps pour te proposer tes trajets de la semaine. Choisis comment le partager.",
   "calendarChooseIcs": "Coller mon lien d'agenda (ICS)",
   "calendarChooseManual": "Saisir mes horaires",
   "icsTitle": "Ton lien d'agenda",
   "icsBody": "Copie le lien d'abonnement (ICS) de ton emploi du temps, par exemple depuis ADE, puis colle-le ici.",
   "icsLabel": "Lien ICS",
-  "icsPlaceholder": "https://…",
+  "icsPlaceholder": "https://… ou webcal://…",
   "icsConsent": "J'accepte qu'Uni-Moov lise cet agenda pour n'en garder que l'heure de début et de fin de chaque journée. Les intitulés de cours ne sont pas conservés. Je peux le déconnecter à tout moment.",
   "icsConsentRequired": "Coche la case pour autoriser la lecture de ton agenda.",
-  "icsConnect": "Connecter mon agenda",
   "manualTitle": "Tes horaires de la semaine",
   "manualBody": "Indique l'heure de ton premier cours et la fin de ton dernier, pour chaque jour.",
-  "manualSave": "Enregistrer mes horaires",
   "manualStart": "Début",
   "manualEnd": "Fin",
   "manualDayOff": "Pas de cours",
@@ -301,18 +360,6 @@
   "searchAction": "Chercher un trajet",
   "directionTo": "Aller",
   "directionFrom": "Retour",
-  "rideMetaDriver": "{time} · tu conduis · {count, plural, =0{aucun passager pour l'instant} =1{1 passager} other{{count} passagers}}",
-  "@rideMetaDriver": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "see": "Voir",
   "proposalTitleTo": "Aller du {day}",
   "@proposalTitleTo": {
     "placeholders": {
@@ -329,16 +376,6 @@
       }
     }
   },
-  "proposalTime": "Horaire : {time}",
-  "@proposalTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "proposalDriverIntro": "Tu montes avec",
-  "proposalPassengersIntro": "Tes passagers",
   "proposalNoPassengers": "Personne pour l'instant. Tu recevras une notification si quelqu'un est proposé.",
   "personDetails": "Fiabilité {score} sur 5 · détour {minutes} min",
   "@personDetails": {
@@ -351,31 +388,21 @@
       }
     }
   },
-  "privacyNote": "Nom et adresse exacte s'affichent seulement une fois le trajet confirmé à deux.",
+  "privacyNote": "Nom et adresse sont partagés seulement quand vous avez accepté tous les deux.",
   "accept": "Accepter",
   "decline": "Refuser",
   "seeOthers": "Voir d'autres voitures",
   "proposalConfirmed": "Trajet confirmé",
-  "proposalWaiting": "Tu as accepté. On attend la réponse de l'autre.",
-  "proposalDeclined": "Proposition refusée.",
   "alternativesTitle": "Autres voitures",
   "alternativesEmpty": "Aucune autre voiture compatible pour ce créneau.",
   "choose": "Choisir",
-  "joined": "C'est noté : tu as choisi cette voiture.",
+  "joined": "Demande envoyée : le conducteur doit l'accepter.",
   "searchTitle": "Chercher un trajet",
   "searchDayLabel": "Jour",
   "searchTimeOptional": "Heure (facultatif)",
   "searchNoTime": "Selon mon emploi du temps",
   "searchEmpty": "Aucune voiture trouvée pour ce créneau.",
   "searchHint": "Choisis un jour et un sens, puis lance la recherche.",
-  "seatsLeftLabel": "{count, plural, =1{1 place} other{{count} places}}",
-  "@seatsLeftLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "profileSchedule": "Emploi du temps",
   "scheduleConnected": "Agenda connecté, mis à jour le {date}.",
   "@scheduleConnected": {
@@ -398,7 +425,6 @@
   "scheduleSync": "Mettre à jour",
   "scheduleDisconnect": "Déconnecter l'agenda",
   "scheduleSynced": "Emploi du temps mis à jour.",
-  "rideMapOpen": "Voir la carte",
   "rideMapLabel": "Carte du trajet avec {count, plural, =1{1 arrêt} other{{count} arrêts}}",
   "@rideMapLabel": {
     "placeholders": {
@@ -408,7 +434,6 @@
     }
   },
   "rideRouteEstimated": "Tracé approximatif : le calcul d'itinéraire n'était pas disponible.",
-  "rideStopsTitle": "Arrêts",
   "rideStopAround": "Vers {time}",
   "@rideStopAround": {
     "placeholders": {
@@ -452,27 +477,13 @@
       }
     }
   },
-  "ridePriceDetail": "Estimation : {total} de carburant partagés entre {persons} personnes, plus {commission} de frais de service par passager. Le prix final est calculé à l'arrivée.",
-  "@ridePriceDetail": {
-    "placeholders": {
-      "total": {
-        "type": "String"
-      },
-      "persons": {
-        "type": "int"
-      },
-      "commission": {
-        "type": "String"
-      }
-    }
-  },
   "ridePriceUnknown": "Prix indisponible : le véhicule du conducteur n'est plus renseigné.",
   "rideAddPassengers": "Ajouter des passagers",
-  "rideChooseMeetingPoint": "Choisir un point de rendez-vous",
-  "rideChangeMeetingPoint": "Changer de point de rendez-vous",
+  "rideChooseMeetingPoint": "Fixer un rendez-vous",
+  "rideChangeMeetingPoint": "Modifier le rendez-vous",
   "meetingPointTitle": "Point de rendez-vous",
-  "meetingPointIntro": "Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
-  "meetingPointMapLabel": "Carte : touche pour placer le point de rendez-vous",
+  "meetingPointIntro": "Touche la carte, ou un parking, pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
+  "meetingPointMapLabel": "Carte du trajet : touche un endroit ou un parking pour placer le point de rendez-vous",
   "meetingPointLabel": "Nom du point",
   "meetingPointHint": "Ex. arrêt de bus Mairie",
   "meetingPointSave": "Enregistrer ce point",
@@ -552,8 +563,11 @@
   "liveReconnecting": "Connexion au suivi en direct…",
   "liveEnded": "Le suivi en direct est terminé.",
   "presenceValidated": "Présence validée",
-  "presencePaid": "Présence validée, trajet payé",
-  "presenceUnpaid": "Présence validée, paiement en attente : recharge ton portefeuille",
+  "presenceOnBoard": "Présence validée : ta part est prélevée à la fin du trajet",
+  "tripArrived": "Arrivée à destination : ta part est prélevée à la clôture du trajet. Un problème ? Signale-le dans les 24 h.",
+  "tripLeftEarly": "Tu as terminé ton trajet avant la destination prévue : ta part est prélevée à la clôture. Un problème ? Signale-le dans les 24 h.",
+  "stopArrived": "Arrivée",
+  "stopLeftEarly": "Terminé avant l'arrivée",
   "confirmPresence": "Valider ma présence",
   "presenceDone": "Présence validée. Bon trajet.",
   "shareLocation": "Partager ma position",
@@ -596,6 +610,14 @@
   "walletTitle": "Ton portefeuille",
   "walletIntro": "Tes trajets sont payés depuis ce solde, sans frais à chaque trajet.",
   "walletBalance": "Disponible",
+  "walletPending": "{amount} reçus, versés après 24 h sans signalement",
+  "@walletPending": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "walletHeld": "{amount} retenus pour un trajet en cours",
   "@walletHeld": {
     "placeholders": {
@@ -627,8 +649,48 @@
   "errorTopupTooSmall": "Montant de recharge trop faible.",
   "errorTopupFailed": "La recharge a été refusée.",
   "finishConfirmTitle": "Terminer le trajet ?",
-  "finishConfirmBody": "Le suivi s'arrête pour tout le monde et les passagers dont la présence n'est pas validée sont comptés absents.",
+  "finishConfirmBody": "Le suivi s'arrête pour tout le monde. Les passagers pris en charge paient leur part ; ta part est versée après 24 h, sauf si un problème est signalé.",
   "finishConfirmCancel": "Continuer le trajet",
+  "finishMyTrip": "Terminer mon trajet",
+  "finishMyTripTitle": "Terminer ton trajet maintenant ?",
+  "finishMyTripBody": "Tu n'as pas encore atteint la destination prévue. Tu as été pris en charge : ta part reste due, même si tu descends ailleurs. Le conducteur est prévenu tout de suite. Un problème ? Signale-le après le trajet, dans les 24 h.",
+  "finishMyTripConfirm": "Terminer quand même",
+  "finishMyTripDone": "Trajet terminé. Le conducteur est prévenu.",
+  "insufficientFundsTitle": "Solde insuffisant",
+  "insufficientFundsBody": "Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l'arrivée que ta part réelle.",
+  "insufficientFundsTopup": "Recharger",
+  "insufficientFundsLater": "Plus tard",
+  "walletPayout": "Retirer vers mon compte",
+  "walletPayoutTitle": "Retirer ton solde",
+  "walletPayoutIntro": "Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.",
+  "walletPayoutAmount": "Montant en euros",
+  "walletPayoutIban": "IBAN",
+  "walletPayoutHolder": "Titulaire du compte",
+  "walletPayoutSubmit": "Retirer {amount}",
+  "@walletPayoutSubmit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutDone": "Retrait demandé. Le virement arrive sous quelques jours.",
+  "walletPayoutRule": "Un retrait par semaine, {amount} minimum.",
+  "@walletPayoutRule": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletPayoutAmountInvalid": "Indique un montant, par exemple 12,50.",
+  "walletPayoutHolderInvalid": "Indique le nom du titulaire du compte.",
+  "errorIbanInvalid": "Cet IBAN n'est pas valide : vérifie-le.",
+  "errorPayoutTooSmall": "Montant de retrait trop faible.",
+  "errorPayoutTooSoon": "Un seul retrait par semaine : réessaie plus tard.",
+  "errorPayoutFailed": "Le virement a été refusé.",
+  "errorInsufficientFunds": "Solde insuffisant.",
+  "errorNotOnBoard": "Ta présence n'est pas validée : pour renoncer, annule ta place.",
   "cancelMyPlace": "Annuler ma place",
   "cancelRide": "Annuler le trajet",
   "cancelSheetTitle": "Annuler ce trajet ?",
@@ -665,7 +727,6 @@
   "ratingDriver": "Conducteur",
   "ratingPassenger": "Passager",
   "profileReliability": "Fiabilité",
-  "profileReliabilityBody": "Ton score, ce qui le compose, et les pénalités que tu peux contester.",
   "reliabilityTitle": "Ma fiabilité",
   "reliabilityIntro": "Ton score aide à composer des trajets fiables, il ne t'exclut jamais. Il se calcule sur les {days} derniers jours.",
   "@reliabilityIntro": {
@@ -883,7 +944,6 @@
   },
   "rideChat": "Chat du trajet",
   "profileNotifications": "Notifications",
-  "profileNotificationsBody": "Choisis ce qui te prévient sur ton téléphone.",
   "notificationsTitle": "Notifications",
   "notificationsIntro": "Tout est activé par défaut. Coupe ce dont tu n'as pas besoin.",
   "notificationsRideReminder": "Rappel de trajet",
@@ -904,5 +964,830 @@
   "chatLeaveBody": "Tu ne verras plus ses messages.",
   "chatLeaveConfirm": "Quitter",
   "chatGroupNameHelp": "Obligatoire pour un groupe.",
-  "chatLeaveCancel": "Rester"
+  "chatLeaveCancel": "Rester",
+  "notificationsBlockedTitle": "Notifications bloquées",
+  "notificationsBlockedBody": "Ton téléphone bloque les notifications d'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.",
+  "exportAction": "Exporter mes données",
+  "exportSubject": "Mes données Uni-Moov",
+  "deleteAccountAction": "Supprimer mon compte",
+  "deleteAccountTitle": "Supprimer ton compte",
+  "deleteAccountIntro": "C'est définitif : ton compte ne pourra pas être récupéré.",
+  "deleteAccountErased": "ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.",
+  "deleteAccountKept": "les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.",
+  "deleteAccountRides": "tes trajets à venir. Les autres sont prévenus.",
+  "deleteAccountPassword": "Ton mot de passe, pour confirmer",
+  "deleteAccountConfirm": "Supprimer définitivement",
+  "deleteAccountCancel": "Garder mon compte",
+  "deleteAccountDone": "Ton compte est supprimé.",
+  "errorInvalidPassword": "Mot de passe incorrect. Réessaie.",
+  "errorWalletNotEmpty": "Ton portefeuille n'est pas vide : récupère ton solde avant de supprimer ton compte.",
+  "errorRideInProgress": "Termine ton trajet en cours avant de supprimer ton compte.",
+  "deleteAccountErasedLead": "Effacés :",
+  "deleteAccountKeptLead": "Gardés sans ton nom :",
+  "deleteAccountRidesLead": "Annulés :",
+  "deleteAccountWalletTitle": "Portefeuille à vider d'abord",
+  "deleteAccountWalletLeft": "Il te reste {amount} sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l'équipe, {email}), puis reviens supprimer ton compte.",
+  "@deleteAccountWalletLeft": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountWriteTeam": "Écrire à l'équipe",
+  "deleteAccountMailSubject": "Récupérer mon solde avant de supprimer mon compte",
+  "exportDone": "Tes données sont prêtes.",
+  "notificationsOpenSettings": "Ouvrir les réglages",
+  "notificationsBlockedHelp": "Ces choix s'appliqueront dès que tu auras réactivé les notifications.",
+  "noMailApp": "Aucune application de mail trouvée. Écris-nous à {email}.",
+  "@noMailApp": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "requestSent": "Demande envoyée",
+  "requestWithdraw": "Retirer ma demande",
+  "requestApprove": "Accepter",
+  "requestReject": "Refuser",
+  "homePlace": "Domicile",
+  "rideSeatsTaken": "{taken, plural, =0{Aucun passager} =1{1 passager} other{{taken} passagers}} sur {total} places",
+  "@rideSeatsTaken": {
+    "placeholders": {
+      "taken": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeBalance": "Solde : {amount}. Ouvrir le portefeuille",
+  "@homeBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rideStatusLive": "En cours",
+  "historyTitle": "Historique",
+  "historyEmpty": "Tes trajets terminés apparaîtront ici.",
+  "historyAbsent": "Absent",
+  "roleAutoInfoTooltip": "Comment marche le mode automatique",
+  "roleAutoInfo": "Chaque jour, Uni-Moov regarde les besoins de ton secteur. S'il manque un conducteur, tu conduis ; sinon tu montes avec quelqu'un. Entre plusieurs conducteurs possibles, on alterne : celui qui a le moins conduit ces dernières semaines prend le volant. Tes pauses programmées sont toujours respectées.",
+  "understood": "Compris",
+  "tripTitleTo": "Aller · {date}",
+  "@tripTitleTo": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "tripTitleFrom": "Retour · {date}",
+  "@tripTitleFrom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statScore": "Note : {score} sur 5",
+  "@statScore": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "statDetour": "+{minutes} min",
+  "@statDetour": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statDetourDriver": "Fait {minutes} minutes de détour pour toi",
+  "@statDetourDriver": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "statDetourPassenger": "Te fait faire {minutes} minutes de détour",
+  "@statDetourPassenger": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "personAccepted": "Accepté",
+  "personRequested": "Demande",
+  "personPending": "En attente",
+  "priceBulletFinal": "Prix final calculé à l'arrivée",
+  "stopOnBoard": "À bord",
+  "moreActions": "Plus d'actions",
+  "rideDetailsTitle": "Détails du trajet",
+  "proposalMapLabel": "{count, plural, =0{Carte du trajet proposé} =1{Carte du trajet proposé, 1 personne en zone approximative} other{Carte du trajet proposé, {count} personnes en zones approximatives}}",
+  "@proposalMapLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatRideBar": "Ton trajet",
+  "aboutTitle": "À propos de moi",
+  "aboutIntro": "Visible par les étudiants que tu croises sur un trajet. Tout est facultatif.",
+  "aboutEmpty": "Formation, âge, centres d'intérêt",
+  "aboutStudy": "Formation",
+  "aboutStudyHint": "BUT Informatique",
+  "aboutBirthYear": "Année de naissance",
+  "aboutBirthYearHelp": "Seul ton âge est affiché.",
+  "aboutBirthYearInvalid": "Indique une année, par exemple 2005.",
+  "aboutInterests": "Centres d'intérêt",
+  "aboutInterestAdd": "Ajouter un centre d'intérêt",
+  "aboutInterestHint": "Escalade",
+  "aboutInterestRemove": "Retirer {interest}",
+  "@aboutInterestRemove": {
+    "placeholders": {
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "ageYears": "{age} ans",
+  "@ageYears": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "profileNameAge": "{name}, {age} ans",
+  "@profileNameAge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSeeMine": "Voir mon profil comme les autres",
+  "profileUnavailable": "Ce profil n'est pas disponible.",
+  "statRides": "{count, plural, =0{Aucun trajet mené} =1{1 trajet mené à bien} other{{count} trajets menés à bien}}",
+  "@statRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoChange": "Changer ma photo",
+  "photoFromGallery": "Choisir une photo",
+  "photoFromCamera": "Prendre une photo",
+  "photoRemove": "Retirer la photo",
+  "photoSaved": "Photo enregistrée.",
+  "photoUnavailable": "Impossible d'ouvrir tes photos. Vérifie l'autorisation dans les réglages.",
+  "errorPhotoInvalid": "Choisis une photo JPEG ou PNG.",
+  "carpoolTitle": "Proposer un covoiturage",
+  "carpoolIDrive": "Je conduis",
+  "carpoolILook": "Je cherche",
+  "carpoolSeats": "{count, plural, =0{Complet} =1{1 place libre} other{{count} places libres}}",
+  "@carpoolSeats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "carpoolToCampus": "Aller",
+  "carpoolFromCampus": "Retour",
+  "carpoolAsk": "Publier ma demande",
+  "carpoolOffer": "Trajet proposé",
+  "carpoolRequest": "Cherche un trajet",
+  "carpoolJoin": "Je monte",
+  "carpoolTake": "Je te prends",
+  "carpoolJoined": "{names} : c'est réservé",
+  "@carpoolJoined": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "carpoolDone": "C'est réservé : le trajet est dans ta semaine.",
+  "errorNoRideThatDay": "Tu ne conduis pas ce jour-là. Accepte d'abord un trajet comme conducteur.",
+  "errorOwnCarpool": "C'est ta propre proposition.",
+  "errorCarpoolNotHere": "Propose un trajet dans un groupe ou une conversation privée.",
+  "themeTitle": "Thème",
+  "themeSystem": "Automatique (comme le téléphone)",
+  "themeLight": "Clair",
+  "themeDark": "Sombre",
+  "reduceMotion": "Réduire les animations",
+  "ridePriceReceiveTotalLabel": "Tu reçois au total",
+  "ridePriceYouReceiveTotal": "Tu reçois {price} au total, de {count, plural, =0{personne} =1{1 passager} other{{count} passagers}}",
+  "@ridePriceYouReceiveTotal": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ridePriceFromPassengers": "{count, plural, =1{Payé par ton passager} other{Somme payée par tes {count} passagers}}",
+  "@ridePriceFromPassengers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "calcTitle": "Détail du calcul",
+  "calcLitres": "{km} km × {consumption} L/100 km = {litres} L",
+  "@calcLitres": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      },
+      "consumption": {
+        "type": "String"
+      },
+      "litres": {
+        "type": "String"
+      }
+    }
+  },
+  "calcFuel": "{litres} L × {price} le litre",
+  "@calcFuel": {
+    "placeholders": {
+      "litres": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "calcShareOf": "Part de {name}",
+  "@calcShareOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "calcMyShare": "Ta part du carburant",
+  "calcCommission": "Frais de service",
+  "calcTotalPaid": "= Tu paies",
+  "calcTotalReceived": "= Tu reçois au total",
+  "carpoolArriveAt": "Arrivée au campus",
+  "carpoolLeaveAt": "Départ du campus",
+  "carpoolReturnAt": "Retour, départ du campus",
+  "carpoolWithReturn": "Programmer le retour",
+  "carpoolPublishDrive": "Proposer ce trajet",
+  "carpoolExisting": "Ou un trajet déjà prévu",
+  "vehicleModelLabel": "Modèle",
+  "vehicleModelHint": "Renault Clio",
+  "vehicleModelRequired": "Indique le modèle, pour que tes passagers reconnaissent ta voiture.",
+  "vehicleColorLabel": "Couleur",
+  "vehicleColorRequired": "Indique la couleur de ta voiture.",
+  "vehicleColorChoices": "blanche,noire,grise,argent,bleue,rouge,verte,beige,marron,jaune,orange",
+  "rideVehicleSemantic": "Voiture : {description}",
+  "@rideVehicleSemantic": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "rideCardReceive": "Tu reçois",
+  "proposalPricePay": "Environ {price} pour toi",
+  "@proposalPricePay": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "proposalPriceReceive": "Tu reçois environ {price} au total",
+  "@proposalPriceReceive": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAttach": "Joindre une photo ou un trajet",
+  "chatPhotoSemantic": "Photo",
+  "chatReact": "Réagir",
+  "chatReactWith": "Réagir avec {emoji}",
+  "@chatReactWith": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReactionRemove": "Retirer ma réaction",
+  "chatReactionSemantic": "Réaction {emoji}, {count}",
+  "@chatReactionSemantic": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReactionMineSemantic": "Ta réaction {emoji}, {count}. Touche pour la retirer",
+  "@chatReactionMineSemantic": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatLastPhoto": "Photo",
+  "close": "Fermer",
+  "achievementsTitle": "Mes réussites",
+  "levelNewcomer": "Nouvel Uni-Mooveur",
+  "levelRegular": "Habitué",
+  "levelPillar": "Pilier du campus",
+  "levelSuper": "Super Uni-Mooveur",
+  "levelLegend": "Légende du campus",
+  "levelTop": "Tu as atteint le plus haut niveau.",
+  "levelNext": "Encore {count} points pour devenir {level}",
+  "@levelNext": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "pointsCount": "{count, plural, =0{0 point} =1{1 point} other{{count} points}}",
+  "@pointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pointsShort": "{count} pts",
+  "@pointsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "impactCo2": "de CO2 évités",
+  "impactKm": "partagés",
+  "impactRides": "trajets effectués",
+  "impactReceived": "reçus en conducteur",
+  "impactPaid": "payés en passager",
+  "badgesTitle": "Badges ({earned}/{total})",
+  "@badgesTitle": {
+    "placeholders": {
+      "earned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeEarned": "Gagné",
+  "badgeProgress": "{progress}/{goal}",
+  "@badgeProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      },
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeFirstRide": "Premier trajet",
+  "badgeFirstRideGoal": "Fais ton premier trajet.",
+  "badgeTenRides": "10 trajets",
+  "badgeTenRidesGoal": "Fais 10 trajets.",
+  "badgeFiftyRides": "50 trajets",
+  "badgeFiftyRidesGoal": "Fais 50 trajets.",
+  "badgeLoyalDriver": "Conducteur fidèle",
+  "badgeLoyalDriverGoal": "Conduis 10 trajets avec des passagers.",
+  "badgeFullWeek": "Semaine complète",
+  "badgeFullWeekGoal": "Fais 5 trajets dans la même semaine.",
+  "badgeSociable": "Sociable",
+  "badgeSociableGoal": "Voyage avec 10 personnes différentes.",
+  "badgeEco": "Éco-voyageur",
+  "badgeEcoGoal": "Évite 100 kg de CO2.",
+  "badgeReliable": "Fiable",
+  "badgeReliableGoal": "Fais 5 trajets avec une fiabilité d'au moins 95 %.",
+  "leaderboardTitle": "Classement du campus",
+  "leaderboardTitleMonth": "Classement · {month}",
+  "@leaderboardTitleMonth": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "leaderboardShowMe": "Apparaître avec mon prénom",
+  "leaderboardShowMeHelp": "Sinon, tu restes classé, mais anonyme.",
+  "leaderboardEmpty": "Personne n'a encore de points ce mois-ci. Un trajet suffit pour entrer au classement.",
+  "leaderboardMyRank": "Ta place : {rank} sur {total}",
+  "@leaderboardMyRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "leaderboardError": "Classement indisponible pour l'instant.",
+  "leaderboardYou": "Toi",
+  "leaderboardAnonymous": "Un étudiant",
+  "leaderboardRowSemantic": "{rank}e, {name}, {points} points",
+  "@leaderboardRowSemantic": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionAbout": "Mon profil",
+  "sectionActivity": "Mon activité",
+  "sectionTrips": "Mes trajets",
+  "sectionPauses": "Pauses",
+  "sectionAppearance": "Apparence",
+  "sectionAccount": "Compte et confidentialité",
+  "aboutBio": "Mini-bio",
+  "aboutBioHint": "Mes points de rendez-vous, ce que j'aime en trajet…",
+  "aboutInterestsHelp": "Touche ceux qui te ressemblent ({count}/{max}).",
+  "@aboutInterestsHelp": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "prefsTitle": "Préférences de covoiturage",
+  "prefChatTitle": "Discussion",
+  "prefChatChatty": "J'aime bien discuter",
+  "prefChatDepends": "Je discute si je me sens à l'aise",
+  "prefChatQuiet": "Je préfère le calme",
+  "prefMusicTitle": "Musique",
+  "prefMusicYes": "J'aime la musique en voiture",
+  "prefMusicDepends": "J'aime la musique si elle me plaît",
+  "prefMusicNo": "Je préfère sans musique",
+  "prefSmokingTitle": "Cigarette",
+  "prefSmokingOk": "La cigarette ne me dérange pas",
+  "prefSmokingOutside": "Pauses cigarette dehors seulement",
+  "prefSmokingNo": "Je préfère qu'on ne fume pas en voiture",
+  "prefPetsTitle": "Animaux",
+  "prefPetsYes": "J'aime les animaux à bord",
+  "prefPetsSome": "Je peux covoiturer avec certains animaux",
+  "prefPetsNo": "Je préfère sans animaux",
+  "profileRating": "{score}/5 · {count, plural, =0{aucun avis} =1{1 avis} other{{count} avis}}",
+  "@profileRating": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileWrite": "Écrire à {name}",
+  "@profileWrite": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditMine": "Modifier mon profil",
+  "profileVerifiedTitle": "{name} a un profil vérifié",
+  "@profileVerifiedTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileVerifiedEmail": "Mail universitaire vérifié",
+  "profileMemberSince": "Membre depuis {month}",
+  "@profileMemberSince": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "profileAboutTitle": "À propos de {name}",
+  "@profileAboutTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileAboutEmpty": "{name} n'a encore rien ajouté.",
+  "@profileAboutEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileBadges": "Badges",
+  "profileRides": "{count, plural, =0{Aucun trajet effectué} =1{1 trajet effectué} other{{count} trajets effectués}}",
+  "@profileRides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileCancellationRate": "Taux d'annulation de {rate} %",
+  "@profileCancellationRate": {
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "profileCo2": "{kg} kg de CO2 évités en covoiturant",
+  "@profileCo2": {
+    "placeholders": {
+      "kg": {
+        "type": "int"
+      }
+    }
+  },
+  "mapFocusVehicle": "Suivre le véhicule",
+  "calcStepFuel": "Le carburant du trajet",
+  "calcTripCost": "Coût du trajet",
+  "calcStepShare": "Le partage, tronçon par tronçon",
+  "calcStepShareNote": "Chaque tronçon est partagé entre les personnes à bord, conducteur compris.",
+  "calcPortionEach": "{km} km ({cost}) ÷ {persons}",
+  "@calcPortionEach": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      },
+      "cost": {
+        "type": "String"
+      },
+      "persons": {
+        "type": "int"
+      }
+    }
+  },
+  "calcStepReceive": "Ce que paie chaque passager",
+  "calcStepPay": "Ce que tu paies",
+  "calcCommissionPlus": "+ frais de service Uni-Moov",
+  "calcDriverCheck": "Vérification : {received} reçus + {own} pour ta propre part = {total}, le coût du trajet.",
+  "@calcDriverCheck": {
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "own": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "calcRounding": "Montants arrondis au centime ; le conducteur n'est jamais perdant.",
+  "charterTitle": "Charte de bonne conduite",
+  "charterIntro": "Pour que chaque trajet se passe bien, tout le monde s'engage à respecter ces règles, comme sur les autres applis de covoiturage.",
+  "charterRead": "Lire la charte de bonne conduite",
+  "charterSignupNote": "En créant ton compte, tu t'engages à respecter la charte de bonne conduite.",
+  "charterContact": "Une question ou un signalement : unimoov.support@gmail.com",
+  "charter1Title": "Respect et bienveillance",
+  "charter1Body": "Sois poli et bienveillant avec tout le monde, dans la voiture comme dans les messages.\nAucune discrimination, aucun propos ou geste déplacé, aucun harcèlement : tolérance zéro.\nRespecte les choix de chacun : discuter ou rester au calme, écouter de la musique ou non.",
+  "charter2Title": "Ponctualité",
+  "charter2Body": "Sois au point de rendez-vous à l'heure de passage indiquée dans l'app ; elle peut avancer si un passager s'ajoute, l'app te prévient.\nEn retard ? Préviens dans le chat du trajet dès que possible.\nConducteur : attends au moins 5 minutes au point de rendez-vous ; passager : ne fais pas attendre plus.",
+  "charter3Title": "Fiabilité",
+  "charter3Body": "N'accepte que les trajets que tu feras vraiment.\nSi tu ne peux plus venir, annule le plus tôt possible : une annulation tardive ou une absence baisse ton score de fiabilité.\nValide ta présence à la prise en charge et termine ton trajet dans l'app.",
+  "charter4Title": "Sécurité",
+  "charter4Body": "Conducteur : permis valide, assurance à jour, véhicule entretenu, pas plus de passagers que de places déclarées.\nRespecte le code de la route ; jamais d'alcool, de drogue ou de téléphone en main au volant.\nCeinture attachée pour tout le monde, à chaque trajet.\nPassager : tu peux demander à descendre ou à ralentir si tu ne te sens pas en sécurité, puis le signaler.",
+  "charter5Title": "Partage des frais, sans profit",
+  "charter5Body": "Le prix couvre seulement le carburant, partagé entre les personnes à bord, plus de petits frais de service ; le covoiturage n'est pas un service de taxi.\nTout se paie dans l'app : pas d'argent liquide ni de paiement à côté, pas de supplément demandé.\nLe prix définitif est calculé à l'arrivée, entre les seules personnes présentes.",
+  "charter6Title": "Confort à bord",
+  "charter6Body": "Respecte les préférences affichées sur le profil du conducteur et des passagers (musique, cigarette, animaux).\nGarde la voiture propre ; pas de repas salissant sans accord.\nBagages : un sac de cours ; pour plus encombrant, demande avant dans le chat.",
+  "charter7Title": "Confidentialité",
+  "charter7Body": "Les adresses, noms et photos des autres ne servent qu'au trajet : ne les partage pas et ne les publie pas.\nNe prends pas de photo ni de vidéo d'une personne sans son accord.\nLe suivi de position ne fonctionne que pendant le trajet, pour ses seuls participants.",
+  "charter8Title": "Notes honnêtes et signalements",
+  "charter8Body": "Note chaque trajet honnêtement, sur ce qui s'est vraiment passé.\nSignale dans l'app tout comportement dangereux, irrespectueux ou contraire à cette charte ; l'équipe Uni-Moov lit chaque signalement.\nEn cas de désaccord sur un trajet (absence, paiement), ouvre un litige depuis le trajet plutôt que de régler ça à deux.",
+  "charter9Title": "En cas de manquement",
+  "charter9Body": "Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.",
+  "icsPaste": "Coller le lien copié",
+  "icsClipboardEmpty": "Rien à coller : copie d'abord le lien de ton agenda.",
+  "icsWhere": "Où le trouver : dans ADE, « Exporter l'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.",
+  "errorDrivesOtherWay": "Tu conduis l'autre trajet ce jour-là : tu repars avec ta voiture.",
+  "errorPassengerOtherWay": "Tu es passager sur l'autre trajet ce jour-là : tu n'as pas ta voiture.",
+  "pauseStartLabel": "Premier jour de pause",
+  "pauseChooseStart": "Choisir le premier jour",
+  "pauseDurationLabel": "Durée de chaque pause",
+  "pauseDurationDays": "{count, plural, =1{1 jour} other{{count} jours}}",
+  "@pauseDurationDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pauseRepeatUntilLabel": "Se répète jusqu'au",
+  "pauseDurationWeeks": "{count, plural, =1{1 semaine} other{{count} semaines}}",
+  "@pauseDurationWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSectionDirect": "Messages privés",
+  "chatSectionGroups": "Groupes",
+  "chatSectionRides": "Trajets",
+  "chatSectionRidesNote": "Chats éphémères : créés avec le trajet, en lecture seule après, puis supprimés.",
+  "chatCopied": "Message copié.",
+  "chatReactMore": "Tous les emojis",
+  "chatCopy": "Copier",
+  "chatGroupInfo": "Infos du groupe",
+  "chatGroupRename": "Nom du groupe",
+  "chatGroupRenameAction": "Renommer",
+  "chatGroupMembers": "{count, plural, =1{1 membre} other{{count} membres}}",
+  "@chatGroupMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatGroupAdd": "Ajouter des personnes",
+  "chatGroupAddNone": "Toutes les personnes croisées sur un trajet sont déjà dans le groupe.",
+  "chatGroupRemove": "Retirer {name} du groupe",
+  "@chatGroupRemove": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatGroupCreator": "Créateur",
+  "chatGroupYou": "Toi",
+  "chatGroupSeeProfile": "Voir le profil de {name}",
+  "@chatGroupSeeProfile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatRideInfo": "Infos du trajet",
+  "chatDirectInfo": "Voir le profil",
+  "badgeSpinHint": "Touche la médaille pour un tour, ou lance-la du doigt.",
+  "badgeWonTitle": "Nouveau badge !",
+  "homeLeaderboardTitle": "Classement du campus",
+  "homeLeaderboardRank": "Tu es {rank}e sur {total} ce mois-ci",
+  "@homeLeaderboardRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLeaderboardNone": "Fais un trajet ce mois-ci pour entrer au classement.",
+  "leaderboardSee": "Voir le classement",
+  "leaderboardPodium": "Podium du mois",
+  "chatReply": "Répondre",
+  "chatReplyingTo": "Réponse à {name}",
+  "@chatReplyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReplyCancel": "Annuler la réponse",
+  "chatReplySemantic": "En réponse à {name} : {body}",
+  "@chatReplySemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReplySwipeHint": "Glisse un message vers la droite pour y répondre.",
+  "tripDurationMinutes": "{minutes} min de trajet",
+  "@tripDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "tripDurationHours": "{hours} h {minutes} de trajet",
+  "@tripDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "mapFollowingVehicle": "La carte suit le véhicule. Touche la carte pour arrêter.",
+  "spotParking": "Parking public",
+  "spotCarpool": "Aire de covoiturage",
+  "meetingPointOnMap": "Point choisi sur la carte",
+  "meetingPointProposeTitle": "Un point pour {name}",
+  "@meetingPointProposeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointProposeIntro": "Touche la carte, ou un parking sur ton chemin, pour proposer un point de rencontre. Ton passager l'accepte ou garde le sien.",
+  "meetingPointPropose": "Proposer ce point",
+  "meetingPointProposed": "Point proposé. Ton passager va répondre.",
+  "meetingPointChoose": "Choisir mon point de rencontre",
+  "meetingPointMine": "Rendez-vous : {label}",
+  "@meetingPointMine": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointAtHome": "Le conducteur passe te prendre à ton adresse.",
+  "meetingPointOffer": "{name} te propose de te retrouver ici : {label}",
+  "@meetingPointOffer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointAccept": "Accepter ce point",
+  "meetingPointDecline": "Garder le mien",
+  "meetingPointAccepted": "C'est noté : rendez-vous à ce point.",
+  "meetingPointDeclined": "Tu gardes ton point actuel.",
+  "meetingPointProposeAction": "Proposer un point",
+  "meetingPointPending": "Proposé : {label}, en attente",
+  "@meetingPointPending": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  }
 }

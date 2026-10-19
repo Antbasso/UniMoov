@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 import 'dart:math';
 
@@ -41,15 +42,20 @@ class ChatLive {
   /// Reconnecté après une coupure : des messages ont pu être manqués, à relire.
   Stream<void> get reconnected => _reconnected.stream;
 
+  /// Change à chaque pause ou reprise : une connexion lancée avant n'est plus la bonne.
+  int _generation = 0;
+
   void start() {
     if (_running || _disposed) return;
     _running = true;
+    _generation++;
     unawaited(_connect());
   }
 
   /// Arrière-plan : socket fermé, plus de reconnexion jusqu'au retour.
   Future<void> pause() async {
     _running = false;
+    _generation++;
     _retry?.cancel();
     final connection = _connection;
     _connection = null;
@@ -58,12 +64,15 @@ class ChatLive {
 
   Future<void> _connect() async {
     if (!_running) return;
+    final generation = _generation;
+    bool current() => _running && generation == _generation;
     int? code;
     try {
       // Jeton refusé à la dernière tentative : on le renouvelle avant de réessayer.
       if (_attempt > 0) await refreshSession?.call();
       final connection = await _connector.connect();
-      if (!_running) {
+      // Mis en pause (puis peut-être repris) pendant la connexion : celle-ci est de trop.
+      if (!current()) {
         await connection.close();
         return;
       }
@@ -75,7 +84,7 @@ class ChatLive {
         connection.ready.then((_) => true),
         done.then((_) => false),
       ]);
-      if (accepted && _running && _connection == connection) {
+      if (accepted && current() && _connection == connection) {
         // Accepté par le serveur : le délai repart du minimum.
         _attempt = 0;
         if (_connectedOnce) _reconnected.add(null);
@@ -86,7 +95,7 @@ class ChatLive {
     } on Object {
       // Hors ligne, serveur indisponible ou session expirée : nouvel essai plus tard.
     }
-    if (!_running) return;
+    if (!current()) return;
     _attempt++;
     _retry = Timer(retryDelay(_attempt, code), () => unawaited(_connect()));
   }
@@ -195,13 +204,32 @@ class ConversationController extends AsyncNotifier<ConversationState> {
         .where((m) => m.conversationId == id)
         .listen(_received);
     ref.onDispose(sub.cancel);
-    final conversation = await api.conversation(id);
-    final page = await api.messages(id);
+    // Gardée 5 minutes après avoir quitté l'écran : la rouvrir est immédiat.
+    final link = ref.keepAlive();
+    Timer? release;
+    ref
+      ..onCancel(() {
+        _onScreen = false;
+        release = Timer(const Duration(minutes: 5), link.close);
+      })
+      ..onResume(() {
+        _onScreen = true;
+        release?.cancel();
+        // De retour sur la conversation : ce qui est arrivé entre-temps est lu.
+        unawaited(_read());
+      })
+      ..onDispose(() => release?.cancel());
+    // La conversation est déjà connue par la liste : seuls les messages sont chargés ; sinon
+    // les deux appels partent ensemble.
+    final known = ref.read(conversationsProvider).value?.where((c) => c.id == id).firstOrNull;
+    final page = api.messages(id);
+    final conversation = known ?? await api.conversation(id);
+    final messages = await page;
     unawaited(_read());
     return ConversationState(
       conversation: conversation,
-      messages: page.reversed.toList(),
-      hasMore: page.length >= _pageSize,
+      messages: messages.reversed.toList(),
+      hasMore: messages.length >= _pageSize,
     );
   }
 
@@ -214,19 +242,92 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     }
   }
 
+  /// Nouveau message, ou message déjà affiché mis à jour (« Chloé monte » sur une proposition).
   void _append(ChatMessage message) {
     final current = state.value;
-    if (current == null || current.messages.any((m) => m.id == message.id)) return;
-    state = AsyncData(current.copyWith(messages: [...current.messages, message]));
+    if (current == null) return;
+    final known = current.messages.any((m) => m.id == message.id);
+    state = AsyncData(
+      current.copyWith(
+        messages: known
+            ? [for (final m in current.messages) m.id == message.id ? message : m]
+            : [...current.messages, message],
+      ),
+    );
   }
+
+  /// Écran ouvert : un message reçu est lu tout de suite ; sinon il reste « non lu ».
+  bool _onScreen = true;
 
   void _received(ChatMessage message) {
     _append(message);
-    unawaited(_read());
+    if (_onScreen) unawaited(_read());
   }
 
-  Future<void> send(String body) async {
-    final message = await _api.send(id, body);
+  Future<void> send(String body, {String? replyToId}) async {
+    final message = await _api.send(id, body, replyToId: replyToId);
+    if (ref.mounted) _append(message);
+  }
+
+  Future<void> sendPhoto(
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+    String? replyToId,
+  }) async {
+    final message = await _api.sendPhoto(
+      id,
+      bytes,
+      contentType,
+      caption: caption,
+      replyToId: replyToId,
+    );
+    if (ref.mounted) _append(message);
+  }
+
+  /// Ma réaction (`null` : la retirer) : affichée tout de suite, puis l'état du serveur.
+  Future<void> react(String messageId, String myId, String? emoji) async {
+    final current = state.value?.messages.where((m) => m.id == messageId).firstOrNull;
+    if (current != null) {
+      _append(
+        current.copyWith(
+          reactions: [
+            for (final r in current.reactions)
+              if (r.userId != myId) r,
+            if (emoji != null) (userId: myId, emoji: emoji),
+          ],
+        ),
+      );
+    }
+    try {
+      final message = await _api.react(id, messageId, emoji);
+      if (ref.mounted) _append(message);
+    } on Object {
+      if (current != null && ref.mounted) _append(current);
+      rethrow;
+    }
+  }
+
+  Future<void> postCarpool({
+    String? rideId,
+    DateTime? day,
+    bool toCampus = true,
+    String? time,
+    bool create = false,
+  }) async {
+    final message = await _api.postCarpool(
+      id,
+      rideId: rideId,
+      day: day,
+      toCampus: toCampus,
+      time: time,
+      create: create,
+    );
+    if (ref.mounted) _append(message);
+  }
+
+  Future<void> acceptCarpool(String messageId) async {
+    final message = await _api.acceptCarpool(id, messageId);
     if (ref.mounted) _append(message);
   }
 
@@ -247,6 +348,25 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     await _api.leave(id);
     if (ref.mounted) ref.invalidate(conversationsProvider);
   }
+
+  /// Groupe modifié (nom, membres) : la conversation affichée et la liste se mettent à jour.
+  Future<void> _manage(Future<Conversation> Function() action) async {
+    final updated = await action();
+    final current = state.value;
+    if (!ref.mounted || current == null) return;
+    state = AsyncData(
+      ConversationState(
+        conversation: updated.copyWith(lastMessage: current.conversation.lastMessage),
+        messages: current.messages,
+        hasMore: current.hasMore,
+      ),
+    );
+    ref.invalidate(conversationsProvider);
+  }
+
+  Future<void> rename(String title) => _manage(() => _api.renameGroup(id, title));
+  Future<void> addMembers(List<String> userIds) => _manage(() => _api.addMembers(id, userIds));
+  Future<void> removeMember(String userId) => _manage(() => _api.removeMember(id, userId));
 }
 
 final conversationProvider = AsyncNotifierProvider.autoDispose

@@ -9,7 +9,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../schedule/domain/schedule.dart';
 import '../domain/proposal.dart';
 import 'alternatives_screen.dart';
-import 'formatting.dart';
 import 'proposals_controller.dart';
 
 /// Recherche manuelle (cahier §4) : jour, sens, heure facultative ; quota quotidien.
@@ -54,20 +53,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       children: [
         Text(l10n.searchDayLabel, style: UmText.label.copyWith(color: c.ink)),
         const SizedBox(height: UmSpace.s2),
-        Wrap(
-          spacing: UmSpace.s2,
-          runSpacing: UmSpace.s2,
-          children: [
-            for (var i = 0; i < 7; i++)
-              () {
-                final day = _today.add(Duration(days: i));
-                return ChoiceChip(
-                  label: Text(formatDay(day, l10n.localeName)),
-                  selected: day == _day,
-                  onSelected: (_) => setState(() => _day = day),
-                );
-              }(),
-          ],
+        // Calendrier des deux semaines à venir : on voit tout de suite quel jour on choisit.
+        UmCalendar(
+          first: _today,
+          last: _today.add(const Duration(days: 13)),
+          selected: _day,
+          onSelected: (day) => setState(() => _day = day),
         ),
         const SizedBox(height: UmSpace.s4),
         SegmentedButton<Direction>(

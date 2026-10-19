@@ -39,7 +39,14 @@ void main() {
     // Onboarding, étape 1 : adresse enregistrée.
     expect(find.text('Étape 1 sur 4'), findsOneWidget);
     expect(find.text('Où habites-tu ?'), findsOneWidget);
-    await tester.enterText(fieldLabeled('Adresse'), FakeBackend.knownAddress);
+    // Adresse tapée sans choisir : refusée ; on choisit dans les propositions.
+    await tester.enterText(fieldLabeled('Adresse'), '12 rue de la paix');
+    await tapText(tester, 'Continuer');
+    expect(find.textContaining('Choisis une adresse dans la liste proposée.'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(backend.addressQueries, ['12 rue de la paix']);
+    await tapText(tester, FakeBackend.knownLabel);
     await tapText(tester, 'Continuer');
 
     // Étape 2 : passée.
@@ -116,15 +123,34 @@ void main() {
     expect(find.text('Aucune pause programmée.'), findsOneWidget);
 
     // Véhicule.
-    await tester.tap(find.text('Modifier').at(1));
-    await tester.pumpAndSettle();
+    await tapText(tester, 'Véhicule');
     await tapText(tester, 'Oui, j\'ai une voiture');
     await tester.enterText(fieldLabeled('Consommation (L/100 km)'), '5,8');
+    // Modèle et couleur exigés : les passagers reconnaissent la voiture.
     await tapText(tester, 'Enregistrer');
-    expect(find.text('5,8 L/100 km · 3 places · détour 10 min'), findsOneWidget);
+    expect(find.textContaining('Indique le modèle'), findsOneWidget);
+    await tester.enterText(fieldLabeled('Modèle'), 'Renault Clio');
+    await tapText(tester, 'grise');
+    await tapText(tester, 'Enregistrer');
+    expect(
+      find.text('Renault Clio grise · 5,8 L/100 km · 3 places · détour 10 min'),
+      findsOneWidget,
+    );
+
+    // Rôle : un « i » explique le mode automatique (alternance entre conducteurs).
+    await tapText(tester, 'Rôle');
+    await tester.tap(find.byTooltip('Comment marche le mode automatique'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('on alterne'), findsOneWidget);
+    await tapText(tester, 'Compris');
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
 
     // Erreur serveur sur la pause : message, puis succès.
-    await tapText(tester, 'Mettre en pause');
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
     expect(find.text('Choisir les dates'), findsOneWidget);
     await tapText(tester, 'Choisir les dates');
     // Saisie clavier du sélecteur : dates relatives à aujourd'hui (jours passés désactivés).
@@ -140,6 +166,40 @@ void main() {
     expect(find.textContaining('Vérifie les dates'), findsOneWidget);
     await tapText(tester, 'Enregistrer la pause');
     expect(find.textContaining('Du '), findsOneWidget);
+
+    // Comme dans un agenda : tous les lundis, jusqu'à une date.
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Jours');
+    await tapText(tester, 'lun.');
+    await tapText(tester, 'Choisir la date de fin');
+    await tapText(tester, 'OK');
+    expect(find.textContaining('Tous les lundis jusqu'), findsOneWidget);
+    await tapText(tester, 'Enregistrer la pause');
+    expect(find.textContaining('Tous les lundis jusqu'), findsOneWidget);
+    expect((backend.lastPause!.repeat! as RepeatDays).weekdays, {1});
+
+    // Répéter : un premier jour, une durée, une fréquence, et une seule date de fin.
+    await tester.ensureVisible(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mettre en pause'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Répéter');
+    expect(find.text('Choisir les dates'), findsNothing);
+    await tapText(tester, 'Choisir le premier jour');
+    await tapText(tester, 'OK');
+    await tapText(tester, '2 jours');
+    await tester.ensureVisible(find.text('Choisir la date de fin'));
+    await tapText(tester, 'Choisir la date de fin');
+    await tapText(tester, 'OK');
+    expect(find.text('Se répète jusqu\'au'), findsOneWidget);
+    await tester.ensureVisible(find.text('Enregistrer la pause'));
+    await tapText(tester, 'Enregistrer la pause');
+    final repeated = backend.lastPause!;
+    expect(repeated.endsOn.difference(repeated.startsOn).inDays, 1);
+    expect(repeated.repeat, isA<RepeatWeekly>());
 
     await tapText(tester, 'Me déconnecter');
     expect(find.text('Créer mon compte'), findsOneWidget);

@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE ride_status AS ENUM ('proposed','confirmed','in_progress','completed','cancelled');
 CREATE TYPE participant_role AS ENUM ('driver','passenger');
-CREATE TYPE participant_status AS ENUM ('proposed','accepted','declined','picked_up','absent','cancelled');
+CREATE TYPE participant_status AS ENUM ('proposed','requested','accepted','declined','picked_up','absent','cancelled');
 CREATE TYPE role_mode AS ENUM ('auto','always_driver','always_passenger');
 
 CREATE TABLE app_settings (          -- commission, prix carburant, seuils, rétentions
@@ -22,7 +22,10 @@ CREATE TABLE users (
   apple_sub text UNIQUE,
   first_name text NOT NULL,
   last_name text NOT NULL,
-  photo_url text,
+  photo_url text,                          -- /api/v1/users/{id}/photo?v=… (photo dans user_photos)
+  study_program text CHECK (char_length(study_program) <= 80),
+  birth_year smallint CHECK (birth_year BETWEEN 1940 AND 2020),  -- âge affiché, jamais la date
+  interests text[] NOT NULL DEFAULT '{}' CHECK (cardinality(interests) <= 6),
   home_address text,
   home_location geography(Point,4326),
   home_sector text,                       -- cellule de grille ~500 m, calculée côté serveur
@@ -44,12 +47,29 @@ CREATE TABLE campuses (
   location geography(Point,4326) NOT NULL
 );
 
+CREATE TABLE user_photos (                -- photo de profil, sauvegardée avec la base
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  content_type text NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png')),
+  data bytea NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Profil public (facultatif) et classement du campus, ajoutés à users :
+ALTER TABLE users ADD COLUMN bio text CHECK (char_length(bio) <= 200);              -- mini-bio
+ALTER TABLE users ADD COLUMN pref_chat text CHECK (pref_chat IN ('chatty', 'depends', 'quiet'));
+ALTER TABLE users ADD COLUMN pref_music text CHECK (pref_music IN ('yes', 'depends', 'no'));
+ALTER TABLE users ADD COLUMN pref_smoking text CHECK (pref_smoking IN ('ok', 'outside', 'no'));
+ALTER TABLE users ADD COLUMN pref_pets text CHECK (pref_pets IN ('yes', 'some', 'no'));
+ALTER TABLE users ADD COLUMN leaderboard_visible boolean NOT NULL DEFAULT false;     -- prénom au classement
+
 CREATE TABLE vehicles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   consumption_l_per_100km numeric(4,1) NOT NULL,
   default_seats smallint NOT NULL CHECK (default_seats BETWEEN 1 AND 8),
-  max_detour_minutes smallint NOT NULL DEFAULT 10
+  max_detour_minutes smallint NOT NULL DEFAULT 10,
+  model text CHECK (char_length(model) BETWEEN 1 AND 40),   -- « Clio 4 », pour reconnaître la voiture
+  color text CHECK (char_length(color) BETWEEN 1 AND 30)    -- « grise »
 );
 CREATE UNIQUE INDEX vehicles_user_id_key ON vehicles (user_id);   -- un véhicule par personne
 
@@ -58,7 +78,9 @@ CREATE TABLE pauses (                     -- pause programmée, récurrence opti
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   starts_on date NOT NULL,
   ends_on date NOT NULL,
-  recurrence text                         -- ex. 'weekly:2' (une semaine sur deux)
+  recurrence text,                        -- 'weekly:N', 'monthly:N' ou 'days:1,3' (jours ISO)
+  repeat_until date,                      -- fin de la répétition (avec recurrence seulement)
+  CHECK ((recurrence IS NULL) = (repeat_until IS NULL) AND (repeat_until IS NULL OR repeat_until >= ends_on))
 );
 CREATE INDEX pauses_user_idx ON pauses (user_id);
 
@@ -148,10 +170,13 @@ CREATE TABLE ride_participants (
   status participant_status NOT NULL DEFAULT 'proposed',
   pickup_label text,                      -- adresse ou point de rendez-vous
   pickup_location geography(Point,4326),
+  proposed_pickup_label text,             -- point de rencontre proposé par le conducteur
+  proposed_pickup_location geography(Point,4326),
   use_meeting_point boolean NOT NULL DEFAULT false,
   stop_order smallint,
   eta timestamptz,
   detour_s integer,
+  onboard_m integer CHECK (onboard_m >= 0),  -- distance à bord depuis le campus (plan) : prix au prorata
   presence_validated_at timestamptz,
   amount_cents integer,
   cancelled_at timestamptz,
@@ -178,6 +203,7 @@ CREATE TABLE wallets (
   user_id uuid PRIMARY KEY REFERENCES users(id),
   balance_cents integer NOT NULL DEFAULT 0,       -- cache de SUM(wallet_ledger), recalculable
   held_cents integer NOT NULL DEFAULT 0,          -- retenues en attente de clôture
+  pending_cents integer NOT NULL DEFAULT 0,       -- parts reçues, versées après le délai de signalement
   provider_account_ref text,                      -- compte chez le prestataire agréé
   identity_verified_at timestamptz                -- requis pour retirer (conducteur)
 );
@@ -186,7 +212,7 @@ CREATE TABLE wallets (
 CREATE TABLE wallet_ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   idempotency_key text NOT NULL UNIQUE,
-  account text NOT NULL,                          -- 'user:<uuid>' | 'platform:commission' | 'provider:clearing'
+  account text NOT NULL,                          -- 'user:<uuid>' | 'held:<uuid>' | 'pending:<uuid>' | 'platform:commission' | 'provider:clearing'
   ride_id uuid REFERENCES rides(id),
   kind text NOT NULL,       -- topup | hold | hold_release | ride_charge | ride_credit | commission | payout | refund
   amount_cents integer NOT NULL,                  -- signé ; la somme des écritures d'une opération vaut 0
@@ -230,6 +256,7 @@ CREATE TABLE payments (                          -- un enregistrement par passag
   status text NOT NULL DEFAULT 'held',           -- held | paid | failed | refunded
   held_cents integer NOT NULL DEFAULT 0 CHECK (held_cents >= 0),  -- retenu au départ
   paid_at timestamptz,
+  released_at timestamptz,                       -- part versée au conducteur (après le délai, sans litige)
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (ride_id, payer_id)
 );
@@ -268,10 +295,41 @@ CREATE TABLE messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id uuid NOT NULL REFERENCES users(id),
-  body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
-  created_at timestamptz NOT NULL DEFAULT now()
+  body text NOT NULL,                       -- vide seulement pour une photo sans légende
+  has_photo boolean NOT NULL DEFAULT false,
+  reply_to_id uuid REFERENCES messages(id) ON DELETE SET NULL,  -- réponse à un message (citation)
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- proposition de covoiturage (groupe ou privé) : offre d'un trajet, ou demande jour + sens
+  carpool_kind text CHECK (carpool_kind IN ('offer', 'request')),
+  carpool_ride_id uuid REFERENCES rides(id) ON DELETE SET NULL,
+  carpool_day date,
+  carpool_direction text CHECK (carpool_direction IN ('to_campus', 'from_campus'))
 );
 CREATE INDEX messages_conv_idx ON messages (conversation_id, created_at);
+ALTER TABLE messages ADD CONSTRAINT messages_body_length
+  CHECK (char_length(body) <= 2000 AND (char_length(body) >= 1 OR has_photo));
+
+CREATE TABLE message_reactions (        -- une réaction par personne et par message
+  message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  emoji text NOT NULL CHECK (char_length(emoji) BETWEEN 1 AND 16),   -- un emoji (vérifié par l'API)
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, user_id)
+);
+
+CREATE TABLE message_photos (           -- photo réduite par l'app, supprimée avec son message
+  message_id uuid PRIMARY KEY REFERENCES messages(id) ON DELETE CASCADE,
+  content_type text NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png')),
+  data bytea NOT NULL CHECK (octet_length(data) <= 614400)
+);
+
+CREATE TABLE carpool_joins (            -- qui a accepté quelle proposition, dans quelle voiture
+  message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ride_id uuid NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, user_id)
+);
 
 CREATE TABLE ratings (
   ride_id uuid NOT NULL REFERENCES rides(id),

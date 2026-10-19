@@ -7,10 +7,21 @@ const navApp = z.enum(['google_maps', 'waze', 'apple_maps']);
 const stepStatus = z.enum(['done', 'skipped']);
 const isoDate = z.iso.date();
 
+/** Préférences de covoiturage montrées sur le profil (null : non précisé). */
+export const preferences = z.strictObject({
+  chat: z.enum(['chatty', 'depends', 'quiet']).nullable(),
+  music: z.enum(['yes', 'depends', 'no']).nullable(),
+  smoking: z.enum(['ok', 'outside', 'no']).nullable(),
+  pets: z.enum(['yes', 'some', 'no']).nullable(),
+});
+
 export const vehicleSchema = z.object({
   consumptionLPer100km: z.number().min(2).max(20),
   defaultSeats: z.number().int().min(1).max(8),
   maxDetourMinutes: z.number().int().min(0).max(60),
+  /** Modèle et couleur : pour que les passagers reconnaissent la voiture (facultatifs). */
+  model: z.string().trim().min(1).max(40).nullish(),
+  color: z.string().trim().min(1).max(30).nullish(),
 });
 
 export const meResponse = z.object({
@@ -19,6 +30,12 @@ export const meResponse = z.object({
   firstName: z.string(),
   lastName: z.string(),
   photoUrl: z.string().nullable(),
+  studyProgram: z.string().nullable(),
+  birthYear: z.number().int().nullable(),
+  interests: z.array(z.string()),
+  bio: z.string().nullable(),
+  preferences,
+  leaderboardVisible: z.boolean(),
   campusId: z.uuid().nullable(),
   home: z
     .object({ address: z.string(), lat: z.number(), lon: z.number(), sector: z.string() })
@@ -37,12 +54,26 @@ export const meResponse = z.object({
 });
 export type MeResponse = z.infer<typeof meResponse>;
 
+/** Centres d'intérêt : quelques mots courts (6 au plus). */
+const interests = z.array(z.string().trim().min(1).max(30)).max(6);
+
 export const patchMeBody = z
-  .object({ firstName: name, lastName: name })
+  .object({
+    firstName: name,
+    lastName: name,
+    studyProgram: z.string().trim().min(1).max(80).nullable(),
+    birthYear: z.number().int().min(1940).max(2020).nullable(),
+    interests,
+    bio: z.string().trim().min(1).max(200).nullable(),
+    preferences: preferences.partial(),
+    leaderboardVisible: z.boolean(),
+  })
   .partial()
   .refine((body) => Object.keys(body).length > 0, 'Aucun champ à modifier');
 
 export const addressBody = z.object({ address: z.string().trim().min(5).max(200) });
+export const addressQuery = z.object({ q: z.string().trim().min(3).max(200) });
+export const addressSuggestions = z.object({ suggestions: z.array(z.object({ label: z.string() })) });
 
 export const preferencesBody = z
   .object({ roleMode, defaultNavApp: navApp.nullable() })
@@ -56,15 +87,38 @@ export const pauseSchema = z.object({
   id: z.uuid(),
   startsOn: isoDate,
   endsOn: isoDate,
-  recurrence: z.enum(['weekly:2', 'weekly:3', 'weekly:4']).nullable(),
+  /** `weekly:N` (1-8), `monthly:N` (1-6) ou `days:1,3` (jours ISO), voir docs/api.md. */
+  recurrence: z
+    .string()
+    .regex(/^(weekly:[1-8]|monthly:[1-6]|days:[1-7](,[1-7]){0,6})$/)
+    .nullable(),
+  repeatUntil: isoDate.nullable(),
 });
-export const pauseBody = pauseSchema.omit({ id: true });
+export const pauseBody = pauseSchema.omit({ id: true }).extend({ repeatUntil: isoDate.nullable().default(null) });
 export const pausesResponse = z.object({ pauses: z.array(pauseSchema) });
 export const idParams = z.object({ id: z.uuid() });
 
-export const publicProfileResponse = z.object({
+/**
+ * Profil d'une personne croisée sur un trajet ou une conversation : prénom, photo, âge,
+ * formation, centres d'intérêt, fiabilité. Jamais le nom de famille ni l'adresse (cahier §4).
+ */
+export const publicProfileResponse = z.strictObject({
   id: z.uuid(),
   firstName: z.string(),
   photoUrl: z.string().nullable(),
   reliabilityScore: z.number(),
+  age: z.number().int().nullable(),
+  studyProgram: z.string().nullable(),
+  interests: z.array(z.string()),
+  ridesCompleted: z.number().int(),
+  bio: z.string().nullable(),
+  preferences,
+  /** Mois d'inscription (`AAAA-MM`), pas la date exacte. */
+  memberSince: z.string(),
+  ratingsCount: z.number().int(),
+  /** Part des trajets acceptés puis annulés par la personne, en pour cent. */
+  cancellationRate: z.number().int(),
+  level: z.strictObject({ key: z.string(), points: z.number().int() }),
+  badges: z.array(z.string()),
+  co2SavedKg: z.number().int(),
 });

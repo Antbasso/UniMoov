@@ -6,8 +6,12 @@ import { startJobs } from './jobs.js';
 import { BanGeocodingProvider } from './shared/geocoding/ban-geocoding-provider.js';
 import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-provider.js';
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
+import { CachedPlacesProvider } from './shared/places/cached-places-provider.js';
+import { OverpassPlacesProvider } from './shared/places/overpass-places-provider.js';
 import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
+import { OsrmRoutingProvider } from './shared/routing/osrm-routing-provider.js';
 import { FakePaymentProvider } from './shared/payments/payment-provider.js';
+import { BrevoMailProvider } from './shared/mail/brevo-mail-provider.js';
 import { ConsoleMailProvider } from './shared/mail/console-mail-provider.js';
 import { FcmPushProvider, type ServiceAccount } from './shared/push/push-provider.js';
 
@@ -19,7 +23,8 @@ const database = createDatabase(config.DATABASE_URL, { onIdleError: (error) => l
 const geocoding =
   config.GEOCODING_PROVIDER === 'fake'
     ? new FakeGeocodingProvider()
-    : new CachedGeocodingProvider(new BanGeocodingProvider(config.GEOCODING_URL));
+    : // Résultats proches du campus du pilote d'abord (Annecy).
+      new CachedGeocodingProvider(new BanGeocodingProvider(config.GEOCODING_URL, fetch, { lat: 45.9195, lon: 6.158 }));
 
 // Clé du compte de service lue au démarrage, hors du dépôt (chemin dans .env).
 const push =
@@ -36,14 +41,23 @@ const app = await buildApp({
     db: database.db,
     jwtSecret: config.JWT_SECRET,
     calendarKey: config.CALENDAR_ENCRYPTION_KEY,
-    // Développement uniquement (refusé en production par la config).
-    mail: new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
+    // Console : développement uniquement (refusée en production par la config).
+    mail:
+      config.MAIL_PROVIDER === 'brevo' && config.BREVO_API_KEY && config.MAIL_FROM
+        ? new BrevoMailProvider(config.BREVO_API_KEY, { email: config.MAIL_FROM, name: 'Uni-Moov' })
+        : new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
+    ...(config.PLACES_PROVIDER === 'overpass'
+      ? { places: new CachedPlacesProvider(new OverpassPlacesProvider(config.OVERPASS_URL)) }
+      : {}),
     // Développement uniquement (refusé en production par la config) ; prestataire réel en M4b.
     payments: new FakePaymentProvider(),
     ...(push ? { push } : {}),
     ...(config.ROUTING_PROVIDER === 'ors' && config.ORS_API_KEY
       ? { routing: new OrsRoutingProvider(config.ORS_API_KEY), routingDailyQuota: config.ROUTING_DAILY_QUOTA }
+      : {}),
+    ...(config.ROUTING_PROVIDER === 'osrm'
+      ? { routing: new OsrmRoutingProvider(config.OSRM_URL), routingDailyQuota: config.ROUTING_DAILY_QUOTA }
       : {}),
   },
 });

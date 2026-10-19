@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui';
 
+import 'package:unimoov/features/account/data/export_sharer.dart';
 import 'package:unimoov/features/chat/data/user_socket.dart';
 import 'package:unimoov/features/chat/domain/chat.dart';
 import 'package:unimoov/features/notifications/data/push_service.dart';
@@ -54,6 +58,10 @@ class FakePushService implements PushService {
   final _opened = StreamController<Map<String, String>>.broadcast();
   Map<String, String>? initial;
 
+  /// Notifications refusées dans les réglages du téléphone.
+  bool blocked = false;
+  int settingsOpened = 0;
+
   void tap(Map<String, String> data) => _opened.add(data);
 
   @override
@@ -66,4 +74,21 @@ class FakePushService implements PushService {
   Stream<Map<String, String>> get opened => _opened.stream;
   @override
   Future<Map<String, String>?> initialOpened() async => initial;
+  @override
+  Future<bool> isBlocked() async => blocked;
+  @override
+  Future<void> openSettings() async => settingsOpened++;
+}
+
+/// Feuille de partage du système : garde les fichiers remis à l'utilisateur.
+class FakeExportSharer implements ExportSharer {
+  final List<({String fileName, String content})> shared = [];
+
+  @override
+  Future<void> share(
+    Uint8List bytes, {
+    required String fileName,
+    required String subject,
+    Rect? origin,
+  }) async => shared.add((fileName: fileName, content: utf8.decode(bytes)));
 }

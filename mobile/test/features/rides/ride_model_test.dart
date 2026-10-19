@@ -74,6 +74,24 @@ void main() {
     expect(ride.editable, isTrue);
   });
 
+  test('mon temps de trajet : ma portion pour un passager, tout pour le conducteur', () {
+    final stops = [
+      for (final stop in json['stops']! as List<dynamic>)
+        {
+          ...(stop as Map<String, dynamic>),
+          if (stop['userId'] == 'u2') 'eta': '2026-10-19T15:22:00.000Z',
+        },
+    ];
+    final ride = RideDetails.fromJson({...json, 'stops': stops});
+    // Retour : du campus (15 h 00) à ma dépose (15 h 22).
+    expect(ride.myDuration('u2'), const Duration(minutes: 22));
+    // Heure de passage inconnue : rien plutôt qu'une durée fausse.
+    expect(RideDetails.fromJson(json).myDuration('u2'), isNull);
+    // Conducteur : tout l'itinéraire.
+    final driving = RideDetails.fromJson({...json, 'role': 'driver'});
+    expect(driving.myDuration('u1'), const Duration(minutes: 15));
+  });
+
   test('sans prix (véhicule retiré) et trajet terminé : non modifiable', () {
     final ride = RideDetails.fromJson({...json, 'price': null, 'status': 'completed'});
     expect(ride.price, isNull);

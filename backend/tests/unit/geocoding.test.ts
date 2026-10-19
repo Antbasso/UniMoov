@@ -46,9 +46,23 @@ describe('BanGeocodingProvider', () => {
   });
 });
 
+describe('BanGeocodingProvider.suggest', () => {
+  it('autocomplétion près du campus, plusieurs propositions, même sous le seuil de confiance', async () => {
+    let requested = '';
+    const fetchImpl = vi.fn((url: URL) => {
+      requested = url.toString();
+      return Promise.resolve(new Response(JSON.stringify(feature(0.3))));
+    }) as unknown as typeof fetch;
+    const provider = new BanGeocodingProvider('https://geo.test/search', fetchImpl, { lat: 45.9195, lon: 6.158 });
+    expect(await provider.suggest('12 rue de la p', 5)).toEqual([{ label: '12 Rue de la Paix 74000 Annecy', lat: 45.9003, lon: 6.1251 }]);
+    const params = new URL(requested).searchParams;
+    expect(Object.fromEntries(params)).toMatchObject({ autocomplete: '1', limit: '5', lat: '45.9195', lon: '6.158' });
+  });
+});
+
 describe('CachedGeocodingProvider', () => {
   it('n’appelle le fournisseur qu’une fois par adresse (casse et espaces ignorés)', async () => {
-    const inner = { geocode: vi.fn(() => Promise.resolve({ label: 'A', lat: 1, lon: 2 })) };
+    const inner = { geocode: vi.fn(() => Promise.resolve({ label: 'A', lat: 1, lon: 2 })), suggest: vi.fn(() => Promise.resolve([])) };
     const cached = new CachedGeocodingProvider(inner);
     await cached.geocode('12 rue de la Paix');
     await cached.geocode('  12 RUE de la   paix ');
@@ -57,7 +71,7 @@ describe('CachedGeocodingProvider', () => {
 
   it('expire les entrées et borne sa taille', async () => {
     let now = 0;
-    const inner = { geocode: vi.fn(() => Promise.resolve(null)) };
+    const inner = { geocode: vi.fn(() => Promise.resolve(null)), suggest: vi.fn(() => Promise.resolve([])) };
     const cached = new CachedGeocodingProvider(inner, 2, 1000, () => now);
     await cached.geocode('a');
     now = 2000;

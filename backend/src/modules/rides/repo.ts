@@ -19,9 +19,12 @@ export interface RideInfo {
   durationS: number | null;
   routeEstimated: boolean;
   plannedAt: Date | null;
+  startedAt: Date | null;
   campus: LatLon & { name: string };
   /** Consommation du véhicule du conducteur (null s'il l'a retiré). */
   consumptionLPer100km: number | null;
+  /** Modèle et couleur de la voiture du conducteur, s'il les a donnés. */
+  vehicle: { model: string | null; color: string | null } | null;
 }
 
 export interface Member {
@@ -36,9 +39,18 @@ export interface Member {
   useMeetingPoint: boolean;
   meetingPoint: LatLon | null;
   meetingLabel: string | null;
+  /** Point de rencontre proposé par le conducteur, en attente de la réponse du passager. */
+  proposedMeeting: { label: string; point: LatLon } | null;
   stopOrder: number | null;
   eta: Date | null;
   presenceValidatedAt: Date | null;
+  /** Arrivé à destination (passager) : son trajet est payé à la clôture. */
+  arrivedAt: Date | null;
+  /** Trajet terminé de son côté (arrivé, ou sorti avant l'arrivée). */
+  endedAt: Date | null;
+  detourS: number | null;
+  /** Distance à bord, depuis le campus (calculée avec le plan) ; null avant le plan. */
+  onboardM: number | null;
 }
 
 export const isAccepted = (m: Member) => m.status === 'accepted' || m.status === 'picked_up';
@@ -71,15 +83,19 @@ export class RidesRepo {
       duration_s: number | null;
       route_estimated: boolean;
       planned_at: Date | null;
+      started_at: Date | null;
       campus_name: string;
       campus_lat: number;
       campus_lon: number;
       consumption: string | null;
+      vehicle_model: string | null;
+      vehicle_color: string | null;
     }>(sql`
       SELECT r.id, r.driver_id, r.direction, r.day::text, r.target_time, r.status, r.seats_total,
-             r.distance_m, r.duration_s, r.route_estimated, r.planned_at,
+             r.distance_m, r.duration_s, r.route_estimated, r.planned_at, r.started_at,
              c.name AS campus_name, ST_Y(c.location::geometry) AS campus_lat,
-             ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption
+             ST_X(c.location::geometry) AS campus_lon, v.consumption_l_per_100km AS consumption,
+             v.model AS vehicle_model, v.color AS vehicle_color
       FROM rides r JOIN campuses c ON c.id = r.campus_id
       LEFT JOIN vehicles v ON v.user_id = r.driver_id
       WHERE r.id = ${rideId}
@@ -98,8 +114,10 @@ export class RidesRepo {
       durationS: r.duration_s,
       routeEstimated: r.route_estimated,
       plannedAt: r.planned_at ? new Date(r.planned_at) : null,
+      startedAt: r.started_at ? new Date(r.started_at) : null,
       campus: { name: r.campus_name, lat: Number(r.campus_lat), lon: Number(r.campus_lon) },
       consumptionLPer100km: r.consumption === null ? null : Number(r.consumption),
+      vehicle: r.vehicle_model || r.vehicle_color ? { model: r.vehicle_model, color: r.vehicle_color } : null,
     };
   }
 
@@ -118,15 +136,23 @@ export class RidesRepo {
       meet_lat: number | null;
       meet_lon: number | null;
       pickup_label: string | null;
+      prop_lat: number | null;
+      prop_lon: number | null;
+      proposed_pickup_label: string | null;
       stop_order: number | null;
       eta: Date | null;
       presence_validated_at: Date | null;
+      arrived_at: Date | null;
+      ended_at: Date | null;
+      detour_s: number | null;
+      onboard_m: number | null;
     }>(sql`
       SELECT p.user_id, p.role, p.status, u.first_name, u.last_name, u.photo_url,
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at
+             p.pickup_label, ST_Y(p.proposed_pickup_location::geometry) AS prop_lat,
+             ST_X(p.proposed_pickup_location::geometry) AS prop_lon, p.proposed_pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s, p.onboard_m
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -142,9 +168,17 @@ export class RidesRepo {
       useMeetingPoint: r.use_meeting_point,
       meetingPoint: r.meet_lat === null || r.meet_lon === null ? null : { lat: Number(r.meet_lat), lon: Number(r.meet_lon) },
       meetingLabel: r.pickup_label,
+      proposedMeeting:
+        r.prop_lat === null || r.prop_lon === null
+          ? null
+          : { label: r.proposed_pickup_label ?? '', point: { lat: Number(r.prop_lat), lon: Number(r.prop_lon) } },
       stopOrder: r.stop_order,
       eta: r.eta ? new Date(r.eta) : null,
       presenceValidatedAt: r.presence_validated_at ? new Date(r.presence_validated_at) : null,
+      arrivedAt: r.arrived_at ? new Date(r.arrived_at) : null,
+      endedAt: r.ended_at ? new Date(r.ended_at) : null,
+      detourS: r.detour_s,
+      onboardM: r.onboard_m,
     }));
   }
 
@@ -166,7 +200,7 @@ export class RidesRepo {
       durationS: number;
       estimated: boolean;
       totalCostCents: number | null;
-      stops: { userId: string; order: number; eta: Date }[];
+      stops: { userId: string; order: number; eta: Date; onboardM?: number | null; detourS?: number | null }[];
       /** Null : plan provisoire (estimé), à recalculer. */
       now: Date | null;
     },
@@ -181,12 +215,18 @@ export class RidesRepo {
       WHERE id = ${rideId}`);
     await tx
       .update(rideParticipants)
-      .set({ stopOrder: null, eta: null })
+      .set({ stopOrder: null, eta: null, onboardM: null })
       .where(eq(rideParticipants.rideId, rideId));
     for (const stop of plan.stops) {
       await tx
         .update(rideParticipants)
-        .set({ stopOrder: stop.order, eta: stop.eta })
+        .set({
+          stopOrder: stop.order,
+          eta: stop.eta,
+          onboardM: stop.onboardM ?? null,
+          // Détour réel s'il a pu être calculé ; sinon l'estimation du matching reste.
+          ...(stop.detourS != null ? { detourS: stop.detourS } : {}),
+        })
         .where(and(eq(rideParticipants.rideId, rideId), eq(rideParticipants.userId, stop.userId)));
     }
   }
@@ -201,8 +241,27 @@ export class RidesRepo {
       UPDATE ride_participants SET
         use_meeting_point = ${pickup !== null},
         pickup_label = ${pickup?.label ?? null},
-        pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null}
+        pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null},
+        -- Choisir son point répond aussi à une proposition du conducteur.
+        proposed_pickup_label = NULL,
+        proposed_pickup_location = NULL
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
+  /** Point de rencontre proposé par le conducteur (`null` : proposition retirée ou refusée). */
+  async setPickupProposal(rideId: string, userId: string, proposal: { label: string; point: LatLon } | null, db: DbOrTx = this.db): Promise<void> {
+    await db.execute(sql`
+      UPDATE ride_participants SET
+        proposed_pickup_label = ${proposal?.label ?? null},
+        proposed_pickup_location = ${proposal ? sql`ST_SetSRID(ST_MakePoint(${proposal.point.lon}, ${proposal.point.lat}), 4326)::geography` : null}
+      WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
+  async declinePendingRequests(rideId: string, tx: Tx): Promise<string[]> {
+    const { rows } = await tx.execute<{ user_id: string }>(sql`
+      UPDATE ride_participants SET status = 'declined' WHERE ride_id = ${rideId} AND status = 'requested'
+      RETURNING user_id`);
+    return rows.map((r) => r.user_id);
   }
 
   async setRideStatus(
@@ -225,7 +284,15 @@ export class RidesRepo {
   async setParticipant(
     rideId: string,
     userId: string,
-    fields: { status?: 'picked_up' | 'absent'; pickedUpAt?: Date; presenceValidatedAt?: Date; amountCents?: number },
+    fields: {
+      status?: 'picked_up' | 'absent' | 'cancelled';
+      pickedUpAt?: Date;
+      presenceValidatedAt?: Date;
+      amountCents?: number;
+      cancelledAt?: Date;
+      arrivedAt?: Date;
+      endedAt?: Date;
+    },
     tx: Tx,
   ): Promise<void> {
     await tx
@@ -267,4 +334,60 @@ export class RidesRepo {
   async invalidatePlan(rideId: string, db: DbOrTx = this.db): Promise<void> {
     await db.update(rides).set({ plannedAt: null }).where(eq(rides.id, rideId));
   }
+
+  /**
+   * Trajets terminés d'un participant (historique), du plus récent au plus ancien, avec ce qu'il
+   * a payé (passager) ou reçu (conducteur) une fois la clôture faite.
+   */
+  async history(userId: string, limit: number): Promise<HistoryRow[]> {
+    const { rows } = await this.db.execute<{
+      id: string;
+      day: string;
+      direction: Direction;
+      target_time: Date;
+      role: 'driver' | 'passenger';
+      status: string;
+      amount_cents: number | null;
+      others: string[] | null;
+    }>(sql`
+      SELECT r.id, r.day::text AS day, r.direction, r.target_time, p.role, p.status::text AS status,
+        CASE WHEN p.role = 'driver'
+          THEN (SELECT sum(pay.share_cents)::int FROM payments pay
+                WHERE pay.ride_id = r.id AND pay.payee_id = ${userId} AND pay.status = 'paid')
+          ELSE (SELECT (pay.share_cents + pay.commission_cents)::int FROM payments pay
+                WHERE pay.ride_id = r.id AND pay.payer_id = ${userId} AND pay.status = 'paid')
+        END AS amount_cents,
+        (SELECT array_agg(u.first_name ORDER BY o.role, u.first_name) FROM ride_participants o
+           JOIN users u ON u.id = o.user_id
+          WHERE o.ride_id = r.id AND o.user_id <> ${userId} AND o.status IN ('accepted', 'picked_up')
+            AND (p.role = 'driver' OR o.role = 'driver')) AS others
+      FROM rides r JOIN ride_participants p ON p.ride_id = r.id
+      WHERE p.user_id = ${userId} AND r.status = 'completed'
+        AND p.status IN ('accepted', 'picked_up', 'absent')
+      ORDER BY r.day DESC, r.target_time DESC
+      LIMIT ${limit}`);
+    return rows.map((r) => ({
+      id: r.id,
+      day: r.day,
+      direction: r.direction,
+      time: new Date(r.target_time),
+      role: r.role,
+      myStatus: r.status,
+      amountCents: r.amount_cents,
+      with: r.others ?? [],
+    }));
+  }
+}
+
+export interface HistoryRow {
+  id: string;
+  day: string;
+  direction: Direction;
+  time: Date;
+  role: 'driver' | 'passenger';
+  myStatus: string;
+  /** Payé (passager) ou reçu (conducteur), null sans paiement (absent, prix indisponible). */
+  amountCents: number | null;
+  /** Prénoms des personnes acceptées : conducteur ↔ passagers, jamais entre passagers. */
+  with: string[];
 }

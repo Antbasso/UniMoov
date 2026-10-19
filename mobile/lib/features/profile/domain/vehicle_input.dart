@@ -21,6 +21,15 @@ abstract final class VehicleInput {
     return value == null || value < min || value > max ? null : value;
   }
 
+  static const modelMax = 40;
+  static const colorMax = 30;
+
+  /// Modèle ou couleur : texte non vide, borné (comme le serveur).
+  static String? label(String text, int max) {
+    final value = text.trim();
+    return value.isEmpty || value.length > max ? null : value;
+  }
+
   /// Affichage français : « 5,8 ».
   static String formatConsumption(double value) => value.toStringAsFixed(1).replaceAll('.', ',');
 }

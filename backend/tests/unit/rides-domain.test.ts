@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderStops, passageTimes, planKey } from '../../src/modules/rides/domain.js';
+import { myDurationS, onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from '../../src/modules/rides/domain.js';
 
 const campus = { lat: 45.9195, lon: 6.158 };
 const seynod = { lat: 45.8865, lon: 6.089 };
@@ -85,5 +85,76 @@ describe('planKey', () => {
 
   it('change si le conducteur déménage (départ ou arrivée)', () => {
     expect(key([stop('a', annecy)], meythet)).not.toBe(key([stop('a', annecy)]));
+  });
+});
+
+describe('onboardDistances', () => {
+  const legs = [
+    { distanceM: 3000, durationS: 300 },
+    { distanceM: 2000, durationS: 200 },
+    { distanceM: 5000, durationS: 500 },
+  ];
+
+  it('aller : de chaque arrêt au campus', () => {
+    // Conducteur → A (3 km) → B (2 km) → campus (5 km).
+    expect(onboardDistances('to_campus', legs)).toEqual([7000, 5000]);
+  });
+
+  it('retour : du campus à chaque arrêt', () => {
+    // Campus → A (3 km) → B (2 km) → domicile du conducteur (5 km).
+    expect(onboardDistances('from_campus', legs)).toEqual([3000, 5000]);
+  });
+
+  it('sans passager : aucun arrêt', () => {
+    expect(onboardDistances('to_campus', [{ distanceM: 9000, durationS: 900 }])).toEqual([]);
+    expect(onboardDistances('to_campus', [])).toEqual([]);
+  });
+});
+
+describe('shiftedPassages', () => {
+  const at = (min: number) => new Date(Date.UTC(2026, 9, 19, 6, min));
+
+  it('signale une heure avancée ou retardée d’au moins 1 min', () => {
+    const previous = new Map([['driver', at(30)], ['a', at(40)], ['b', at(45)]]);
+    const next = new Map([['driver', at(24)], ['a', new Date(at(40).getTime() + 59_000)], ['b', at(48)]]);
+    expect(shiftedPassages(previous, next)).toEqual([
+      { userId: 'driver', eta: at(24), earlier: true },
+      { userId: 'b', eta: at(48), earlier: false },
+    ]);
+  });
+
+  it('ignore la personne ajoutée (pas d’heure avant) et un écart de 59 s', () => {
+    const previous = new Map<string, Date | null>([['a', at(40)], ['new', null]]);
+    const next = new Map([['a', new Date(at(40).getTime() - 59_000)], ['new', at(35)], ['other', at(20)]]);
+    expect(shiftedPassages(previous, next)).toEqual([]);
+  });
+
+  it('signale pile 1 min', () => {
+    expect(shiftedPassages(new Map([['a', at(40)]]), new Map([['a', at(39)]]))).toEqual([
+      { userId: 'a', eta: at(39), earlier: true },
+    ]);
+  });
+});
+
+describe('myDurationS', () => {
+  // Départ, passager A, passager B, arrivée : trois tronçons.
+  const route = { durationS: 1500, legs: [{ durationS: 300 }, { durationS: 400 }, { durationS: 800 }] };
+
+  it('conducteur : tout le trajet', () => {
+    expect(myDurationS(route, -1, 'to_campus')).toBe(1500);
+  });
+
+  it('aller : de ma prise en charge au campus', () => {
+    expect(myDurationS(route, 0, 'to_campus')).toBe(1200);
+    expect(myDurationS(route, 1, 'to_campus')).toBe(800);
+  });
+
+  it('retour : du campus à ma dépose', () => {
+    expect(myDurationS(route, 0, 'from_campus')).toBe(300);
+    expect(myDurationS(route, 1, 'from_campus')).toBe(700);
+  });
+
+  it('sans tronçons (itinéraire indisponible) : la durée totale', () => {
+    expect(myDurationS({ durationS: 600, legs: [] }, 0, 'to_campus')).toBe(600);
   });
 });

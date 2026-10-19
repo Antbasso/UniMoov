@@ -45,7 +45,7 @@ export const calendarRoutes: FastifyPluginAsyncZod<{ service: CalendarService }>
     days: await service.getManual(request.userId),
   }));
 
-  app.put('/schedule/manual', { schema: { body: manualBody, response: { 200: manualResponse } } }, (request) =>
+  app.put('/schedule/manual', { config: { rateLimit: { max: 20, timeWindow: '1 hour' } }, schema: { body: manualBody, response: { 200: manualResponse } } }, (request) =>
     service.setManual(request.userId, request.body.days),
   );
 

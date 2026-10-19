@@ -10,9 +10,18 @@ import {
   createBody,
   message,
   messagesQuery,
+  messageParams,
   messagesResponse,
+  carpoolBody,
+  addMembersBody,
+  memberParams,
+  photoQuery,
+  reactionBody,
+  renameBody,
   sendBody,
 } from './schema.js';
+import { PHOTO_MAX_BYTES } from '../../shared/images.js';
+import { AppError } from '../../shared/errors.js';
 import type { ChatService } from './service.js';
 
 const PING_INTERVAL_MS = 30_000;
@@ -76,6 +85,19 @@ export const userSocketRoutes: FastifyPluginAsyncZod<{
 export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api, { service }) => {
   api.addHook('preHandler', api.authenticate);
 
+  // Proposition de covoiturage dans un groupe ou une conversation privée (texte écrit par le serveur).
+  api.post(
+    '/conversations/:id/carpool',
+    { schema: { params: conversationParams, body: carpoolBody, response: { 201: message } }, config: { rateLimit: { max: 20, timeWindow: '1 hour' } } },
+    async (request, reply) => reply.code(201).send(await service.postCarpool(request.userId, request.params.id, request.body)),
+  );
+
+  api.post(
+    '/conversations/:id/messages/:messageId/carpool/accept',
+    { schema: { params: messageParams, response: { 200: message } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.acceptCarpool(request.userId, request.params.id, request.params.messageId),
+  );
+
   api.get('/conversations', { schema: { response: { 200: conversationsResponse } } }, async (request) => ({
     conversations: await service.list(request.userId),
   }));
@@ -117,13 +139,80 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
       schema: { params: conversationParams, body: sendBody, response: { 201: message } },
       config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     },
-    async (request, reply) => reply.code(201).send(await service.send(request.userId, request.params.id, request.body.body)),
+    async (request, reply) => reply.code(201).send(await service.send(request.userId, request.params.id, request.body.body, request.body.replyToId ?? null)),
+  );
+
+  // Photo : corps brut JPEG ou PNG (réduite par l'app), légende facultative en paramètre.
+  api.addContentTypeParser(['image/jpeg', 'image/png'], { parseAs: 'buffer', bodyLimit: PHOTO_MAX_BYTES }, (_request, body, done) => {
+    done(null, body);
+  });
+
+  api.post(
+    '/conversations/:id/photos',
+    {
+      bodyLimit: PHOTO_MAX_BYTES,
+      schema: { params: conversationParams, querystring: photoQuery, response: { 201: message } },
+      config: { rateLimit: { max: 30, timeWindow: '1 hour' } },
+    },
+    async (request, reply) => {
+      const contentType = request.headers['content-type']?.split(';')[0]?.trim() ?? '';
+      if (!Buffer.isBuffer(request.body)) throw new AppError(415, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
+      return reply
+        .code(201)
+        .send(
+          await service.sendPhoto(
+            request.userId,
+            request.params.id,
+            contentType,
+            request.body,
+            request.query.caption,
+            request.query.replyToId ?? null,
+          ),
+        );
+    },
+  );
+
+  api.get('/conversations/:id/messages/:messageId/photo', { schema: { params: messageParams } }, async (request, reply) => {
+    const photo = await service.photo(request.userId, request.params.id, request.params.messageId);
+    // Une photo de message ne change jamais : l'app peut la garder.
+    return reply.header('cache-control', 'private, max-age=604800').type(photo.contentType).send(photo.data);
+  });
+
+  api.put(
+    '/conversations/:id/messages/:messageId/reaction',
+    { schema: { params: messageParams, body: reactionBody, response: { 200: message } }, config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    (request) => service.react(request.userId, request.params.id, request.params.messageId, request.body.emoji),
+  );
+
+  api.delete(
+    '/conversations/:id/messages/:messageId/reaction',
+    { schema: { params: messageParams, response: { 200: message } } },
+    (request) => service.react(request.userId, request.params.id, request.params.messageId, null),
   );
 
   api.post('/conversations/:id/read', { schema: { params: conversationParams, response: { 204: z.null() } } }, async (request, reply) => {
     await service.markRead(request.userId, request.params.id);
     return reply.code(204).send(null);
   });
+
+  // Gestion d'un groupe : nom, ajout de personnes croisées, retrait par le créateur.
+  api.patch(
+    '/conversations/:id',
+    { schema: { params: conversationParams, body: renameBody, response: { 200: conversation } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.rename(request.userId, request.params.id, request.body.title),
+  );
+
+  api.post(
+    '/conversations/:id/members',
+    { schema: { params: conversationParams, body: addMembersBody, response: { 200: conversation } }, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
+    (request) => service.addMembers(request.userId, request.params.id, request.body.memberIds),
+  );
+
+  api.delete(
+    '/conversations/:id/members/:userId',
+    { schema: { params: memberParams, response: { 200: conversation } } },
+    (request) => service.removeMember(request.userId, request.params.id, request.params.userId),
+  );
 
   api.delete(
     '/conversations/:id/members/me',

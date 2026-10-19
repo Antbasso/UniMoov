@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/clock.dart';
 import '../../../core/location/location_service.dart';
 import '../data/live_channel.dart';
 import '../data/rides_api.dart';
@@ -17,7 +16,6 @@ class LiveState {
     this.positions = const {},
     this.etas = const {},
     this.pickedUp = const {},
-    this.presence = const {},
     this.sharing = false,
     this.ended = false,
   });
@@ -30,9 +28,6 @@ class LiveState {
   final Map<String, DateTime> etas;
   final Set<String> pickedUp;
 
-  /// Présence validée, et paiement passé ou non.
-  final Map<String, bool> presence;
-
   /// Ma position est envoyée (permission accordée, trajet en cours).
   final bool sharing;
 
@@ -44,7 +39,6 @@ class LiveState {
     Map<String, LivePosition>? positions,
     Map<String, DateTime>? etas,
     Set<String>? pickedUp,
-    Map<String, bool>? presence,
     bool? sharing,
     bool? ended,
   }) => LiveState(
@@ -52,7 +46,6 @@ class LiveState {
     positions: positions ?? this.positions,
     etas: etas ?? this.etas,
     pickedUp: pickedUp ?? this.pickedUp,
-    presence: presence ?? this.presence,
     sharing: sharing ?? this.sharing,
     ended: ended ?? this.ended,
   );
@@ -62,8 +55,8 @@ class LiveState {
 const staleAfter = Duration(seconds: 30);
 
 /// Immobile, le téléphone n'envoie plus rien : la dernière position est renvoyée à ce rythme,
-/// pour que la présence puisse être validée quand le conducteur arrive.
-const heartbeat = Duration(seconds: 15);
+/// pour que la présence puisse être validée quand le conducteur arrive (20 s, docs/couts.md).
+const heartbeat = Duration(seconds: 20);
 
 /// Suivi en direct (WebSocket) et envoi de ma position pendant le trajet. Reconnexion avec
 /// délai croissant ; arrêt définitif à la clôture ou si l'accès est refusé.
@@ -99,8 +92,12 @@ class LiveRideController extends Notifier<LiveState> {
         return;
       }
       _connection = connection;
-      _events = connection.events.listen(_onEvent);
-      unawaited(connection.closeCode.then(_onClosed));
+      // Trame illisible ou connexion coupée : traitées comme une fermeture, jamais remontées.
+      _events = connection.events.listen(
+        _onEvent,
+        onError: (Object _) => unawaited(connection.close()),
+      );
+      unawaited(connection.closeCode.then(_onClosed, onError: (Object _) => _onClosed(null)));
     } on Object {
       _scheduleRetry();
     }
@@ -119,9 +116,9 @@ class LiveRideController extends Notifier<LiveState> {
       case LivePickedUp():
         state = state.copyWith(pickedUp: {...state.pickedUp, event.userId});
         ref.invalidate(rideProvider(rideId));
-      case LivePresence():
-        state = state.copyWith(presence: {...state.presence, event.userId: event.paid});
+      case LivePresence() || LivePassengerDone():
         ref.invalidate(rideProvider(rideId));
+        ref.invalidate(navigationProvider(rideId));
       case LiveStatus(:final status):
         if (status == 'completed') {
           state = state.copyWith(ended: true, connected: false);
@@ -163,17 +160,32 @@ class LiveRideController extends Notifier<LiveState> {
     if (await location.status() != LocationAccess.granted) return;
     _positions = location
         .positions(notificationTitle: notificationTitle, notificationText: notificationText)
-        .listen((p) {
-          _lastFix = p;
-          _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at);
-        });
+        .listen(
+          (p) {
+            _lastFix = p;
+            _connection?.sendPosition(lat: p.lat, lon: p.lon, at: p.at);
+          },
+          // GPS coupé ou permission retirée : on cesse de partager plutôt que d'envoyer du vieux.
+          onError: (Object _) => _stopSharing(),
+        );
     _heartbeat = Timer.periodic(heartbeat, (_) {
       final fix = _lastFix;
+      // Immobile, le GPS (filtre de distance) n'envoie plus rien : la dernière position est
+      // renvoyée avec son heure d'origine. GPS coupé : l'erreur du flux arrête le partage.
       if (fix != null) {
-        _connection?.sendPosition(lat: fix.lat, lon: fix.lon, at: ref.read(clockProvider)());
+        _connection?.sendPosition(lat: fix.lat, lon: fix.lon, at: fix.at);
       }
     });
     state = state.copyWith(sharing: true);
+  }
+
+  void _stopSharing() {
+    _heartbeat?.cancel();
+    _heartbeat = null;
+    unawaited(_positions?.cancel());
+    _positions = null;
+    _lastFix = null;
+    if (!_disposed) state = state.copyWith(sharing: false);
   }
 
   void _stop() {

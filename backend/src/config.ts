@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+/** Valeurs de `.env.example` : jamais en production. */
+const EXAMPLE_SECRETS = new Set([
+  'dev-secret-a-remplacer-par-32-caracteres-min',
+  'ZGV2LWNsZS1hLXJlbXBsYWNlci0zMi1vY3RldHMhISE=',
+]);
+
 /** Variables d'environnement validées au démarrage (docs/architecture.md §10). */
 const envSchema = z
   .object({
@@ -13,7 +19,11 @@ const envSchema = z
   /** Secret de signature des JWT et des codes (32 caractères minimum, jamais commité). */
   JWT_SECRET: z.string().min(32),
   /** `console` : le code s'affiche dans les journaux de l'API (développement uniquement). */
-  MAIL_PROVIDER: z.enum(['console']).default('console'),
+  MAIL_PROVIDER: z.enum(['console', 'brevo']).default('console'),
+  /** Clé de l'API transactionnelle Brevo (secret, jamais commité). */
+  BREVO_API_KEY: z.string().optional(),
+  /** Expéditeur des mails, sur un domaine vérifié chez le fournisseur (pas une messagerie gratuite). */
+  MAIL_FROM: z.union([z.email(), z.literal('')]).optional(),
   GEOCODING_PROVIDER: z.enum(['ban', 'fake']).default('ban'),
   /** Géoplateforme (successeur de api-adresse.data.gouv.fr), gratuite pour la France. */
   GEOCODING_URL: z.url().default('https://data.geopf.fr/geocodage/search'),
@@ -21,13 +31,20 @@ const envSchema = z
   CALENDAR_ENCRYPTION_KEY: z
     .base64()
     .refine((value) => Buffer.from(value, 'base64').length === 32, '32 octets attendus'),
+  /** Lieux de rendez-vous : `overpass` (OpenStreetMap, gratuit, mis en cache), `none` : aucun. */
+  PLACES_PROVIDER: z.enum(['overpass', 'none']).default('overpass'),
+  OVERPASS_URL: z.url().default('https://overpass-api.de/api/interpreter'),
   /** `ors` : OpenRouteService (clé requise) ; `estimate` : lignes droites, sans appel externe. */
-  ROUTING_PROVIDER: z.enum(['ors', 'estimate']).default('estimate'),
+  ROUTING_PROVIDER: z.enum(['osrm', 'ors', 'estimate']).default('estimate'),
+  /** OSRM : instance auto-hébergée en production ; le serveur de démonstration public sinon. */
+  OSRM_URL: z.url().default('https://router.project-osrm.org'),
   ORS_API_KEY: z.string().optional(),
   /** Appels quotidiens autorisés (palier gratuit d'OpenRouteService), alerte à 80 %. */
   ROUTING_DAILY_QUOTA: z.coerce.number().int().min(1).default(2000),
-  /** `fake` : portefeuille simulé (aucun argent réel), interdit en production. */
+  /** `fake` : portefeuille simulé (aucun argent réel), interdit en production sauf répétition. */
   PAYMENT_PROVIDER: z.enum(['fake']).default('fake'),
+  /** Répétition du pilote en production sans argent réel : autorise explicitement `fake`. */
+  ALLOW_FAKE_PAYMENTS: z.stringbool().default(false),
   /** `fcm` : Firebase Cloud Messaging (clé de compte de service) ; `log` : journal seulement. */
   PUSH_PROVIDER: z.enum(['log', 'fcm']).default('log'),
   /** Chemin du fichier JSON de la clé du compte de service Firebase (secret, jamais commité). */
@@ -39,9 +56,25 @@ const envSchema = z
     path: ['MAIL_PROVIDER'],
     message: 'console interdit en production',
   })
-  .refine((env) => env.NODE_ENV !== 'production' || env.PAYMENT_PROVIDER !== 'fake', {
+  .refine((env) => env.NODE_ENV !== 'production' || env.PAYMENT_PROVIDER !== 'fake' || env.ALLOW_FAKE_PAYMENTS, {
     path: ['PAYMENT_PROVIDER'],
-    message: 'fake interdit en production',
+    message: 'fake interdit en production (ALLOW_FAKE_PAYMENTS=true pour une répétition)',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || !EXAMPLE_SECRETS.has(env.JWT_SECRET), {
+    path: ['JWT_SECRET'],
+    message: 'valeur d’exemple interdite en production',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || !EXAMPLE_SECRETS.has(env.CALENDAR_ENCRYPTION_KEY), {
+    path: ['CALENDAR_ENCRYPTION_KEY'],
+    message: 'valeur d’exemple interdite en production',
+  })
+  .refine((env) => env.MAIL_PROVIDER !== 'brevo' || Boolean(env.BREVO_API_KEY), {
+    path: ['BREVO_API_KEY'],
+    message: 'clé requise avec MAIL_PROVIDER=brevo',
+  })
+  .refine((env) => env.MAIL_PROVIDER !== 'brevo' || Boolean(env.MAIL_FROM), {
+    path: ['MAIL_FROM'],
+    message: 'expéditeur requis avec MAIL_PROVIDER=brevo',
   })
   .refine((env) => env.ROUTING_PROVIDER !== 'ors' || Boolean(env.ORS_API_KEY), {
     path: ['ORS_API_KEY'],

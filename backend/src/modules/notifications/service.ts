@@ -8,8 +8,17 @@ export function categoryOf(event: NotificationEvent): Category {
   switch (event.type) {
     case 'replacement_proposed':
     case 'proposals_ready':
+    case 'ride_requested':
+    case 'request_answered':
+    case 'carpool_joined':
       return 'match';
     case 'ride_cancelled':
+    case 'payment_required':
+    case 'passenger_left':
+    case 'rating_requested':
+    case 'pickup_time_changed':
+    case 'meeting_point_proposed':
+    case 'meeting_point_answered':
       return 'ride_update';
     case 'ride_reminder':
       return 'ride_reminder';
@@ -32,6 +41,47 @@ export function pushMessage(event: NotificationEvent): PushMessage {
       };
     case 'replacement_proposed':
       return { title: 'Nouvelle proposition', body: 'Une place se libère pour toi. Réponds vite.', data: { type: event.type, rideId: event.rideId } };
+    case 'payment_required':
+      return {
+        title: 'Solde insuffisant',
+        body: 'Ton solde ne couvrait pas le trajet : ta place est annulée. Recharge ton portefeuille.',
+        data: { type: event.type, rideId: event.rideId },
+      };
+    case 'passenger_left':
+      return {
+        title: 'Passager descendu avant l’arrivée',
+        body: 'Un passager a terminé son trajet avant la destination prévue. Sa part reste due ; il peut signaler un problème pendant 24 h.',
+        data: { type: event.type, rideId: event.rideId },
+      };
+    case 'ride_requested':
+      return { title: 'Demande de place', body: 'Un passager demande à monter avec toi. Réponds-lui.', data: { type: event.type, rideId: event.rideId } };
+    case 'request_answered':
+      return event.approved
+        ? { title: 'Place acceptée', body: 'Ton conducteur a accepté ta demande.', data: { type: event.type, rideId: event.rideId } }
+        : { title: 'Demande refusée', body: 'Le conducteur ne peut pas te prendre. On te cherche une autre voiture.', data: { type: event.type, rideId: event.rideId } };
+    case 'meeting_point_proposed':
+      return {
+        title: 'Point de rencontre proposé',
+        body: 'Ton conducteur te propose un point de rencontre. Accepte-le ou garde le tien.',
+        data: { type: event.type, rideId: event.rideId },
+      };
+    case 'meeting_point_answered':
+      return event.accepted
+        ? { title: 'Point de rencontre accepté', body: 'Ton passager t’attendra au point proposé.', data: { type: event.type, rideId: event.rideId } }
+        : { title: 'Point de rencontre refusé', body: 'Ton passager garde son point de prise en charge.', data: { type: event.type, rideId: event.rideId } };
+    case 'carpool_joined':
+      return { title: 'Covoiturage confirmé', body: 'Accord trouvé dans ta conversation : le trajet est réservé.', data: { type: event.type, rideId: event.rideId } };
+    case 'rating_requested':
+      return { title: 'Comment s’est passé ton trajet ?', body: 'Note les personnes avec qui tu as voyagé.', data: { type: event.type, rideId: event.rideId } };
+    case 'pickup_time_changed':
+      return {
+        title: event.earlier ? 'Départ avancé' : 'Départ décalé',
+        body:
+          event.role === 'driver'
+            ? `Ton trajet change de passagers : pars à ${event.time} pour arriver à l’heure.`
+            : `Ton conducteur passe maintenant te prendre à ${event.time}.`,
+        data: { type: event.type, rideId: event.rideId },
+      };
     case 'proposals_ready':
       return { title: 'Ta semaine est prête', body: 'Tes propositions de trajets sont arrivées.', data: { type: event.type, week: event.week } };
     case 'ride_reminder':

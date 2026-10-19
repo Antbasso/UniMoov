@@ -46,6 +46,30 @@ const driver = (userId: string, home: keyof typeof places, seats = 3, maxDetourM
   need(userId, home, { roleMode: 'always_driver', vehicle: { seats, maxDetourMinutes }, ...overrides });
 
 describe('assignRoles', () => {
+  it('rôle fixé pour la journée : conducteur à l’aller, conducteur au retour, et l’inverse', () => {
+    const a = need('a', 'seynod', { roleMode: 'auto', vehicle: { seats: 3, maxDetourMinutes: 10 } });
+    const b = need('b', 'meythet', { roleMode: 'auto', vehicle: { seats: 3, maxDetourMinutes: 10 } });
+    // Sans contrainte, une seule voiture suffit : l'un conduit, l'autre monte.
+    const free = assignRoles([a, b]);
+    expect([...free.values()].sort()).toEqual(['driver', 'passenger']);
+    // Le retour reprend les rôles de l'aller, même inversés par rapport au choix libre.
+    const flipped = new Map([...free].map(([id, role]) => [id, role === 'driver' ? 'passenger' : 'driver'] as const));
+    expect(assignRoles([a, b], flipped)).toEqual(flipped);
+  });
+
+  it('rôle fixé conducteur sans voiture déclarée : passager malgré tout', () => {
+    expect(assignRoles([need('a', 'annecy')], new Map([['a', 'driver']])).get('a')).toBe('passenger');
+  });
+
+  it('matchSlot rend les rôles décidés, pour imposer les mêmes au retour', () => {
+    const d = need('d', 'seynod', { roleMode: 'auto', vehicle: { seats: 3, maxDetourMinutes: 30 } });
+    const p = need('p', 'cranGevrier');
+    const aller = matchSlot([d, p], 'to_campus', params);
+    const retour = matchSlot([d, p], 'from_campus', params, () => false, aller.roles);
+    expect(retour.roles).toEqual(aller.roles);
+    expect(retour.rides.map((r) => r.driverId)).toEqual(['d']);
+  });
+
   it('sans véhicule : passager, même en mode automatique', () => {
     const roles = assignRoles([need('a', 'annecy', { roleMode: 'auto' })]);
     expect(roles.get('a')).toBe('passenger');
@@ -77,6 +101,17 @@ describe('assignRoles', () => {
     expect(roles.get('small')).toBe('passenger');
   });
 
+  it('automatique : on alterne, celui qui a le moins conduit récemment conduit', () => {
+    const car = { seats: 3, maxDetourMinutes: 10 };
+    const roles = assignRoles([
+      need('p', 'annecy'),
+      need('big', 'sevrier', { roleMode: 'auto', vehicle: { seats: 4, maxDetourMinutes: 10 }, drivenRecently: 3 }),
+      need('rested', 'seynod', { roleMode: 'auto', vehicle: car, drivenRecently: 0 }),
+    ]);
+    expect(roles.get('rested')).toBe('driver');
+    expect(roles.get('big')).toBe('passenger');
+  });
+
   it('automatique : conduit si l’offre égale tout juste la demande (marge de places)', () => {
     const roles = assignRoles([
       driver('d', 'seynod', 1),
@@ -103,6 +138,13 @@ describe('détour estimé', () => {
     const opposite = detourSeconds(places.seynod, [places.sevrier], params);
     expect(onTheWay).toBeLessThan(120);
     expect(opposite).toBeGreaterThan(4 * onTheWay);
+  });
+
+  it('chaque arrêt ajoute un temps fixe, même pour un passager sur la route', () => {
+    const onTheWay = detourSeconds(places.seynod, [places.cranGevrier], params);
+    expect(detourSeconds(places.seynod, [places.cranGevrier], { ...params, stopPenaltySeconds: 240 })).toBeCloseTo(onTheWay + 240, 5);
+    expect(detourSeconds(places.seynod, [places.cranGevrier, places.meythet], { ...params, stopPenaltySeconds: 240 })).toBeGreaterThan(480);
+    expect(detourSeconds(places.seynod, [], { ...params, stopPenaltySeconds: 240 })).toBe(0);
   });
 
   it('applique le facteur routier et la vitesse moyenne', () => {
@@ -177,8 +219,8 @@ describe('matchSlot', () => {
   });
 
   it('cas vide et sans conducteur', () => {
-    expect(matchSlot([], 'to_campus', params)).toEqual({ rides: [], unmatched: [] });
-    expect(matchSlot([need('p', 'annecy')], 'to_campus', params)).toEqual({ rides: [], unmatched: ['p'] });
+    expect(matchSlot([], 'to_campus', params)).toMatchObject({ rides: [], unmatched: [] });
+    expect(matchSlot([need('p', 'annecy')], 'to_campus', params)).toMatchObject({ rides: [], unmatched: ['p'] });
   });
 
   it('respecte le nombre de places', () => {

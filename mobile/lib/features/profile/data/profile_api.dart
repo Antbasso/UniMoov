@@ -1,22 +1,50 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/authenticated_dio.dart';
 import '../domain/me.dart';
+import '../../demo/demo_mode.dart';
 
 /// Routes du profil (docs/api.md, « Profil ») ; toutes exigent un JWT.
 abstract interface class ProfileApi {
   Future<Me> getMe();
   Future<Me> updateNames({String? firstName, String? lastName});
+
+  /// Formation, année de naissance, centres d'intérêt (null efface).
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
+  });
+
+  /// Prénom et photo visibles, ou non, dans le classement du campus.
+  Future<Me> setLeaderboardVisible(bool visible);
+
+  /// Photo de profil (JPEG ou PNG déjà réduite par l'app).
+  Future<Me> setPhoto(Uint8List bytes, String contentType);
+  Future<void> removePhoto();
+
+  /// Octets d'une photo de profil (`photoUrl`), avec le jeton.
+  Future<Uint8List> photo(String url);
+
+  /// Profil d'une personne croisée ; 404 sinon.
+  Future<PublicProfile> publicProfile(String userId);
   Future<Me> setAddress(String address);
+
+  /// Adresses existantes proposées pendant la saisie (Base Adresse Nationale).
+  Future<List<String>> suggestAddresses(String query);
   Future<Me> setVehicle(Vehicle vehicle);
   Future<void> removeVehicle();
   Future<Me> setRoleMode(RoleMode mode);
   Future<Me> setDefaultNavApp(String app);
   Future<Me> setStep(OnboardingStep step, StepStatus status);
   Future<List<Pause>> listPauses();
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks);
+  Future<Pause> addPause(PauseDraft pause);
   Future<void> removePause(String id);
 }
 
@@ -37,8 +65,74 @@ class DioProfileApi implements ProfileApi {
       _me$(() => _dio.patch(_me, data: {'firstName': ?firstName, 'lastName': ?lastName}));
 
   @override
+  Future<Me> updateAbout({
+    String? studyProgram,
+    int? birthYear,
+    required List<String> interests,
+    String? bio,
+    CarpoolPreferences preferences = const CarpoolPreferences(),
+  }) => _me$(
+    () => _dio.patch(
+      _me,
+      data: {
+        'studyProgram': studyProgram,
+        'birthYear': birthYear,
+        'interests': interests,
+        'bio': bio,
+        'preferences': preferences.toJson(),
+      },
+    ),
+  );
+
+  @override
+  Future<Me> setLeaderboardVisible(bool visible) =>
+      _me$(() => _dio.patch(_me, data: {'leaderboardVisible': visible}));
+
+  @override
+  Future<Me> setPhoto(Uint8List bytes, String contentType) => _me$(
+    () => _dio.put(
+      '$_me/photo',
+      data: Stream.fromIterable([bytes]),
+      options: Options(
+        contentType: contentType,
+        headers: {Headers.contentLengthHeader: bytes.length},
+      ),
+    ),
+  );
+
+  @override
+  Future<void> removePhoto() => guardApi(() => _dio.delete<void>('$_me/photo'));
+
+  @override
+  Future<Uint8List> photo(String url) => guardApi(() async {
+    final response = await _dio.get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return Uint8List.fromList(response.data!);
+  });
+
+  @override
+  Future<PublicProfile> publicProfile(String userId) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/users/$userId/public');
+    return PublicProfile.fromJson(response.data!);
+  });
+
+  @override
   Future<Me> setAddress(String address) =>
       _me$(() => _dio.put('$_me/address', data: {'address': address}));
+
+  @override
+  Future<List<String>> suggestAddresses(String query) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/addresses',
+      queryParameters: {'q': query},
+    );
+    return [
+      for (final s in response.data!['suggestions'] as List<dynamic>)
+        (s as Map<String, dynamic>)['label'] as String,
+    ];
+  });
 
   @override
   Future<Me> setVehicle(Vehicle vehicle) =>
@@ -69,11 +163,8 @@ class DioProfileApi implements ProfileApi {
   });
 
   @override
-  Future<Pause> addPause(DateTime startsOn, DateTime endsOn, int? everyWeeks) => guardApi(() async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '$_me/pauses',
-      data: Pause.requestBody(startsOn, endsOn, everyWeeks),
-    );
+  Future<Pause> addPause(PauseDraft pause) => guardApi(() async {
+    final response = await _dio.post<Map<String, dynamic>>('$_me/pauses', data: pause.toJson());
     return Pause.fromJson(response.data!);
   });
 
@@ -81,4 +172,6 @@ class DioProfileApi implements ProfileApi {
   Future<void> removePause(String id) => guardApi(() => _dio.delete<void>('$_me/pauses/$id'));
 }
 
-final profileApiProvider = Provider<ProfileApi>((ref) => DioProfileApi(ref.watch(dioProvider)));
+final profileApiProvider = Provider<ProfileApi>(
+  (ref) => ref.watch(demoProvider) ?? DioProfileApi(ref.watch(dioProvider)),
+);

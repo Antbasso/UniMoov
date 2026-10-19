@@ -6,6 +6,10 @@ import { appSettings } from '../../db/schema.js';
 /** Paramètres connus et leur forme. Les valeurs vivent dans `app_settings` (jamais en dur). */
 const settingSchemas = {
   'auth.allowedEmailDomains': z.array(z.string().min(3)).min(1),
+  'auth.loginMaxFailures': z.number().int().min(3).max(100),
+  'auth.loginLockMinutes': z.number().int().min(1).max(24 * 60),
+  'auth.loginDailyMaxFailures': z.number().int().min(10).max(10_000),
+  'auth.signupCodesPerDay': z.number().int().min(1).max(100),
   'matching.roadFactor': z.number().min(1).max(3),
   'matching.avgSpeedKmh': z.number().min(5).max(130),
   'matching.arrivalWindowMinutes': z.number().int().min(0).max(180),
@@ -17,7 +21,11 @@ const settingSchemas = {
   'rides.startWindowMinutes': z.number().int().min(0).max(24 * 60),
   'rides.staleAfterHours': z.number().int().min(1).max(72),
   'wallet.minTopupCents': z.number().int().min(1).max(100_000),
+  'wallet.minPayoutCents': z.number().int().min(1).max(100_000),
+  'wallet.payoutMinIntervalDays': z.number().int().min(0).max(90),
   'wallet.holdMarginPercent': z.number().min(0).max(100),
+  /** Délai de signalement avant que la part du conducteur soit versée sur son solde. */
+  'wallet.releaseAfterHours': z.number().int().min(0).max(24 * 14),
   'tracking.presenceRadiusMeters': z.number().int().min(10).max(2000),
   'tracking.arrivalRadiusMeters': z.number().int().min(10).max(5000),
   'tracking.traceRetentionDays': z.number().int().min(1).max(365),
@@ -36,6 +44,7 @@ const settingSchemas = {
     })
     .refine((p) => p.lateHours <= p.earlyHours, 'lateHours doit être inférieur à earlyHours'),
   'matching.reliabilityWeightSeconds': z.number().int().min(0).max(3600),
+  'matching.stopPenaltySeconds': z.number().int().min(0).max(900),
   'ratings.windowDays': z.number().int().min(1).max(60),
   'disputes.windowDays': z.number().int().min(1).max(90),
   'reports.dailyLimit': z.number().int().min(1).max(100),

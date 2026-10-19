@@ -32,6 +32,16 @@ describe('adresse', () => {
     expect(response.json<{ home: { sector: string } }>().home.sector).toMatch(/^\d+:\d+$/);
   });
 
+  it('propose des adresses pendant la saisie ; l’adresse choisie est enregistrée telle quelle', async () => {
+    const response = await call(lea, 'GET', `/addresses?q=${encodeURIComponent('rue de la paix')}`);
+    expect(response.statusCode).toBe(200);
+    const { suggestions } = response.json<{ suggestions: { label: string }[] }>();
+    expect(suggestions).toEqual([{ label: '12 Rue de la Paix 74000 Annecy' }]);
+    const saved = await call(lea, 'PUT', '/me/address', { address: suggestions[0]!.label });
+    expect(saved.json<{ home: { address: string } }>().home.address).toBe('12 Rue de la Paix 74000 Annecy');
+    expect((await call(lea, 'GET', '/addresses?q=ab')).statusCode).toBe(400);
+  });
+
   it('adresse introuvable : 422', async () => {
     const response = await call(lea, 'PUT', '/me/address', { address: 'nulle part 99999' });
     expect(response.statusCode).toBe(422);
@@ -119,13 +129,33 @@ describe('pauses', () => {
   it('une pause en cours met l’utilisateur en pause aujourd’hui', async () => {
     const created = await call(hugo, 'POST', '/me/pauses', {
       startsOn: '2026-11-02',
-      endsOn: '2027-06-30',
+      endsOn: '2026-11-08',
       recurrence: 'weekly:2',
+      repeatUntil: '2027-06-30',
     });
     expect(created.statusCode).toBe(201);
     expect((await call(hugo, 'GET', '/me')).json()).toMatchObject({ pausedToday: true });
     ctx.clock.advance(7 * 86_400_000); // semaine suivante : pas de pause
     expect((await call(hugo, 'GET', '/me')).json()).toMatchObject({ pausedToday: false });
+    expect((await call(hugo, 'GET', '/me/pauses')).json<{ pauses: unknown[] }>().pauses).toContainEqual(
+      expect.objectContaining({ recurrence: 'weekly:2', repeatUntil: '2027-06-30' }),
+    );
+  });
+
+  it('certains jours chaque semaine : le jour même seulement', async () => {
+    const today = new Date(ctx.clock.now);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const weekday = ((today.getUTCDay() + 6) % 7) + 1;
+    const until = new Date(today.getTime() + 30 * 86_400_000);
+    const created = await call(lea, 'POST', '/me/pauses', {
+      startsOn: iso(today),
+      endsOn: iso(today),
+      recurrence: `days:${weekday}`,
+      repeatUntil: iso(until),
+    });
+    expect(created.statusCode).toBe(201);
+    expect((await call(lea, 'GET', '/me')).json()).toMatchObject({ pausedToday: true });
+    await call(lea, 'DELETE', `/me/pauses/${created.json<{ id: string }>().id}`);
   });
 
   it('refuse une pause à l’envers ou trop longue', async () => {
@@ -139,6 +169,8 @@ describe('pauses', () => {
       recurrence: 'daily',
     });
     expect(badRecurrence.statusCode).toBe(400);
+    const noEnd = await call(hugo, 'POST', '/me/pauses', { startsOn: '2026-12-01', endsOn: '2026-12-01', recurrence: 'weekly:1' });
+    expect(noEnd.json()).toMatchObject({ error: { code: 'invalid_pause' } });
   });
 });
 
@@ -158,11 +190,65 @@ describe('contrôle d’accès', () => {
     expect(response.json()).toMatchObject({ firstName: 'Léna', universityEmail: 'lea@etu.univ-smb.fr' });
   });
 
-  it('le profil public n’expose que prénom, photo et score', async () => {
+  it('profil d’une personne : seulement entre personnes qui se sont croisées, sans nom ni adresse', async () => {
+    // Inconnus l'un pour l'autre : 404, comme un compte qui n'existe pas.
+    expect((await call(lea, 'GET', `/users/${hugoId}/public`)).statusCode).toBe(404);
+    // Une conversation commune (ou un trajet) : le profil s'ouvre.
+    const leaId = (await call(lea, 'GET', '/me')).json<{ id: string }>().id;
+    const { rows } = await ctx.database.pool.query<{ id: string }>(`INSERT INTO conversations (kind, title) VALUES ('group', 'Covoit') RETURNING id`);
+    await ctx.database.pool.query(`INSERT INTO conversation_members (conversation_id, user_id) VALUES ($1, $2), ($1, $3)`, [rows[0]!.id, leaId, hugoId]);
+    const patched = await call(hugo, 'PATCH', '/me', { studyProgram: 'BUT Informatique', birthYear: 2005, interests: ['Escalade', 'escalade', 'Jazz'] });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json()).toMatchObject({ studyProgram: 'BUT Informatique', birthYear: 2005, interests: ['Escalade', 'Jazz'] });
+
     const response = await call(lea, 'GET', `/users/${hugoId}/public`);
     expect(response.statusCode).toBe(200);
-    expect(Object.keys(response.json()).sort()).toEqual(['firstName', 'id', 'photoUrl', 'reliabilityScore']);
-    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|lat|address/);
+    expect(response.json()).toEqual({
+      id: hugoId,
+      firstName: 'Hugo',
+      photoUrl: null,
+      reliabilityScore: expect.any(Number) as number,
+      age: 21,
+      studyProgram: 'BUT Informatique',
+      interests: ['Escalade', 'Jazz'],
+      ridesCompleted: 0,
+      bio: null,
+      preferences: { chat: null, music: null, smoking: null, pets: null },
+      memberSince: expect.stringMatching(/^\d{4}-\d{2}$/) as string,
+      ratingsCount: 0,
+      cancellationRate: 0,
+      level: { key: 'newcomer', points: 0 },
+      badges: [],
+      co2SavedKg: 0,
+    });
+    expect(JSON.stringify(response.json())).not.toMatch(/Bernard|hugo@|"lat"|address|2005/);
+    expect((await call(hugo, 'PATCH', '/me', { interests: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).statusCode).toBe(400);
+  });
+
+  it('photo de profil : JPEG ou PNG vérifié, servie aux personnes croisées seulement', async () => {
+    const put = (body: Buffer, type: string) =>
+      ctx.app.inject({ method: 'PUT', url: '/api/v1/me/photo', headers: { ...bearer(hugo), 'content-type': type }, payload: body });
+    const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
+    // Un faux JPEG (texte), un type non accepté, une image trop lourde : refusés.
+    expect((await put(Buffer.from('<script>alert(1)</script>'), 'image/jpeg')).json<{ error: { code: string } }>().error.code).toBe('photo_invalid');
+    expect((await put(jpeg, 'image/gif')).statusCode).toBe(415);
+    expect((await put(Buffer.concat([jpeg, Buffer.alloc(700 * 1024)]), 'image/jpeg')).statusCode).toBe(413);
+
+    const saved = await put(jpeg, 'image/jpeg');
+    expect(saved.statusCode).toBe(200);
+    const url = saved.json<{ photoUrl: string }>().photoUrl;
+    expect(url).toMatch(new RegExp(`^/api/v1/users/${hugoId}/photo\\?v=`));
+    const photo = await ctx.app.inject({ method: 'GET', url, headers: bearer(lea) });
+    expect(photo.statusCode).toBe(200);
+    expect(photo.headers['content-type']).toBe('image/jpeg');
+    expect(photo.rawPayload.equals(jpeg)).toBe(true);
+    expect((await ctx.app.inject({ method: 'GET', url })).statusCode).toBe(401);
+    const stranger = await signUp(ctx, 'chloe@etu.univ-smb.fr', { firstName: 'Chloé', lastName: 'Martin' });
+    expect((await ctx.app.inject({ method: 'GET', url, headers: bearer(stranger) })).statusCode).toBe(404);
+
+    expect((await call(hugo, 'DELETE', '/me/photo')).statusCode).toBe(204);
+    expect((await call(hugo, 'GET', '/me')).json<{ photoUrl: string | null }>().photoUrl).toBeNull();
+    expect((await ctx.app.inject({ method: 'GET', url, headers: bearer(lea) })).statusCode).toBe(404);
   });
 
   it('profil public : exige un JWT et renvoie 404 pour un inconnu', async () => {

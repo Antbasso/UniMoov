@@ -55,7 +55,7 @@ export class PaymentsRepo {
         VALUES (${`${idempotencyKey}#${i}`}, ${e.account}, ${rideId}, ${e.kind}, ${e.amountCents}, ${operationId})`);
     }
     const users = new Set(
-      entries.filter((e) => /^(user|held):/.test(e.account)).map((e) => e.account.slice(e.account.indexOf(':') + 1)),
+      entries.filter((e) => /^(user|held|pending):/.test(e.account)).map((e) => e.account.slice(e.account.indexOf(':') + 1)),
     );
     for (const id of users) await this.refreshCache(id, tx);
     return true;
@@ -66,15 +66,43 @@ export class PaymentsRepo {
     await tx.execute(sql`
       UPDATE wallets SET
         balance_cents = COALESCE((SELECT sum(amount_cents) FROM wallet_ledger WHERE account = ${`user:${userId}`}), 0),
-        held_cents = COALESCE((SELECT sum(amount_cents) FROM wallet_ledger WHERE account = ${`held:${userId}`}), 0)
+        held_cents = COALESCE((SELECT sum(amount_cents) FROM wallet_ledger WHERE account = ${`held:${userId}`}), 0),
+        pending_cents = COALESCE((SELECT sum(amount_cents) FROM wallet_ledger WHERE account = ${`pending:${userId}`}), 0)
       WHERE user_id = ${userId}`);
   }
 
-  async wallet(userId: string): Promise<{ balanceCents: number; heldCents: number }> {
-    const { rows } = await this.db.execute<{ balance_cents: number; held_cents: number }>(
-      sql`SELECT balance_cents, held_cents FROM wallets WHERE user_id = ${userId}`,
+  async wallet(userId: string): Promise<{ balanceCents: number; heldCents: number; pendingCents: number }> {
+    const { rows } = await this.db.execute<{ balance_cents: number; held_cents: number; pending_cents: number }>(
+      sql`SELECT balance_cents, held_cents, pending_cents FROM wallets WHERE user_id = ${userId}`,
     );
-    return { balanceCents: rows[0]?.balance_cents ?? 0, heldCents: rows[0]?.held_cents ?? 0 };
+    return {
+      balanceCents: rows[0]?.balance_cents ?? 0,
+      heldCents: rows[0]?.held_cents ?? 0,
+      pendingCents: rows[0]?.pending_cents ?? 0,
+    };
+  }
+
+  /**
+   * Parts payées depuis plus de `before`, pas encore versées, sans litige en attente d'arbitrage
+   * sur ce trajet de la part du payeur ou du conducteur.
+   */
+  async releasablePayments(before: Date, db: DbOrTx = this.db) {
+    const { rows } = await db.execute<{ ride_id: string; payer_id: string; payee_id: string; share_cents: number }>(sql`
+      SELECT p.ride_id, p.payer_id, p.payee_id, p.share_cents FROM payments p
+      WHERE p.status = 'paid' AND p.released_at IS NULL AND p.paid_at <= ${before}
+        AND NOT EXISTS (
+          SELECT 1 FROM disputes d
+          WHERE d.ride_id = p.ride_id AND d.opened_by IN (p.payer_id, p.payee_id) AND d.decision = 'escalated'
+        )
+      ORDER BY p.paid_at LIMIT 500`);
+    return rows.map((r) => ({ rideId: r.ride_id, payerId: r.payer_id, payeeId: r.payee_id, shareCents: r.share_cents }));
+  }
+
+  async markReleased(rideId: string, payerId: string, at: Date, tx: Tx): Promise<boolean> {
+    const { rows } = await tx.execute(sql`
+      UPDATE payments SET released_at = ${at}
+      WHERE ride_id = ${rideId} AND payer_id = ${payerId} AND released_at IS NULL RETURNING 1`);
+    return rows.length > 0;
   }
 
   async history(userId: string, limit = 50): Promise<LedgerRow[]> {
@@ -107,6 +135,35 @@ export class PaymentsRepo {
       INSERT INTO payments (ride_id, payer_id, payee_id, share_cents, commission_cents, held_cents, status)
       VALUES (${p.rideId}, ${p.payerId}, ${p.payeeId}, ${p.shareCents}, ${p.commissionCents}, ${p.heldCents}, ${p.status})
       ON CONFLICT (ride_id, payer_id) DO NOTHING`);
+  }
+
+  /** Prix final à la clôture : part et commission réelles, puis statut. */
+  async settlePayment(
+    p: { rideId: string; payerId: string; shareCents: number; commissionCents: number; paidAt: Date },
+    tx: Tx,
+  ): Promise<void> {
+    await tx.execute(sql`
+      UPDATE payments SET share_cents = ${p.shareCents}, commission_cents = ${p.commissionCents}, status = 'paid', paid_at = ${p.paidAt}
+      WHERE ride_id = ${p.rideId} AND payer_id = ${p.payerId}`);
+  }
+
+  /** Dernier retrait demandé (fréquence limitée). */
+  async lastPayoutAt(userId: string, tx: Tx): Promise<Date | null> {
+    const { rows } = await tx.execute<{ at: Date | null }>(sql`
+      SELECT max(created_at) AS at FROM payouts WHERE user_id = ${userId} AND status <> 'failed'`);
+    return rows[0]?.at ? new Date(rows[0].at) : null;
+  }
+
+  /** `at` : l'horloge du service, la même que pour la règle « un retrait par semaine ». */
+  async insertPayout(p: { userId: string; amountCents: number; ibanLast4: string; at: Date }, tx: Tx): Promise<string> {
+    const { rows } = await tx.execute<{ id: string }>(sql`
+      INSERT INTO payouts (user_id, amount_cents, status, iban_last4, created_at)
+      VALUES (${p.userId}, ${p.amountCents}, 'pending', ${p.ibanLast4}, ${p.at}) RETURNING id`);
+    return rows[0]!.id;
+  }
+
+  async setPayoutResult(id: string, status: 'pending' | 'paid' | 'failed', providerRef: string | null, tx: Tx): Promise<void> {
+    await tx.execute(sql`UPDATE payouts SET status = ${status}, provider_ref = ${providerRef} WHERE id = ${id}`);
   }
 
   async setPaymentStatus(rideId: string, payerId: string, status: string, paidAt: Date | null, tx: Tx): Promise<void> {

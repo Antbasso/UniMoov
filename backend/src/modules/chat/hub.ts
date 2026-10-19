@@ -31,6 +31,12 @@ export class UserHub {
     if (set?.size === 0) this.sockets.delete(userId);
   }
 
+  /** Compte supprimé : ses sockets sont fermés tout de suite. */
+  disconnect(userId: string): void {
+    for (const socket of [...(this.sockets.get(userId) ?? [])]) socket.close(4401, 'account_deleted');
+    this.sockets.delete(userId);
+  }
+
   isOnline(userId: string): boolean {
     return (this.sockets.get(userId)?.size ?? 0) > 0;
   }

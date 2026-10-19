@@ -25,7 +25,7 @@ async function login(firstName: string): Promise<Tokens> {
   return t;
 }
 
-async function call(firstName: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: object) {
+async function call(firstName: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: object) {
   return ctx.app.inject({
     method,
     url: `/api/v1${url}`,
@@ -38,6 +38,7 @@ const code = (response: { json: <T>() => T }) => response.json<{ error: { code: 
 interface Conversation {
   id: string;
   kind: string;
+  title?: string | null;
   ride: { day: string; direction: string } | null;
   archived: boolean;
   members: Record<string, unknown>[];
@@ -194,6 +195,82 @@ describe('messages en direct et push', () => {
   });
 });
 
+describe('réactions et photos', () => {
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 1)]);
+
+  it('une réaction par personne, remplacée ou retirée, vue par tous ; jeu fermé', async () => {
+    const [latest] = (await call('Inès', 'GET', `/conversations/${chatId}/messages?limit=1`)).json<{ messages: { id: string }[] }>().messages;
+    const url = `/conversations/${chatId}/messages/${latest!.id}/reaction`;
+    expect((await call('Inès', 'PUT', url, { emoji: '👍' })).statusCode).toBe(200);
+    expect((await call('Hugo', 'PUT', url, { emoji: '😂' })).statusCode).toBe(200);
+    const replaced = await call('Inès', 'PUT', url, { emoji: '❤️' });
+    expect(replaced.json<{ reactions: unknown[] }>().reactions).toEqual([
+      { userId: user('Hugo').id, emoji: '😂' },
+      { userId: user('Inès').id, emoji: '❤️' },
+    ]);
+    // Tous les emojis du clavier (teintes, drapeaux, familles), mais rien d'autre.
+    for (const emoji of ['🤡', '👍🏽', '🇫🇷', '👨‍👩‍👧']) expect((await call('Hugo', 'PUT', url, { emoji })).statusCode).toBe(200);
+    expect((await call('Hugo', 'DELETE', url)).statusCode).toBe(200);
+    for (const emoji of ['ok', '<b>', '👍 ok']) expect((await call('Inès', 'PUT', url, { emoji })).statusCode).toBe(400);
+    expect((await call('Hugo', 'PUT', url, { emoji: '😂' })).statusCode).toBe(200);
+    expect((await call('Nathan', 'PUT', url, { emoji: '👍' })).statusCode).toBe(404);
+    const removed = await call('Hugo', 'DELETE', url);
+    expect(removed.json<{ reactions: unknown[] }>().reactions).toEqual([{ userId: user('Inès').id, emoji: '❤️' }]);
+  });
+
+  it('photo avec légende facultative, servie aux seuls membres ; contrôlée sur ses octets', async () => {
+    const send = (body: Buffer, type: string, query = '') =>
+      login('Léa').then((t) =>
+        ctx.app.inject({
+          method: 'POST',
+          url: `/api/v1/conversations/${chatId}/photos${query}`,
+          headers: { ...bearer(t), 'content-type': type },
+          payload: body,
+        }),
+      );
+    const sent = await send(jpeg, 'image/jpeg', `?caption=${encodeURIComponent('Je suis là')}`);
+    expect(sent.statusCode).toBe(201);
+    const message = sent.json<{ id: string; body: string; photoUrl: string }>();
+    expect(message.body).toBe('Je suis là');
+    expect(message.photoUrl).toBe(`/api/v1/conversations/${chatId}/messages/${message.id}/photo`);
+    const photo = await ctx.app.inject({ method: 'GET', url: message.photoUrl, headers: bearer(await login('Hugo')) });
+    expect(photo.statusCode).toBe(200);
+    expect(photo.headers['content-type']).toBe('image/jpeg');
+    expect(photo.rawPayload.equals(jpeg)).toBe(true);
+    expect((await ctx.app.inject({ method: 'GET', url: message.photoUrl, headers: bearer(await login('Nathan')) })).statusCode).toBe(404);
+    // Sans légende : permis pour une photo ; un faux JPEG est refusé.
+    expect((await send(jpeg, 'image/jpeg')).json<{ body: string }>().body).toBe('');
+    expect((await send(Buffer.from('pas une image'), 'image/jpeg')).statusCode).toBe(400);
+    expect((await send(Buffer.alloc(700 * 1024, 0xff), 'image/jpeg')).statusCode).toBe(413);
+    // Aperçu de la liste : le dernier message est une photo.
+    const list = (await call('Hugo', 'GET', '/conversations')).json<{ conversations: (Conversation & { lastMessage: { photoUrl: string | null } })[] }>();
+    expect(list.conversations.find((c) => c.id === chatId)!.lastMessage.photoUrl).not.toBeNull();
+  });
+});
+
+describe('réponses', () => {
+  it('répondre cite le message d’origine ; seulement un message de la même conversation', async () => {
+    const original = (await call('Inès', 'POST', `/conversations/${chatId}/messages`, { body: 'Je serai devant la boulangerie' })).json<{
+      id: string;
+    }>();
+    const reply = await call('Hugo', 'POST', `/conversations/${chatId}/messages`, { body: 'Parfait', replyToId: original.id });
+    expect(reply.statusCode).toBe(201);
+    expect(reply.json<{ replyTo: unknown }>().replyTo).toEqual({
+      id: original.id,
+      senderId: user('Inès').id,
+      body: 'Je serai devant la boulangerie',
+      hasPhoto: false,
+    });
+    const listed = (await call('Inès', 'GET', `/conversations/${chatId}/messages`)).json<{
+      messages: { id: string; replyTo: { id: string } | null }[];
+    }>().messages;
+    const replyId = reply.json<{ id: string }>().id;
+    expect(listed.find((m) => m.id === replyId)?.replyTo?.id).toBe(original.id);
+    const unknown = await call('Hugo', 'POST', `/conversations/${chatId}/messages`, { body: 'Hein ?', replyToId: crypto.randomUUID() });
+    expect(unknown.statusCode).toBe(404);
+  });
+});
+
 describe('messages privés et groupes', () => {
   it('seulement avec des personnes croisées sur un trajet ; une conversation privée par paire', async () => {
     const contacts = (await call('Hugo', 'GET', '/contacts')).json<{ contacts: { firstName: string }[] }>().contacts;
@@ -228,6 +305,87 @@ describe('messages privés et groupes', () => {
     expect((await call('Inès', 'DELETE', `/conversations/${id}/members/me`)).statusCode).toBe(204);
     expect((await call('Inès', 'GET', `/conversations/${id}`)).statusCode).toBe(404);
     expect(code(await call('Hugo', 'DELETE', `/conversations/${chatId}/members/me`))).toBe('cannot_leave');
+  });
+
+  it('gérer un groupe : renommer, ajouter une personne croisée, retirer (créateur seulement)', async () => {
+    const group = await call('Hugo', 'POST', '/conversations', { kind: 'group', title: 'Aller du lundi', memberIds: [user('Léa').id] });
+    const id = group.json<Conversation & { createdBy: string }>().id;
+    expect(group.json<{ createdBy: string }>().createdBy).toBe(user('Hugo').id);
+    const renamed = await call('Léa', 'PATCH', `/conversations/${id}`, { title: 'Covoit du lundi' });
+    expect(renamed.json<Conversation>().title).toBe('Covoit du lundi');
+    // Nathan n'a jamais croisé Hugo : refusé ; Inès oui.
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/members`, { memberIds: [user('Nathan').id] }))).toBe('not_a_contact');
+    const added = await call('Hugo', 'POST', `/conversations/${id}/members`, { memberIds: [user('Inès').id] });
+    expect(added.json<Conversation>().members.map((m) => m.firstName).sort()).toEqual(['Hugo', 'Inès', 'Léa']);
+    // Seul le créateur retire quelqu'un ; un intrus ne voit rien ; un privé ne se gère pas.
+    expect((await call('Léa', 'DELETE', `/conversations/${id}/members/${user('Inès').id}`)).statusCode).toBe(403);
+    const removed = await call('Hugo', 'DELETE', `/conversations/${id}/members/${user('Inès').id}`);
+    expect(removed.json<Conversation>().members.map((m) => m.firstName).sort()).toEqual(['Hugo', 'Léa']);
+    expect((await call('Nathan', 'PATCH', `/conversations/${id}`, { title: 'x' })).statusCode).toBe(404);
+    expect(code(await call('Hugo', 'PATCH', `/conversations/${chatId}`, { title: 'x' }))).toBe('not_a_group');
+  });
+
+  it('covoiturage de groupe : offre du conducteur, demande d’un passager, acceptées d’un toucher', async () => {
+    const group = await call('Léa', 'POST', '/conversations', {
+      kind: 'group',
+      title: 'Covoit Seynod',
+      memberIds: [user('Chloé').id, user('Hugo').id],
+    });
+    const id = group.json<Conversation>().id;
+    interface Carpool { id: string; body: string; carpool: { kind: string; rideId: string | null; day: string; time: string | null; joined: { firstName: string }[] } }
+    const seat = async (name: string, ride: string) =>
+      (await ctx.database.pool.query<{ status: string }>(`SELECT status FROM ride_participants WHERE ride_id = $1 AND user_id = $2`, [ride, user(name).id])).rows[0]?.status;
+
+    // Offre : Léa partage son trajet du lundi (elle le conduit) ; Chloé monte d'un toucher.
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/carpool`, { kind: 'offer', rideId }))).toBe('ride_unavailable');
+    const offer = await call('Léa', 'POST', `/conversations/${id}/carpool`, { kind: 'offer', rideId });
+    expect(offer.statusCode).toBe(201);
+    const posted = offer.json<Carpool>();
+    expect(posted.carpool).toMatchObject({ kind: 'offer', rideId, day: '2026-10-19', joined: [] });
+    expect(posted.carpool.time).not.toBeNull();
+    expect(code(await call('Léa', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`))).toBe('own_carpool');
+    const accepted = await call('Chloé', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`);
+    expect(accepted.statusCode).toBe(200);
+    expect(accepted.json<Carpool>().carpool.joined.map((j) => j.firstName)).toEqual(['Chloé']);
+    expect(await seat('Chloé', rideId)).toBe('accepted');
+    expect(ctx.notifier.sent).toContainEqual({ userIds: [user('Léa').id, user('Chloé').id], event: { type: 'carpool_joined', rideId } });
+    // Rejoué : sans effet.
+    expect((await call('Chloé', 'POST', `/conversations/${id}/messages/${posted.id}/carpool/accept`)).statusCode).toBe(200);
+
+    // Demande : Chloé cherche une voiture mardi ; Hugo ne conduit pas, Léa (qui conduit) la prend.
+    const request = await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-20', direction: 'to_campus' });
+    expect(request.statusCode).toBe(201);
+    const asked = request.json<Carpool>();
+    expect(asked.carpool).toMatchObject({ kind: 'request', rideId: null, day: '2026-10-20' });
+    expect(code(await call('Hugo', 'POST', `/conversations/${id}/messages/${asked.id}/carpool/accept`))).toBe('no_ride_that_day');
+    expect((await call('Léa', 'POST', `/conversations/${id}/messages/${asked.id}/carpool/accept`)).statusCode).toBe(200);
+    expect(await seat('Chloé', tuesdayId)).toBe('accepted');
+    // Les messages relus portent la proposition et qui est monté.
+    const messages = (await call('Hugo', 'GET', `/conversations/${id}/messages`)).json<{ messages: Carpool[] }>().messages;
+    expect(messages.find((m) => m.id === asked.id)!.carpool.joined.map((j) => j.firstName)).toEqual(['Chloé']);
+    // Créer son propre trajet depuis la conversation : Léa conduit jeudi à 8 h 15 ; Hugo monte.
+    const created = await call('Léa', 'POST', `/conversations/${id}/carpool`, {
+      kind: 'offer',
+      create: { day: '2026-10-22', direction: 'to_campus', time: '08:15' },
+    });
+    expect(created.statusCode).toBe(201);
+    const fresh = created.json<Carpool>();
+    expect(fresh.carpool).toMatchObject({ kind: 'offer', day: '2026-10-22' });
+    expect(fresh.carpool.time).toBe('2026-10-22T06:15:00.000Z');
+    const newRide = fresh.carpool.rideId!;
+    expect(await seat('Léa', newRide)).toBe('accepted');
+    const joined = await call('Hugo', 'POST', `/conversations/${id}/messages/${fresh.id}/carpool/accept`);
+    expect(joined.json<{ carpool: { joined: { rideId: string }[] } }>().carpool.joined[0]!.rideId).toBe(newRide);
+    expect(await seat('Hugo', newRide)).toBe('accepted');
+    // Déjà engagée sur ce créneau : pas un second trajet.
+    expect(code(await call('Léa', 'POST', '/rides', { day: '2026-10-22', direction: 'to_campus', time: '09:00' }))).toBe('already_committed');
+    // Une demande peut porter une heure.
+    const timed = await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-23', direction: 'from_campus', time: '17:30' });
+    expect(timed.json<Carpool>().carpool.time).toBe('2026-10-23T15:30:00.000Z');
+
+    // Pas dans un chat de trajet ; jamais pour un jour passé.
+    expect(code(await call('Léa', 'POST', `/conversations/${chatId}/carpool`, { kind: 'offer', rideId }))).toBe('carpool_not_here');
+    expect((await call('Chloé', 'POST', `/conversations/${id}/carpool`, { kind: 'request', day: '2026-10-01', direction: 'to_campus' })).statusCode).toBe(400);
   });
 });
 

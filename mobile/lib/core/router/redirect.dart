@@ -16,21 +16,35 @@ abstract final class AppRoutes {
   static const profileVehicle = '/profile/vehicle';
   static const profileRole = '/profile/role';
   static const profileSchedule = '/profile/schedule';
+  static const history = '/profile/history';
+  static const profileAbout = '/profile/about';
+  static String person(String userId) => '/users/$userId';
   static const profileScheduleIcs = '/profile/schedule/ics';
   static const profileScheduleManual = '/profile/schedule/manual';
   static const search = '/search';
   static String proposal(String week, String id) => '/week/$week/proposals/$id';
   static String alternatives(String week, String id) => '/week/$week/proposals/$id/alternatives';
   static String ride(String id) => '/rides/$id';
-  static String rideMeetingPoint(String id) => '/rides/$id/meeting-point';
+
+  /// Choisir mon point de rencontre, ou (conducteur) en proposer un à `forUser`.
+  static String rideMeetingPoint(String id, {String? forUser, String? name}) => Uri(
+    path: '/meeting-point/$id',
+    queryParameters: forUser == null ? null : {'for': forUser, 'name': ?name},
+  ).toString();
   static String rideSuggestions(String id) => '/rides/$id/suggestions';
   static String rideDeparture(String id) => '/rides/$id/departure';
   static String rideLocation(String id) => '/rides/$id/location';
   static const wallet = '/wallet';
+  static const walletPayout = '/wallet/payout';
   static const reliability = '/profile/reliability';
+  static const achievements = '/profile/achievements';
+  static const leaderboard = '/leaderboard';
   static const notificationSettings = '/profile/notifications';
+  static const deleteAccount = '/profile/delete';
   static const messages = '/messages';
+  static const charter = '/charter';
   static String conversation(String id) => '/messages/$id';
+  static String conversationInfo(String id) => '/messages/$id/info';
 
   /// Litige sur un trajet ; route à part, car un passager qui a annulé n'a plus accès au trajet.
   static String dispute(String rideId, {DisputeReason? reason}) => Uri(
@@ -38,7 +52,7 @@ abstract final class AppRoutes {
     queryParameters: reason == null ? null : {'reason': reason.wire},
   ).toString();
 
-  static const public = {welcome, login, signup};
+  static const public = {welcome, login, signup, charter};
   static const entry = {splash, welcome, login, signup, onboarding};
 }
 

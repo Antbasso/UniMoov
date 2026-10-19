@@ -42,6 +42,42 @@ export class AuthRepo {
     });
   }
 
+  /** Codes demandés pour cette adresse depuis `since` (plafond quotidien). */
+  async codesSince(email: string, since: Date): Promise<number> {
+    const { rows } = await this.db.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM verification_codes WHERE email = ${email} AND created_at > ${since}`);
+    return rows[0]?.n ?? 0;
+  }
+
+  /** Clé bloquée après trop d'échecs de connexion (`null` : libre). */
+  async loginLockedUntil(keys: readonly string[], now: Date): Promise<Date | null> {
+    const { rows } = await this.db.execute<{ locked_until: Date | null }>(sql`
+      SELECT max(locked_until) AS locked_until FROM login_failures
+      WHERE email IN (${sql.join(
+        keys.map((k) => sql`${k}`),
+        sql`, `,
+      )}) AND locked_until > ${now}`);
+    return rows[0]?.locked_until ?? null;
+  }
+
+  /** Compte un échec dans la fenêtre de la clé ; au seuil, la bloque. */
+  async recordLoginFailure(key: string, now: Date, policy: { maxFailures: number; windowMinutes: number; lockMinutes: number }): Promise<void> {
+    const windowStart = new Date(now.getTime() - policy.windowMinutes * 60_000);
+    const lockUntil = new Date(now.getTime() + policy.lockMinutes * 60_000);
+    await this.db.execute(sql`
+      INSERT INTO login_failures (email, failures, window_start) VALUES (${key}, 1, ${now})
+      ON CONFLICT (email) DO UPDATE SET
+        failures = CASE WHEN login_failures.window_start < ${windowStart} THEN 1 ELSE login_failures.failures + 1 END,
+        window_start = CASE WHEN login_failures.window_start < ${windowStart} THEN ${now} ELSE login_failures.window_start END,
+        locked_until = CASE
+          WHEN login_failures.window_start >= ${windowStart} AND login_failures.failures + 1 >= ${policy.maxFailures}
+          THEN ${lockUntil} ELSE login_failures.locked_until END`);
+  }
+
+  async clearLoginFailures(keys: readonly string[]): Promise<void> {
+    for (const key of keys) await this.db.execute(sql`DELETE FROM login_failures WHERE email = ${key}`);
+  }
+
   async incrementAttempts(id: string, db: DbOrTx = this.db): Promise<void> {
     await db
       .update(verificationCodes)
@@ -113,6 +149,14 @@ export class AuthRepo {
       .update(refreshTokens)
       .set({ revokedAt: now })
       .where(and(eq(refreshTokens.familyId, familyId), isNull(refreshTokens.revokedAt)));
+  }
+
+  async passwordHash(id: string): Promise<string | null> {
+    const [user] = await this.db
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
+    return user?.passwordHash ?? null;
   }
 
   async isActiveUser(id: string, db: DbOrTx = this.db): Promise<boolean> {

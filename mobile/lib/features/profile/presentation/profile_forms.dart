@@ -8,6 +8,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/me.dart';
 import '../domain/vehicle_input.dart';
+import 'address_suggestions.dart';
 import 'me_controller.dart';
 
 /// Habillage commun : étape d'onboarding (avec « Passer ») ou modification depuis le profil.
@@ -79,16 +80,32 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
   late final _address = TextEditingController(text: widget.me.home?.address ?? '');
   bool _showFieldErrors = false;
 
+  /// Adresse choisie dans les propositions (elle existe vraiment), ou l'adresse actuelle.
+  late String? _selected = widget.me.home?.address;
+
   @override
   void dispose() {
     _address.dispose();
     super.dispose();
   }
 
+  void _onChanged(String text) {
+    if (text.trim() != _selected) setState(() => _selected = null);
+    ref.read(addressSuggestionsProvider.notifier).search(text);
+  }
+
+  void _choose(String label) {
+    _address.text = label;
+    setState(() => _selected = label);
+    ref.read(addressSuggestionsProvider.notifier).clear();
+    FocusScope.of(context).unfocus();
+  }
+
   void _submit() {
     setState(() => _showFieldErrors = true);
     final text = _address.text.trim();
-    if (text.length < 5) return;
+    // Seule une adresse proposée (donc existante) est acceptée.
+    if (text.length < 5 || _selected != text) return;
     run(() async {
       // Adresse inchangée : rien à géocoder.
       if (text != widget.me.home?.address) {
@@ -115,8 +132,17 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
           placeholder: l10n.addressPlaceholder,
           keyboardType: TextInputType.streetAddress,
           autofillHints: const [AutofillHints.fullStreetAddress],
-          error: _showFieldErrors && _address.text.trim().length < 5 ? l10n.fieldRequired : null,
+          onChanged: _onChanged,
+          help: l10n.addressPickHelp,
+          error: !_showFieldErrors
+              ? null
+              : _address.text.trim().length < 5
+              ? l10n.fieldRequired
+              : _selected != _address.text.trim()
+              ? l10n.addressPickRequired
+              : null,
         ),
+        _Suggestions(onChoose: _choose),
         if (home != null) ...[
           const SizedBox(height: UmSpace.s3),
           Align(
@@ -130,6 +156,56 @@ class _AddressFormState extends ConsumerState<AddressForm> with SubmitStateMixin
         ],
         ...errorFor(l10n),
       ],
+    );
+  }
+}
+
+/// Propositions sous le champ : chargement, aucune adresse, erreur, liste à toucher.
+class _Suggestions extends ConsumerWidget {
+  const _Suggestions({required this.onChoose});
+
+  final ValueChanged<String> onChoose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    final state = ref.watch(addressSuggestionsProvider);
+    if (state == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: UmSpace.s2),
+      child: switch (state) {
+        AsyncData(:final value) when value.isEmpty => Text(
+          l10n.addressNoSuggestion,
+          style: UmText.bodySm.copyWith(color: c.inkMuted),
+        ),
+        AsyncData(:final value) => Material(
+          color: c.surfaceRaised,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(UmRadius.md),
+            side: BorderSide(color: c.border),
+          ),
+          child: Column(
+            children: [
+              for (final label in value)
+                ListTile(
+                  minTileHeight: UmSize.tapTarget,
+                  leading: Icon(Icons.place_outlined, color: c.brandStrong),
+                  title: Text(label, style: UmText.body.copyWith(color: c.ink)),
+                  onTap: () => onChoose(label),
+                ),
+            ],
+          ),
+        ),
+        AsyncError(:final error) => UmErrorText(
+          apiErrorMessage(l10n, error is ApiException ? error.code : null),
+        ),
+        _ => Semantics(
+          label: l10n.loading,
+          child: LinearProgressIndicator(color: c.brand),
+        ),
+      },
     );
   }
 }
@@ -151,11 +227,13 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
   );
   late final _seats = TextEditingController(text: '${widget.me.vehicle?.defaultSeats ?? 3}');
   late final _detour = TextEditingController(text: '${widget.me.vehicle?.maxDetourMinutes ?? 10}');
+  late final _model = TextEditingController(text: widget.me.vehicle?.model ?? '');
+  late final _color = TextEditingController(text: widget.me.vehicle?.color ?? '');
   bool _showFieldErrors = false;
 
   @override
   void dispose() {
-    for (final c in [_consumption, _seats, _detour]) {
+    for (final c in [_consumption, _seats, _detour, _model, _color]) {
       c.dispose();
     }
     super.dispose();
@@ -174,10 +252,20 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
     final consumption = VehicleInput.consumption(_consumption.text);
     final seats = VehicleInput.seats(_seats.text);
     final detour = VehicleInput.detour(_detour.text);
-    if (consumption == null || seats == null || detour == null) return;
+    final model = VehicleInput.label(_model.text, VehicleInput.modelMax);
+    final color = VehicleInput.label(_color.text, VehicleInput.colorMax);
+    if (consumption == null || seats == null || detour == null || model == null || color == null) {
+      return;
+    }
     run(() async {
       await controller.setVehicle(
-        Vehicle(consumptionLPer100km: consumption, defaultSeats: seats, maxDetourMinutes: detour),
+        Vehicle(
+          consumptionLPer100km: consumption,
+          defaultSeats: seats,
+          maxDetourMinutes: detour,
+          model: model,
+          color: color,
+        ),
       );
       await widget.frame.onDone();
     });
@@ -215,6 +303,42 @@ class _VehicleFormState extends ConsumerState<VehicleForm> with SubmitStateMixin
           ),
         ),
         if (_hasCar) ...[
+          const SizedBox(height: UmSpace.s4),
+          // Modèle et couleur d'abord : c'est ce qui permet aux passagers de reconnaître la voiture.
+          UmField(
+            label: l10n.vehicleModelLabel,
+            placeholder: l10n.vehicleModelHint,
+            controller: _model,
+            maxLength: VehicleInput.modelMax,
+            error:
+                _showFieldErrors && VehicleInput.label(_model.text, VehicleInput.modelMax) == null
+                ? l10n.vehicleModelRequired
+                : null,
+          ),
+          const SizedBox(height: UmSpace.s4),
+          UmField(
+            label: l10n.vehicleColorLabel,
+            controller: _color,
+            maxLength: VehicleInput.colorMax,
+            onChanged: (_) => setState(() {}),
+            error:
+                _showFieldErrors && VehicleInput.label(_color.text, VehicleInput.colorMax) == null
+                ? l10n.vehicleColorRequired
+                : null,
+          ),
+          const SizedBox(height: UmSpace.s2),
+          Wrap(
+            spacing: UmSpace.s2,
+            runSpacing: UmSpace.s2,
+            children: [
+              for (final color in l10n.vehicleColorChoices.split(','))
+                ChoiceChip(
+                  label: Text(color),
+                  selected: _color.text.trim().toLowerCase() == color,
+                  onSelected: (_) => setState(() => _color.text = color),
+                ),
+            ],
+          ),
           const SizedBox(height: UmSpace.s4),
           UmField(
             label: l10n.vehicleConsumptionLabel,
@@ -298,8 +422,28 @@ class _RoleFormState extends ConsumerState<RoleForm> with SubmitStateMixin {
                 RadioListTile<RoleMode>(
                   contentPadding: EdgeInsets.zero,
                   value: RoleMode.auto,
-                  title: Text(l10n.roleAuto),
-                  subtitle: Text(l10n.roleAutoHelp),
+                  title: Row(
+                    children: [
+                      Flexible(child: Text(l10n.roleAuto)),
+                      IconButton(
+                        tooltip: l10n.roleAutoInfoTooltip,
+                        icon: Icon(Icons.info_outline_rounded, color: context.umColors.brandStrong),
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: Text(l10n.roleAuto),
+                            content: Text(l10n.roleAutoInfo),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(),
+                                child: Text(l10n.understood),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 RadioListTile<RoleMode>(
                   contentPadding: EdgeInsets.zero,

@@ -52,6 +52,15 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   photoUrl: text('photo_url'),
+  studyProgram: text('study_program'),
+  birthYear: smallint('birth_year'),
+  interests: text('interests').array().notNull().default(sql`'{}'`),
+  bio: text('bio'),
+  prefChat: text('pref_chat'),
+  prefMusic: text('pref_music'),
+  prefSmoking: text('pref_smoking'),
+  prefPets: text('pref_pets'),
+  leaderboardVisible: boolean('leaderboard_visible').notNull().default(false),
   homeAddress: text('home_address'),
   homeLocation: geographyPoint('home_location'),
   homeSector: text('home_sector'),
@@ -74,6 +83,8 @@ export const vehicles = pgTable('vehicles', {
   consumptionLPer100km: numeric('consumption_l_per_100km', { precision: 4, scale: 1 }).notNull(),
   defaultSeats: smallint('default_seats').notNull(),
   maxDetourMinutes: smallint('max_detour_minutes').notNull().default(10),
+  model: text('model'),
+  color: text('color'),
 });
 
 export const pauses = pgTable('pauses', {
@@ -83,7 +94,8 @@ export const pauses = pgTable('pauses', {
     .references(() => users.id, { onDelete: 'cascade' }),
   startsOn: date('starts_on').notNull(),
   endsOn: date('ends_on').notNull(),
-  recurrence: text('recurrence').$type<'weekly:2' | 'weekly:3' | 'weekly:4'>(),
+  recurrence: text('recurrence'),
+  repeatUntil: date('repeat_until'),
 });
 
 export const verificationCodes = pgTable('verification_codes', {
@@ -152,6 +164,7 @@ export const rideStatus = pgEnum('ride_status', ['proposed', 'confirmed', 'in_pr
 export const participantRole = pgEnum('participant_role', ['driver', 'passenger']);
 export const participantStatus = pgEnum('participant_status', [
   'proposed',
+  'requested',
   'accepted',
   'declined',
   'picked_up',
@@ -195,7 +208,9 @@ export const rideParticipants = pgTable(
     role: participantRole('role').notNull(),
     status: participantStatus('status').notNull().default('proposed'),
     detourS: integer('detour_s'),
+    onboardM: integer('onboard_m'),
     pickupLabel: text('pickup_label'),
+    proposedPickupLabel: text('proposed_pickup_label'),
     useMeetingPoint: boolean('use_meeting_point').notNull().default(false),
     stopOrder: smallint('stop_order'),
     eta: timestamp('eta', { withTimezone: true }),
@@ -203,6 +218,8 @@ export const rideParticipants = pgTable(
     amountCents: integer('amount_cents'),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     pickedUpAt: timestamp('picked_up_at', { withTimezone: true }),
+    arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.rideId, t.userId] })],
 );

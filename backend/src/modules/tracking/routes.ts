@@ -43,10 +43,12 @@ export const trackingRoutes: FastifyPluginAsyncZod<{
       });
 
       let userId: string;
+      let exp: number;
       try {
-        const payload = app.jwt.verify<{ sub: string }>(request.query.token);
+        const payload = app.jwt.verify<{ sub: string; exp: number }>(request.query.token);
         if (!(await isActiveUser(payload.sub))) throw new Error('inactive');
         userId = payload.sub;
+        exp = payload.exp;
       } catch {
         socket.close(WS_CLOSE.unauthorized, 'unauthorized');
         return;
@@ -58,6 +60,9 @@ export const trackingRoutes: FastifyPluginAsyncZod<{
         service.disconnect(rideId, client);
         return;
       }
+      // Jeton expiré : on ferme, le client se reconnecte avec un jeton renouvelé (comme /ws/me).
+      const expiry = setTimeout(() => socket.close(WS_CLOSE.unauthorized, 'token_expired'), Math.max(0, exp * 1000 - Date.now()));
+      socket.on('close', () => clearTimeout(expiry));
       for (const text of pending.splice(0)) handle(client, text);
     },
   );

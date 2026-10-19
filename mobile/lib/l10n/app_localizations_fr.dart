@@ -43,24 +43,12 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String rideSeats(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count places libres',
-      one: '1 place libre',
-      zero: 'Complet',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String ridePriceLabel(String price) {
     return 'Prix estimé : $price';
   }
 
   @override
-  String get rideStatusProposed => 'Proposé';
+  String get rideStatusProposed => 'À confirmer';
 
   @override
   String get rideStatusConfirmed => 'Confirmé';
@@ -74,9 +62,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get welcomeSubtitle =>
       'Covoiturage domicile-campus pour les étudiants d\'Annecy';
-
-  @override
-  String get welcomeNote => 'Inscris-toi en deux minutes !';
 
   @override
   String get welcomeBenefitSchedule => 'Trajets calés sur tes cours';
@@ -94,6 +79,38 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcomeLogin => 'J\'ai déjà un compte';
 
   @override
+  String get demoTry => 'Essayer la démo';
+
+  @override
+  String get demoSheetTitle => 'Essayer Uni-Moov sans compte';
+
+  @override
+  String get demoSheetBody =>
+      'Des données fictives autour du campus d\'Annecy, sans réseau : rien n\'est envoyé ni payé.';
+
+  @override
+  String get demoReady => 'Compte prêt : Camille';
+
+  @override
+  String get demoReadyHelp =>
+      'Une semaine remplie : trajet en cours, trajet à conduire, propositions, portefeuille et messages.';
+
+  @override
+  String get demoSignup => 'Parcours d\'inscription';
+
+  @override
+  String get demoSignupHelp =>
+      'De l\'adresse mail à la semaine type, avec n\'importe quelle adresse en univ-smb.fr.';
+
+  @override
+  String get demoBanner => 'DÉMO';
+
+  @override
+  String demoCodeHint(String code) {
+    return 'Démo : le code est $code.';
+  }
+
+  @override
   String get back => 'Retour';
 
   @override
@@ -107,9 +124,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get save => 'Enregistrer';
-
-  @override
-  String get edit => 'Modifier';
 
   @override
   String get errorGeneric => 'Une erreur est survenue. Réessaie.';
@@ -273,6 +287,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addressLabel => 'Adresse';
 
   @override
+  String get addressPickHelp =>
+      'Commence à taper, puis choisis ton adresse dans la liste.';
+
+  @override
+  String get addressPickRequired =>
+      'Choisis une adresse dans la liste proposée.';
+
+  @override
+  String get addressNoSuggestion =>
+      'Aucune adresse trouvée : vérifie le numéro et la commune.';
+
+  @override
   String get addressPlaceholder => '12 rue de la Paix, Annecy';
 
   @override
@@ -320,10 +346,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get roleAuto => 'Automatique';
 
   @override
-  String get roleAutoHelp =>
-      'Chaque semaine, Uni-Moov choisit si tu conduis ou non, selon les besoins.';
-
-  @override
   String get roleDriver => 'Toujours au volant';
 
   @override
@@ -345,6 +367,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeProfileTooltip => 'Mon profil';
 
   @override
+  String get navMessages => 'Messages';
+
+  @override
+  String get navHome => 'Accueil';
+
+  @override
+  String get navProfile => 'Profil';
+
+  @override
+  String get badgeDriver => 'Tu conduis';
+
+  @override
+  String get badgePassenger => 'Passager';
+
+  @override
+  String liveBannerTitle(String role, String time) {
+    return 'Trajet en cours · $role · $time';
+  }
+
+  @override
+  String get liveBannerAction => 'Voir';
+
+  @override
   String get discoveryTitle => 'Mode découverte';
 
   @override
@@ -361,16 +406,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pauseAction => 'Mettre en pause';
 
   @override
-  String get pauseManage => 'Gérer mes pauses';
-
-  @override
   String get weekTitle => 'Ta semaine';
-
-  @override
-  String get profileTitle => 'Mon profil';
-
-  @override
-  String get profileIdentity => 'Identité';
 
   @override
   String get profileAddress => 'Adresse';
@@ -390,9 +426,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get profileRemoveVehicle => 'Retirer le véhicule';
-
-  @override
   String get profileRole => 'Rôle';
 
   @override
@@ -407,9 +440,44 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String pauseAlternating(int weeks) {
-    return 'une semaine sur $weeks';
+  String pauseOn(String date) {
+    return 'Le $date';
   }
+
+  @override
+  String pauseUntil(String date) {
+    return 'jusqu\'au $date';
+  }
+
+  @override
+  String pauseEveryWeekdays(String days) {
+    return 'Tous les $days';
+  }
+
+  @override
+  String pauseEveryWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'toutes les $count semaines',
+      one: 'chaque semaine',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pauseEveryMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tous les $count mois',
+      one: 'chaque mois',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get and => 'et';
 
   @override
   String pauseDelete(String start) {
@@ -421,13 +489,41 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pauseSheetBody =>
-      'Pendant une pause, tu ne reçois pas de propositions. Ton score de fiabilité n\'est pas touché.';
+      'Pas de propositions pendant la pause. Ton score n\'est pas touché.';
 
   @override
   String get pauseChooseDates => 'Choisir les dates';
 
   @override
-  String get pauseAlternatingToggle => 'Une semaine sur deux (alternance)';
+  String get pauseModeDates => 'Dates';
+
+  @override
+  String get pauseModeDays => 'Jours';
+
+  @override
+  String get pauseModeRepeat => 'Répéter';
+
+  @override
+  String get pauseModeLabel => 'Type de pause';
+
+  @override
+  String get pauseDatesLabel => 'Période de pause';
+
+  @override
+  String get pauseDaysLabel => 'Chaque semaine, les jours :';
+
+  @override
+  String get pauseFrequencyLabel => 'Revient';
+
+  @override
+  String get pauseUntilLabel => 'Jusqu\'au';
+
+  @override
+  String get pauseChooseUntil => 'Choisir la date de fin';
+
+  @override
+  String get pauseTooLongForPeriod =>
+      'La pause est plus longue que sa fréquence : raccourcis-la.';
 
   @override
   String get pauseSave => 'Enregistrer la pause';
@@ -437,12 +533,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get campusName => 'Campus d\'Annecy';
-
-  @override
-  String get nearYourHome => 'Près de chez toi';
-
-  @override
-  String get yourHome => 'Chez toi';
 
   @override
   String get calendarBody =>
@@ -465,7 +555,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get icsLabel => 'Lien ICS';
 
   @override
-  String get icsPlaceholder => 'https://…';
+  String get icsPlaceholder => 'https://… ou webcal://…';
 
   @override
   String get icsConsent =>
@@ -476,17 +566,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Coche la case pour autoriser la lecture de ton agenda.';
 
   @override
-  String get icsConnect => 'Connecter mon agenda';
-
-  @override
   String get manualTitle => 'Tes horaires de la semaine';
 
   @override
   String get manualBody =>
       'Indique l\'heure de ton premier cours et la fin de ton dernier, pour chaque jour.';
-
-  @override
-  String get manualSave => 'Enregistrer mes horaires';
 
   @override
   String get manualStart => 'Début';
@@ -598,21 +682,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get directionFrom => 'Retour';
 
   @override
-  String rideMetaDriver(String time, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count passagers',
-      one: '1 passager',
-      zero: 'aucun passager pour l\'instant',
-    );
-    return '$time · tu conduis · $_temp0';
-  }
-
-  @override
-  String get see => 'Voir';
-
-  @override
   String proposalTitleTo(String day) {
     return 'Aller du $day';
   }
@@ -621,17 +690,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String proposalTitleFrom(String day) {
     return 'Retour du $day';
   }
-
-  @override
-  String proposalTime(String time) {
-    return 'Horaire : $time';
-  }
-
-  @override
-  String get proposalDriverIntro => 'Tu montes avec';
-
-  @override
-  String get proposalPassengersIntro => 'Tes passagers';
 
   @override
   String get proposalNoPassengers =>
@@ -644,7 +702,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyNote =>
-      'Nom et adresse exacte s\'affichent seulement une fois le trajet confirmé à deux.';
+      'Nom et adresse sont partagés seulement quand vous avez accepté tous les deux.';
 
   @override
   String get accept => 'Accepter';
@@ -659,13 +717,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get proposalConfirmed => 'Trajet confirmé';
 
   @override
-  String get proposalWaiting =>
-      'Tu as accepté. On attend la réponse de l\'autre.';
-
-  @override
-  String get proposalDeclined => 'Proposition refusée.';
-
-  @override
   String get alternativesTitle => 'Autres voitures';
 
   @override
@@ -676,7 +727,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get choose => 'Choisir';
 
   @override
-  String get joined => 'C\'est noté : tu as choisi cette voiture.';
+  String get joined => 'Demande envoyée : le conducteur doit l\'accepter.';
 
   @override
   String get searchTitle => 'Chercher un trajet';
@@ -696,17 +747,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get searchHint =>
       'Choisis un jour et un sens, puis lance la recherche.';
-
-  @override
-  String seatsLeftLabel(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count places',
-      one: '1 place',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get profileSchedule => 'Emploi du temps';
@@ -744,9 +784,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get scheduleSynced => 'Emploi du temps mis à jour.';
 
   @override
-  String get rideMapOpen => 'Voir la carte';
-
-  @override
   String rideMapLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -760,9 +797,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get rideRouteEstimated =>
       'Tracé approximatif : le calcul d\'itinéraire n\'était pas disponible.';
-
-  @override
-  String get rideStopsTitle => 'Arrêts';
 
   @override
   String rideStopAround(String time) {
@@ -791,11 +825,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String ridePriceDetail(String total, int persons, String commission) {
-    return 'Estimation : $total de carburant partagés entre $persons personnes, plus $commission de frais de service par passager. Le prix final est calculé à l\'arrivée.';
-  }
-
-  @override
   String get ridePriceUnknown =>
       'Prix indisponible : le véhicule du conducteur n\'est plus renseigné.';
 
@@ -803,21 +832,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rideAddPassengers => 'Ajouter des passagers';
 
   @override
-  String get rideChooseMeetingPoint => 'Choisir un point de rendez-vous';
+  String get rideChooseMeetingPoint => 'Fixer un rendez-vous';
 
   @override
-  String get rideChangeMeetingPoint => 'Changer de point de rendez-vous';
+  String get rideChangeMeetingPoint => 'Modifier le rendez-vous';
 
   @override
   String get meetingPointTitle => 'Point de rendez-vous';
 
   @override
   String get meetingPointIntro =>
-      'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
+      'Touche la carte, ou un parking, pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
 
   @override
   String get meetingPointMapLabel =>
-      'Carte : touche pour placer le point de rendez-vous';
+      'Carte du trajet : touche un endroit ou un parking pour placer le point de rendez-vous';
 
   @override
   String get meetingPointLabel => 'Nom du point';
@@ -938,11 +967,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String get presenceValidated => 'Présence validée';
 
   @override
-  String get presencePaid => 'Présence validée, trajet payé';
+  String get presenceOnBoard =>
+      'Présence validée : ta part est prélevée à la fin du trajet';
 
   @override
-  String get presenceUnpaid =>
-      'Présence validée, paiement en attente : recharge ton portefeuille';
+  String get tripArrived =>
+      'Arrivée à destination : ta part est prélevée à la clôture du trajet. Un problème ? Signale-le dans les 24 h.';
+
+  @override
+  String get tripLeftEarly =>
+      'Tu as terminé ton trajet avant la destination prévue : ta part est prélevée à la clôture. Un problème ? Signale-le dans les 24 h.';
+
+  @override
+  String get stopArrived => 'Arrivée';
+
+  @override
+  String get stopLeftEarly => 'Terminé avant l\'arrivée';
 
   @override
   String get confirmPresence => 'Valider ma présence';
@@ -1059,6 +1099,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get walletBalance => 'Disponible';
 
   @override
+  String walletPending(String amount) {
+    return '$amount reçus, versés après 24 h sans signalement';
+  }
+
+  @override
   String walletHeld(String amount) {
     return '$amount retenus pour un trajet en cours';
   }
@@ -1116,10 +1161,100 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishConfirmBody =>
-      'Le suivi s\'arrête pour tout le monde et les passagers dont la présence n\'est pas validée sont comptés absents.';
+      'Le suivi s\'arrête pour tout le monde. Les passagers pris en charge paient leur part ; ta part est versée après 24 h, sauf si un problème est signalé.';
 
   @override
   String get finishConfirmCancel => 'Continuer le trajet';
+
+  @override
+  String get finishMyTrip => 'Terminer mon trajet';
+
+  @override
+  String get finishMyTripTitle => 'Terminer ton trajet maintenant ?';
+
+  @override
+  String get finishMyTripBody =>
+      'Tu n\'as pas encore atteint la destination prévue. Tu as été pris en charge : ta part reste due, même si tu descends ailleurs. Le conducteur est prévenu tout de suite. Un problème ? Signale-le après le trajet, dans les 24 h.';
+
+  @override
+  String get finishMyTripConfirm => 'Terminer quand même';
+
+  @override
+  String get finishMyTripDone => 'Trajet terminé. Le conducteur est prévenu.';
+
+  @override
+  String get insufficientFundsTitle => 'Solde insuffisant';
+
+  @override
+  String get insufficientFundsBody =>
+      'Ton solde ne couvre pas le prix maximal de ce trajet. Recharge ton portefeuille pour le réserver : tu ne paieras à l\'arrivée que ta part réelle.';
+
+  @override
+  String get insufficientFundsTopup => 'Recharger';
+
+  @override
+  String get insufficientFundsLater => 'Plus tard';
+
+  @override
+  String get walletPayout => 'Retirer vers mon compte';
+
+  @override
+  String get walletPayoutTitle => 'Retirer ton solde';
+
+  @override
+  String get walletPayoutIntro =>
+      'Le virement part vers ton compte bancaire. Uni-Moov ne garde que les 4 derniers chiffres de ton IBAN.';
+
+  @override
+  String get walletPayoutAmount => 'Montant en euros';
+
+  @override
+  String get walletPayoutIban => 'IBAN';
+
+  @override
+  String get walletPayoutHolder => 'Titulaire du compte';
+
+  @override
+  String walletPayoutSubmit(String amount) {
+    return 'Retirer $amount';
+  }
+
+  @override
+  String get walletPayoutDone =>
+      'Retrait demandé. Le virement arrive sous quelques jours.';
+
+  @override
+  String walletPayoutRule(String amount) {
+    return 'Un retrait par semaine, $amount minimum.';
+  }
+
+  @override
+  String get walletPayoutAmountInvalid =>
+      'Indique un montant, par exemple 12,50.';
+
+  @override
+  String get walletPayoutHolderInvalid =>
+      'Indique le nom du titulaire du compte.';
+
+  @override
+  String get errorIbanInvalid => 'Cet IBAN n\'est pas valide : vérifie-le.';
+
+  @override
+  String get errorPayoutTooSmall => 'Montant de retrait trop faible.';
+
+  @override
+  String get errorPayoutTooSoon =>
+      'Un seul retrait par semaine : réessaie plus tard.';
+
+  @override
+  String get errorPayoutFailed => 'Le virement a été refusé.';
+
+  @override
+  String get errorInsufficientFunds => 'Solde insuffisant.';
+
+  @override
+  String get errorNotOnBoard =>
+      'Ta présence n\'est pas validée : pour renoncer, annule ta place.';
 
   @override
   String get cancelMyPlace => 'Annuler ma place';
@@ -1185,10 +1320,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileReliability => 'Fiabilité';
-
-  @override
-  String get profileReliabilityBody =>
-      'Ton score, ce qui le compose, et les pénalités que tu peux contester.';
 
   @override
   String get reliabilityTitle => 'Ma fiabilité';
@@ -1583,10 +1714,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileNotifications => 'Notifications';
 
   @override
-  String get profileNotificationsBody =>
-      'Choisis ce qui te prévient sur ton téléphone.';
-
-  @override
   String get notificationsTitle => 'Notifications';
 
   @override
@@ -1652,4 +1779,1202 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatLeaveCancel => 'Rester';
+
+  @override
+  String get notificationsBlockedTitle => 'Notifications bloquées';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Ton téléphone bloque les notifications d\'Uni-Moov. Tu ne recevras ni rappel de trajet ni message.';
+
+  @override
+  String get exportAction => 'Exporter mes données';
+
+  @override
+  String get exportSubject => 'Mes données Uni-Moov';
+
+  @override
+  String get deleteAccountAction => 'Supprimer mon compte';
+
+  @override
+  String get deleteAccountTitle => 'Supprimer ton compte';
+
+  @override
+  String get deleteAccountIntro =>
+      'C\'est définitif : ton compte ne pourra pas être récupéré.';
+
+  @override
+  String get deleteAccountErased =>
+      'ton nom, ton mail, ton adresse, ton véhicule, ton agenda, tes messages et tes appareils.';
+
+  @override
+  String get deleteAccountKept =>
+      'les trajets passés, les paiements et les notes, pour la comptabilité et les litiges.';
+
+  @override
+  String get deleteAccountRides =>
+      'tes trajets à venir. Les autres sont prévenus.';
+
+  @override
+  String get deleteAccountPassword => 'Ton mot de passe, pour confirmer';
+
+  @override
+  String get deleteAccountConfirm => 'Supprimer définitivement';
+
+  @override
+  String get deleteAccountCancel => 'Garder mon compte';
+
+  @override
+  String get deleteAccountDone => 'Ton compte est supprimé.';
+
+  @override
+  String get errorInvalidPassword => 'Mot de passe incorrect. Réessaie.';
+
+  @override
+  String get errorWalletNotEmpty =>
+      'Ton portefeuille n\'est pas vide : récupère ton solde avant de supprimer ton compte.';
+
+  @override
+  String get errorRideInProgress =>
+      'Termine ton trajet en cours avant de supprimer ton compte.';
+
+  @override
+  String get deleteAccountErasedLead => 'Effacés :';
+
+  @override
+  String get deleteAccountKeptLead => 'Gardés sans ton nom :';
+
+  @override
+  String get deleteAccountRidesLead => 'Annulés :';
+
+  @override
+  String get deleteAccountWalletTitle => 'Portefeuille à vider d\'abord';
+
+  @override
+  String deleteAccountWalletLeft(String amount, String email) {
+    return 'Il te reste $amount sur ton portefeuille. Retire-les vers ton compte bancaire (ou écris à l\'équipe, $email), puis reviens supprimer ton compte.';
+  }
+
+  @override
+  String get deleteAccountWriteTeam => 'Écrire à l\'équipe';
+
+  @override
+  String get deleteAccountMailSubject =>
+      'Récupérer mon solde avant de supprimer mon compte';
+
+  @override
+  String get exportDone => 'Tes données sont prêtes.';
+
+  @override
+  String get notificationsOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get notificationsBlockedHelp =>
+      'Ces choix s\'appliqueront dès que tu auras réactivé les notifications.';
+
+  @override
+  String noMailApp(String email) {
+    return 'Aucune application de mail trouvée. Écris-nous à $email.';
+  }
+
+  @override
+  String get requestSent => 'Demande envoyée';
+
+  @override
+  String get requestWithdraw => 'Retirer ma demande';
+
+  @override
+  String get requestApprove => 'Accepter';
+
+  @override
+  String get requestReject => 'Refuser';
+
+  @override
+  String get homePlace => 'Domicile';
+
+  @override
+  String rideSeatsTaken(int taken, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      taken,
+      locale: localeName,
+      other: '$taken passagers',
+      one: '1 passager',
+      zero: 'Aucun passager',
+    );
+    return '$_temp0 sur $total places';
+  }
+
+  @override
+  String homeBalance(String amount) {
+    return 'Solde : $amount. Ouvrir le portefeuille';
+  }
+
+  @override
+  String get rideStatusLive => 'En cours';
+
+  @override
+  String get historyTitle => 'Historique';
+
+  @override
+  String get historyEmpty => 'Tes trajets terminés apparaîtront ici.';
+
+  @override
+  String get historyAbsent => 'Absent';
+
+  @override
+  String get roleAutoInfoTooltip => 'Comment marche le mode automatique';
+
+  @override
+  String get roleAutoInfo =>
+      'Chaque jour, Uni-Moov regarde les besoins de ton secteur. S\'il manque un conducteur, tu conduis ; sinon tu montes avec quelqu\'un. Entre plusieurs conducteurs possibles, on alterne : celui qui a le moins conduit ces dernières semaines prend le volant. Tes pauses programmées sont toujours respectées.';
+
+  @override
+  String get understood => 'Compris';
+
+  @override
+  String tripTitleTo(String date) {
+    return 'Aller · $date';
+  }
+
+  @override
+  String tripTitleFrom(String date) {
+    return 'Retour · $date';
+  }
+
+  @override
+  String statScore(String score) {
+    return 'Note : $score sur 5';
+  }
+
+  @override
+  String statDetour(int minutes) {
+    return '+$minutes min';
+  }
+
+  @override
+  String statDetourDriver(int minutes) {
+    return 'Fait $minutes minutes de détour pour toi';
+  }
+
+  @override
+  String statDetourPassenger(int minutes) {
+    return 'Te fait faire $minutes minutes de détour';
+  }
+
+  @override
+  String get personAccepted => 'Accepté';
+
+  @override
+  String get personRequested => 'Demande';
+
+  @override
+  String get personPending => 'En attente';
+
+  @override
+  String get priceBulletFinal => 'Prix final calculé à l\'arrivée';
+
+  @override
+  String get stopOnBoard => 'À bord';
+
+  @override
+  String get moreActions => 'Plus d\'actions';
+
+  @override
+  String get rideDetailsTitle => 'Détails du trajet';
+
+  @override
+  String proposalMapLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Carte du trajet proposé, $count personnes en zones approximatives',
+      one: 'Carte du trajet proposé, 1 personne en zone approximative',
+      zero: 'Carte du trajet proposé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatRideBar => 'Ton trajet';
+
+  @override
+  String get aboutTitle => 'À propos de moi';
+
+  @override
+  String get aboutIntro =>
+      'Visible par les étudiants que tu croises sur un trajet. Tout est facultatif.';
+
+  @override
+  String get aboutEmpty => 'Formation, âge, centres d\'intérêt';
+
+  @override
+  String get aboutStudy => 'Formation';
+
+  @override
+  String get aboutStudyHint => 'BUT Informatique';
+
+  @override
+  String get aboutBirthYear => 'Année de naissance';
+
+  @override
+  String get aboutBirthYearHelp => 'Seul ton âge est affiché.';
+
+  @override
+  String get aboutBirthYearInvalid => 'Indique une année, par exemple 2005.';
+
+  @override
+  String get aboutInterests => 'Centres d\'intérêt';
+
+  @override
+  String get aboutInterestAdd => 'Ajouter un centre d\'intérêt';
+
+  @override
+  String get aboutInterestHint => 'Escalade';
+
+  @override
+  String aboutInterestRemove(String interest) {
+    return 'Retirer $interest';
+  }
+
+  @override
+  String ageYears(int age) {
+    return '$age ans';
+  }
+
+  @override
+  String profileNameAge(String name, int age) {
+    return '$name, $age ans';
+  }
+
+  @override
+  String get profileSeeMine => 'Voir mon profil comme les autres';
+
+  @override
+  String get profileUnavailable => 'Ce profil n\'est pas disponible.';
+
+  @override
+  String statRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trajets menés à bien',
+      one: '1 trajet mené à bien',
+      zero: 'Aucun trajet mené',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get photoChange => 'Changer ma photo';
+
+  @override
+  String get photoFromGallery => 'Choisir une photo';
+
+  @override
+  String get photoFromCamera => 'Prendre une photo';
+
+  @override
+  String get photoRemove => 'Retirer la photo';
+
+  @override
+  String get photoSaved => 'Photo enregistrée.';
+
+  @override
+  String get photoUnavailable =>
+      'Impossible d\'ouvrir tes photos. Vérifie l\'autorisation dans les réglages.';
+
+  @override
+  String get errorPhotoInvalid => 'Choisis une photo JPEG ou PNG.';
+
+  @override
+  String get carpoolTitle => 'Proposer un covoiturage';
+
+  @override
+  String get carpoolIDrive => 'Je conduis';
+
+  @override
+  String get carpoolILook => 'Je cherche';
+
+  @override
+  String carpoolSeats(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count places libres',
+      one: '1 place libre',
+      zero: 'Complet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get carpoolToCampus => 'Aller';
+
+  @override
+  String get carpoolFromCampus => 'Retour';
+
+  @override
+  String get carpoolAsk => 'Publier ma demande';
+
+  @override
+  String get carpoolOffer => 'Trajet proposé';
+
+  @override
+  String get carpoolRequest => 'Cherche un trajet';
+
+  @override
+  String get carpoolJoin => 'Je monte';
+
+  @override
+  String get carpoolTake => 'Je te prends';
+
+  @override
+  String carpoolJoined(String names) {
+    return '$names : c\'est réservé';
+  }
+
+  @override
+  String get carpoolDone => 'C\'est réservé : le trajet est dans ta semaine.';
+
+  @override
+  String get errorNoRideThatDay =>
+      'Tu ne conduis pas ce jour-là. Accepte d\'abord un trajet comme conducteur.';
+
+  @override
+  String get errorOwnCarpool => 'C\'est ta propre proposition.';
+
+  @override
+  String get errorCarpoolNotHere =>
+      'Propose un trajet dans un groupe ou une conversation privée.';
+
+  @override
+  String get themeTitle => 'Thème';
+
+  @override
+  String get themeSystem => 'Automatique (comme le téléphone)';
+
+  @override
+  String get themeLight => 'Clair';
+
+  @override
+  String get themeDark => 'Sombre';
+
+  @override
+  String get reduceMotion => 'Réduire les animations';
+
+  @override
+  String get ridePriceReceiveTotalLabel => 'Tu reçois au total';
+
+  @override
+  String ridePriceYouReceiveTotal(String price, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count passagers',
+      one: '1 passager',
+      zero: 'personne',
+    );
+    return 'Tu reçois $price au total, de $_temp0';
+  }
+
+  @override
+  String ridePriceFromPassengers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Somme payée par tes $count passagers',
+      one: 'Payé par ton passager',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get calcTitle => 'Détail du calcul';
+
+  @override
+  String calcLitres(String km, String consumption, String litres) {
+    return '$km km × $consumption L/100 km = $litres L';
+  }
+
+  @override
+  String calcFuel(String litres, String price) {
+    return '$litres L × $price le litre';
+  }
+
+  @override
+  String calcShareOf(String name) {
+    return 'Part de $name';
+  }
+
+  @override
+  String get calcMyShare => 'Ta part du carburant';
+
+  @override
+  String get calcCommission => 'Frais de service';
+
+  @override
+  String get calcTotalPaid => '= Tu paies';
+
+  @override
+  String get calcTotalReceived => '= Tu reçois au total';
+
+  @override
+  String get carpoolArriveAt => 'Arrivée au campus';
+
+  @override
+  String get carpoolLeaveAt => 'Départ du campus';
+
+  @override
+  String get carpoolReturnAt => 'Retour, départ du campus';
+
+  @override
+  String get carpoolWithReturn => 'Programmer le retour';
+
+  @override
+  String get carpoolPublishDrive => 'Proposer ce trajet';
+
+  @override
+  String get carpoolExisting => 'Ou un trajet déjà prévu';
+
+  @override
+  String get vehicleModelLabel => 'Modèle';
+
+  @override
+  String get vehicleModelHint => 'Renault Clio';
+
+  @override
+  String get vehicleModelRequired =>
+      'Indique le modèle, pour que tes passagers reconnaissent ta voiture.';
+
+  @override
+  String get vehicleColorLabel => 'Couleur';
+
+  @override
+  String get vehicleColorRequired => 'Indique la couleur de ta voiture.';
+
+  @override
+  String get vehicleColorChoices =>
+      'blanche,noire,grise,argent,bleue,rouge,verte,beige,marron,jaune,orange';
+
+  @override
+  String rideVehicleSemantic(String description) {
+    return 'Voiture : $description';
+  }
+
+  @override
+  String get rideCardReceive => 'Tu reçois';
+
+  @override
+  String proposalPricePay(String price) {
+    return 'Environ $price pour toi';
+  }
+
+  @override
+  String proposalPriceReceive(String price) {
+    return 'Tu reçois environ $price au total';
+  }
+
+  @override
+  String get chatAttach => 'Joindre une photo ou un trajet';
+
+  @override
+  String get chatPhotoSemantic => 'Photo';
+
+  @override
+  String get chatReact => 'Réagir';
+
+  @override
+  String chatReactWith(String emoji) {
+    return 'Réagir avec $emoji';
+  }
+
+  @override
+  String get chatReactionRemove => 'Retirer ma réaction';
+
+  @override
+  String chatReactionSemantic(String emoji, int count) {
+    return 'Réaction $emoji, $count';
+  }
+
+  @override
+  String chatReactionMineSemantic(String emoji, int count) {
+    return 'Ta réaction $emoji, $count. Touche pour la retirer';
+  }
+
+  @override
+  String get chatLastPhoto => 'Photo';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
+  String get achievementsTitle => 'Mes réussites';
+
+  @override
+  String get levelNewcomer => 'Nouvel Uni-Mooveur';
+
+  @override
+  String get levelRegular => 'Habitué';
+
+  @override
+  String get levelPillar => 'Pilier du campus';
+
+  @override
+  String get levelSuper => 'Super Uni-Mooveur';
+
+  @override
+  String get levelLegend => 'Légende du campus';
+
+  @override
+  String get levelTop => 'Tu as atteint le plus haut niveau.';
+
+  @override
+  String levelNext(int count, String level) {
+    return 'Encore $count points pour devenir $level';
+  }
+
+  @override
+  String pointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count points',
+      one: '1 point',
+      zero: '0 point',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pointsShort(int count) {
+    return '$count pts';
+  }
+
+  @override
+  String get impactCo2 => 'de CO2 évités';
+
+  @override
+  String get impactKm => 'partagés';
+
+  @override
+  String get impactRides => 'trajets effectués';
+
+  @override
+  String get impactReceived => 'reçus en conducteur';
+
+  @override
+  String get impactPaid => 'payés en passager';
+
+  @override
+  String badgesTitle(int earned, int total) {
+    return 'Badges ($earned/$total)';
+  }
+
+  @override
+  String get badgeEarned => 'Gagné';
+
+  @override
+  String badgeProgress(int progress, int goal) {
+    return '$progress/$goal';
+  }
+
+  @override
+  String get badgeFirstRide => 'Premier trajet';
+
+  @override
+  String get badgeFirstRideGoal => 'Fais ton premier trajet.';
+
+  @override
+  String get badgeTenRides => '10 trajets';
+
+  @override
+  String get badgeTenRidesGoal => 'Fais 10 trajets.';
+
+  @override
+  String get badgeFiftyRides => '50 trajets';
+
+  @override
+  String get badgeFiftyRidesGoal => 'Fais 50 trajets.';
+
+  @override
+  String get badgeLoyalDriver => 'Conducteur fidèle';
+
+  @override
+  String get badgeLoyalDriverGoal => 'Conduis 10 trajets avec des passagers.';
+
+  @override
+  String get badgeFullWeek => 'Semaine complète';
+
+  @override
+  String get badgeFullWeekGoal => 'Fais 5 trajets dans la même semaine.';
+
+  @override
+  String get badgeSociable => 'Sociable';
+
+  @override
+  String get badgeSociableGoal => 'Voyage avec 10 personnes différentes.';
+
+  @override
+  String get badgeEco => 'Éco-voyageur';
+
+  @override
+  String get badgeEcoGoal => 'Évite 100 kg de CO2.';
+
+  @override
+  String get badgeReliable => 'Fiable';
+
+  @override
+  String get badgeReliableGoal =>
+      'Fais 5 trajets avec une fiabilité d\'au moins 95 %.';
+
+  @override
+  String get leaderboardTitle => 'Classement du campus';
+
+  @override
+  String leaderboardTitleMonth(String month) {
+    return 'Classement · $month';
+  }
+
+  @override
+  String get leaderboardShowMe => 'Apparaître avec mon prénom';
+
+  @override
+  String get leaderboardShowMeHelp => 'Sinon, tu restes classé, mais anonyme.';
+
+  @override
+  String get leaderboardEmpty =>
+      'Personne n\'a encore de points ce mois-ci. Un trajet suffit pour entrer au classement.';
+
+  @override
+  String leaderboardMyRank(int rank, int total) {
+    return 'Ta place : $rank sur $total';
+  }
+
+  @override
+  String get leaderboardError => 'Classement indisponible pour l\'instant.';
+
+  @override
+  String get leaderboardYou => 'Toi';
+
+  @override
+  String get leaderboardAnonymous => 'Un étudiant';
+
+  @override
+  String leaderboardRowSemantic(int rank, String name, int points) {
+    return '${rank}e, $name, $points points';
+  }
+
+  @override
+  String get sectionAbout => 'Mon profil';
+
+  @override
+  String get sectionActivity => 'Mon activité';
+
+  @override
+  String get sectionTrips => 'Mes trajets';
+
+  @override
+  String get sectionPauses => 'Pauses';
+
+  @override
+  String get sectionAppearance => 'Apparence';
+
+  @override
+  String get sectionAccount => 'Compte et confidentialité';
+
+  @override
+  String get aboutBio => 'Mini-bio';
+
+  @override
+  String get aboutBioHint =>
+      'Mes points de rendez-vous, ce que j\'aime en trajet…';
+
+  @override
+  String aboutInterestsHelp(int count, int max) {
+    return 'Touche ceux qui te ressemblent ($count/$max).';
+  }
+
+  @override
+  String get prefsTitle => 'Préférences de covoiturage';
+
+  @override
+  String get prefChatTitle => 'Discussion';
+
+  @override
+  String get prefChatChatty => 'J\'aime bien discuter';
+
+  @override
+  String get prefChatDepends => 'Je discute si je me sens à l\'aise';
+
+  @override
+  String get prefChatQuiet => 'Je préfère le calme';
+
+  @override
+  String get prefMusicTitle => 'Musique';
+
+  @override
+  String get prefMusicYes => 'J\'aime la musique en voiture';
+
+  @override
+  String get prefMusicDepends => 'J\'aime la musique si elle me plaît';
+
+  @override
+  String get prefMusicNo => 'Je préfère sans musique';
+
+  @override
+  String get prefSmokingTitle => 'Cigarette';
+
+  @override
+  String get prefSmokingOk => 'La cigarette ne me dérange pas';
+
+  @override
+  String get prefSmokingOutside => 'Pauses cigarette dehors seulement';
+
+  @override
+  String get prefSmokingNo => 'Je préfère qu\'on ne fume pas en voiture';
+
+  @override
+  String get prefPetsTitle => 'Animaux';
+
+  @override
+  String get prefPetsYes => 'J\'aime les animaux à bord';
+
+  @override
+  String get prefPetsSome => 'Je peux covoiturer avec certains animaux';
+
+  @override
+  String get prefPetsNo => 'Je préfère sans animaux';
+
+  @override
+  String profileRating(String score, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count avis',
+      one: '1 avis',
+      zero: 'aucun avis',
+    );
+    return '$score/5 · $_temp0';
+  }
+
+  @override
+  String profileWrite(String name) {
+    return 'Écrire à $name';
+  }
+
+  @override
+  String get profileEditMine => 'Modifier mon profil';
+
+  @override
+  String profileVerifiedTitle(String name) {
+    return '$name a un profil vérifié';
+  }
+
+  @override
+  String get profileVerifiedEmail => 'Mail universitaire vérifié';
+
+  @override
+  String profileMemberSince(String month) {
+    return 'Membre depuis $month';
+  }
+
+  @override
+  String profileAboutTitle(String name) {
+    return 'À propos de $name';
+  }
+
+  @override
+  String profileAboutEmpty(String name) {
+    return '$name n\'a encore rien ajouté.';
+  }
+
+  @override
+  String get profileBadges => 'Badges';
+
+  @override
+  String profileRides(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trajets effectués',
+      one: '1 trajet effectué',
+      zero: 'Aucun trajet effectué',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileCancellationRate(int rate) {
+    return 'Taux d\'annulation de $rate %';
+  }
+
+  @override
+  String profileCo2(int kg) {
+    return '$kg kg de CO2 évités en covoiturant';
+  }
+
+  @override
+  String get mapFocusVehicle => 'Suivre le véhicule';
+
+  @override
+  String get calcStepFuel => 'Le carburant du trajet';
+
+  @override
+  String get calcTripCost => 'Coût du trajet';
+
+  @override
+  String get calcStepShare => 'Le partage, tronçon par tronçon';
+
+  @override
+  String get calcStepShareNote =>
+      'Chaque tronçon est partagé entre les personnes à bord, conducteur compris.';
+
+  @override
+  String calcPortionEach(String km, String cost, int persons) {
+    return '$km km ($cost) ÷ $persons';
+  }
+
+  @override
+  String get calcStepReceive => 'Ce que paie chaque passager';
+
+  @override
+  String get calcStepPay => 'Ce que tu paies';
+
+  @override
+  String get calcCommissionPlus => '+ frais de service Uni-Moov';
+
+  @override
+  String calcDriverCheck(String received, String own, String total) {
+    return 'Vérification : $received reçus + $own pour ta propre part = $total, le coût du trajet.';
+  }
+
+  @override
+  String get calcRounding =>
+      'Montants arrondis au centime ; le conducteur n\'est jamais perdant.';
+
+  @override
+  String get charterTitle => 'Charte de bonne conduite';
+
+  @override
+  String get charterIntro =>
+      'Pour que chaque trajet se passe bien, tout le monde s\'engage à respecter ces règles, comme sur les autres applis de covoiturage.';
+
+  @override
+  String get charterRead => 'Lire la charte de bonne conduite';
+
+  @override
+  String get charterSignupNote =>
+      'En créant ton compte, tu t\'engages à respecter la charte de bonne conduite.';
+
+  @override
+  String get charterContact =>
+      'Une question ou un signalement : unimoov.support@gmail.com';
+
+  @override
+  String get charter1Title => 'Respect et bienveillance';
+
+  @override
+  String get charter1Body =>
+      'Sois poli et bienveillant avec tout le monde, dans la voiture comme dans les messages.\nAucune discrimination, aucun propos ou geste déplacé, aucun harcèlement : tolérance zéro.\nRespecte les choix de chacun : discuter ou rester au calme, écouter de la musique ou non.';
+
+  @override
+  String get charter2Title => 'Ponctualité';
+
+  @override
+  String get charter2Body =>
+      'Sois au point de rendez-vous à l\'heure de passage indiquée dans l\'app ; elle peut avancer si un passager s\'ajoute, l\'app te prévient.\nEn retard ? Préviens dans le chat du trajet dès que possible.\nConducteur : attends au moins 5 minutes au point de rendez-vous ; passager : ne fais pas attendre plus.';
+
+  @override
+  String get charter3Title => 'Fiabilité';
+
+  @override
+  String get charter3Body =>
+      'N\'accepte que les trajets que tu feras vraiment.\nSi tu ne peux plus venir, annule le plus tôt possible : une annulation tardive ou une absence baisse ton score de fiabilité.\nValide ta présence à la prise en charge et termine ton trajet dans l\'app.';
+
+  @override
+  String get charter4Title => 'Sécurité';
+
+  @override
+  String get charter4Body =>
+      'Conducteur : permis valide, assurance à jour, véhicule entretenu, pas plus de passagers que de places déclarées.\nRespecte le code de la route ; jamais d\'alcool, de drogue ou de téléphone en main au volant.\nCeinture attachée pour tout le monde, à chaque trajet.\nPassager : tu peux demander à descendre ou à ralentir si tu ne te sens pas en sécurité, puis le signaler.';
+
+  @override
+  String get charter5Title => 'Partage des frais, sans profit';
+
+  @override
+  String get charter5Body =>
+      'Le prix couvre seulement le carburant, partagé entre les personnes à bord, plus de petits frais de service ; le covoiturage n\'est pas un service de taxi.\nTout se paie dans l\'app : pas d\'argent liquide ni de paiement à côté, pas de supplément demandé.\nLe prix définitif est calculé à l\'arrivée, entre les seules personnes présentes.';
+
+  @override
+  String get charter6Title => 'Confort à bord';
+
+  @override
+  String get charter6Body =>
+      'Respecte les préférences affichées sur le profil du conducteur et des passagers (musique, cigarette, animaux).\nGarde la voiture propre ; pas de repas salissant sans accord.\nBagages : un sac de cours ; pour plus encombrant, demande avant dans le chat.';
+
+  @override
+  String get charter7Title => 'Confidentialité';
+
+  @override
+  String get charter7Body =>
+      'Les adresses, noms et photos des autres ne servent qu\'au trajet : ne les partage pas et ne les publie pas.\nNe prends pas de photo ni de vidéo d\'une personne sans son accord.\nLe suivi de position ne fonctionne que pendant le trajet, pour ses seuls participants.';
+
+  @override
+  String get charter8Title => 'Notes honnêtes et signalements';
+
+  @override
+  String get charter8Body =>
+      'Note chaque trajet honnêtement, sur ce qui s\'est vraiment passé.\nSignale dans l\'app tout comportement dangereux, irrespectueux ou contraire à cette charte ; l\'équipe Uni-Moov lit chaque signalement.\nEn cas de désaccord sur un trajet (absence, paiement), ouvre un litige depuis le trajet plutôt que de régler ça à deux.';
+
+  @override
+  String get charter9Title => 'En cas de manquement';
+
+  @override
+  String get charter9Body =>
+      'Selon la gravité : rappel de la charte, avertissement, puis suspension ou fermeture du compte.\nUn comportement dangereux ou un harcèlement peut entraîner la fermeture immédiate du compte.\nContact : unimoov.support@gmail.com.';
+
+  @override
+  String get icsPaste => 'Coller le lien copié';
+
+  @override
+  String get icsClipboardEmpty =>
+      'Rien à coller : copie d\'abord le lien de ton agenda.';
+
+  @override
+  String get icsWhere =>
+      'Où le trouver : dans ADE, « Exporter l\'agenda » puis le lien ; dans Google Agenda, Paramètres puis « Adresse secrète au format iCal » ; dans Outlook, « Publier un calendrier » puis le lien ICS. Les liens webcal:// marchent aussi.';
+
+  @override
+  String get errorDrivesOtherWay =>
+      'Tu conduis l\'autre trajet ce jour-là : tu repars avec ta voiture.';
+
+  @override
+  String get errorPassengerOtherWay =>
+      'Tu es passager sur l\'autre trajet ce jour-là : tu n\'as pas ta voiture.';
+
+  @override
+  String get pauseStartLabel => 'Premier jour de pause';
+
+  @override
+  String get pauseChooseStart => 'Choisir le premier jour';
+
+  @override
+  String get pauseDurationLabel => 'Durée de chaque pause';
+
+  @override
+  String pauseDurationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours',
+      one: '1 jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pauseRepeatUntilLabel => 'Se répète jusqu\'au';
+
+  @override
+  String pauseDurationWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count semaines',
+      one: '1 semaine',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatSectionDirect => 'Messages privés';
+
+  @override
+  String get chatSectionGroups => 'Groupes';
+
+  @override
+  String get chatSectionRides => 'Trajets';
+
+  @override
+  String get chatSectionRidesNote =>
+      'Chats éphémères : créés avec le trajet, en lecture seule après, puis supprimés.';
+
+  @override
+  String get chatCopied => 'Message copié.';
+
+  @override
+  String get chatReactMore => 'Tous les emojis';
+
+  @override
+  String get chatCopy => 'Copier';
+
+  @override
+  String get chatGroupInfo => 'Infos du groupe';
+
+  @override
+  String get chatGroupRename => 'Nom du groupe';
+
+  @override
+  String get chatGroupRenameAction => 'Renommer';
+
+  @override
+  String chatGroupMembers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count membres',
+      one: '1 membre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chatGroupAdd => 'Ajouter des personnes';
+
+  @override
+  String get chatGroupAddNone =>
+      'Toutes les personnes croisées sur un trajet sont déjà dans le groupe.';
+
+  @override
+  String chatGroupRemove(String name) {
+    return 'Retirer $name du groupe';
+  }
+
+  @override
+  String get chatGroupCreator => 'Créateur';
+
+  @override
+  String get chatGroupYou => 'Toi';
+
+  @override
+  String chatGroupSeeProfile(String name) {
+    return 'Voir le profil de $name';
+  }
+
+  @override
+  String get chatRideInfo => 'Infos du trajet';
+
+  @override
+  String get chatDirectInfo => 'Voir le profil';
+
+  @override
+  String get badgeSpinHint =>
+      'Touche la médaille pour un tour, ou lance-la du doigt.';
+
+  @override
+  String get badgeWonTitle => 'Nouveau badge !';
+
+  @override
+  String get homeLeaderboardTitle => 'Classement du campus';
+
+  @override
+  String homeLeaderboardRank(int rank, int total) {
+    return 'Tu es ${rank}e sur $total ce mois-ci';
+  }
+
+  @override
+  String get homeLeaderboardNone =>
+      'Fais un trajet ce mois-ci pour entrer au classement.';
+
+  @override
+  String get leaderboardSee => 'Voir le classement';
+
+  @override
+  String get leaderboardPodium => 'Podium du mois';
+
+  @override
+  String get chatReply => 'Répondre';
+
+  @override
+  String chatReplyingTo(String name) {
+    return 'Réponse à $name';
+  }
+
+  @override
+  String get chatReplyCancel => 'Annuler la réponse';
+
+  @override
+  String chatReplySemantic(String name, String body) {
+    return 'En réponse à $name : $body';
+  }
+
+  @override
+  String get chatReplySwipeHint =>
+      'Glisse un message vers la droite pour y répondre.';
+
+  @override
+  String tripDurationMinutes(int minutes) {
+    return '$minutes min de trajet';
+  }
+
+  @override
+  String tripDurationHours(int hours, String minutes) {
+    return '$hours h $minutes de trajet';
+  }
+
+  @override
+  String get mapFollowingVehicle =>
+      'La carte suit le véhicule. Touche la carte pour arrêter.';
+
+  @override
+  String get spotParking => 'Parking public';
+
+  @override
+  String get spotCarpool => 'Aire de covoiturage';
+
+  @override
+  String get meetingPointOnMap => 'Point choisi sur la carte';
+
+  @override
+  String meetingPointProposeTitle(String name) {
+    return 'Un point pour $name';
+  }
+
+  @override
+  String get meetingPointProposeIntro =>
+      'Touche la carte, ou un parking sur ton chemin, pour proposer un point de rencontre. Ton passager l\'accepte ou garde le sien.';
+
+  @override
+  String get meetingPointPropose => 'Proposer ce point';
+
+  @override
+  String get meetingPointProposed => 'Point proposé. Ton passager va répondre.';
+
+  @override
+  String get meetingPointChoose => 'Choisir mon point de rencontre';
+
+  @override
+  String meetingPointMine(String label) {
+    return 'Rendez-vous : $label';
+  }
+
+  @override
+  String get meetingPointAtHome =>
+      'Le conducteur passe te prendre à ton adresse.';
+
+  @override
+  String meetingPointOffer(String name, String label) {
+    return '$name te propose de te retrouver ici : $label';
+  }
+
+  @override
+  String get meetingPointAccept => 'Accepter ce point';
+
+  @override
+  String get meetingPointDecline => 'Garder le mien';
+
+  @override
+  String get meetingPointAccepted => 'C\'est noté : rendez-vous à ce point.';
+
+  @override
+  String get meetingPointDeclined => 'Tu gardes ton point actuel.';
+
+  @override
+  String get meetingPointProposeAction => 'Proposer un point';
+
+  @override
+  String meetingPointPending(String label) {
+    return 'Proposé : $label, en attente';
+  }
 }

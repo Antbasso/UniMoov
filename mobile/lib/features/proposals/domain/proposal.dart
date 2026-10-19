@@ -18,6 +18,7 @@ class PublicPerson {
     required this.detourMinutes,
     required this.status,
     this.photoUrl,
+    this.sector,
   });
 
   factory PublicPerson.fromJson(Map<String, dynamic> json) => PublicPerson(
@@ -27,6 +28,10 @@ class PublicPerson {
     reliabilityScore: (json['reliabilityScore'] as num).toDouble(),
     detourMinutes: json['detourMinutes'] as int,
     status: json['status'] as String,
+    sector: switch (json['sector']) {
+      {'lat': final num lat, 'lon': final num lon} => (lat.toDouble(), lon.toDouble()),
+      _ => null,
+    },
   );
 
   final String userId;
@@ -36,11 +41,17 @@ class PublicPerson {
   final int detourMinutes;
   final String status;
 
+  /// Centre du secteur (cellule de 500 m), seule position connue avant acceptation mutuelle.
+  final (double, double)? sector;
+
+  /// Demande de place à laquelle le conducteur doit répondre.
+  bool get isRequest => status == 'requested';
+
   /// Score affiché sur 5 (le serveur le donne entre 0 et 1).
   String get scoreOutOfFive => (reliabilityScore * 5).toStringAsFixed(1).replaceAll('.', ',');
 }
 
-enum ProposalState { proposed, waiting, confirmed, cancelled }
+enum ProposalState { proposed, requested, waiting, confirmed, cancelled }
 
 class Proposal {
   const Proposal({
@@ -56,6 +67,7 @@ class Proposal {
     required this.detourMinutes,
     required this.driver,
     required this.passengers,
+    this.priceCents,
   });
 
   factory Proposal.fromJson(Map<String, dynamic> json) => Proposal(
@@ -76,6 +88,7 @@ class Proposal {
       for (final p in json['passengers'] as List<dynamic>)
         PublicPerson.fromJson(p as Map<String, dynamic>),
     ],
+    priceCents: json['priceCents'] as int?,
   );
 
   final String id;
@@ -91,17 +104,29 @@ class Proposal {
   final PublicPerson? driver;
   final List<PublicPerson> passengers;
 
+  /// Prix indicatif : ce que je paie (passager) ou reçois au total (conducteur).
+  final int? priceCents;
+
   int get seatsLeft => seatsTotal - seatsTaken;
 
   /// État affiché : confirmé à deux, en attente de l'autre, ou à décider.
   ProposalState get state => switch ((rideStatus, myStatus)) {
     ('cancelled', _) || (_, 'cancelled') => ProposalState.cancelled,
-    ('confirmed', _) => ProposalState.confirmed,
+    // Voiture choisie par le passager : le conducteur doit accepter la demande.
+    (_, 'requested') => ProposalState.requested,
+    // Trajet confirmé, commencé ou terminé où je suis engagé : l'écran du trajet.
+    ('confirmed' || 'in_progress' || 'completed', 'accepted' || 'picked_up' || 'absent') =>
+      ProposalState.confirmed,
     (_, 'accepted') => ProposalState.waiting,
     _ => ProposalState.proposed,
   };
 
-  bool get canAnswer => myStatus == 'proposed' && state == ProposalState.proposed;
+  /// Proposition encore ouverte où je n'ai pas répondu (une voiture déjà confirmée peut encore
+  /// me proposer une place).
+  bool get canAnswer =>
+      myStatus == 'proposed' &&
+      state == ProposalState.proposed &&
+      (rideStatus == 'proposed' || rideStatus == 'confirmed');
 }
 
 /// Voiture où l'on peut monter (« voir d'autres », recherche).
@@ -113,6 +138,7 @@ class JoinableRide {
     required this.time,
     required this.seatsLeft,
     required this.driver,
+    this.priceCents,
   });
 
   factory JoinableRide.fromJson(Map<String, dynamic> json) => JoinableRide(
@@ -122,6 +148,7 @@ class JoinableRide {
     time: DateTime.parse(json['time'] as String),
     seatsLeft: json['seatsLeft'] as int,
     driver: PublicPerson.fromJson(json['driver'] as Map<String, dynamic>),
+    priceCents: json['priceCents'] as int?,
   );
 
   final String rideId;
@@ -130,6 +157,9 @@ class JoinableRide {
   final DateTime time;
   final int seatsLeft;
   final PublicPerson driver;
+
+  /// Ce que je paierais dans cette voiture (estimation, mon détour compris).
+  final int? priceCents;
 }
 
 /// Semaine ISO 8601 (`AAAA-Www`) d'une date locale.

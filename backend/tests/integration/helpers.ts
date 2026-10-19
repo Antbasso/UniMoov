@@ -1,9 +1,11 @@
+import type { RoutingProvider } from '../../src/shared/routing/routing-provider.js';
 import type { FastifyInstance } from 'fastify';
 import { expect } from 'vitest';
 import { buildApp } from '../../src/app.js';
 import { createDatabase, type Database } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { FakeGeocodingProvider } from '../../src/shared/geocoding/fake-geocoding-provider.js';
+import { FakePlacesProvider } from '../../src/shared/places/fake-places-provider.js';
 import { MemoryMailProvider } from '../../src/shared/mail/memory-mail-provider.js';
 import { MemoryNotifier } from '../../src/shared/notifications/notifier.js';
 import { MemoryPushProvider } from '../../src/shared/push/push-provider.js';
@@ -22,6 +24,8 @@ export interface TestContext {
   database: Database;
   mail: MemoryMailProvider;
   geocoding: FakeGeocodingProvider;
+  /** Parkings et aires de covoiturage d'Annecy, sans réseau. */
+  places: FakePlacesProvider;
   payments: FakePaymentProvider;
   notifier: MemoryNotifier;
   push: MemoryPushProvider;
@@ -35,14 +39,18 @@ export interface TestContext {
 /** Base remise à zéro puis migrée, app complète avec fournisseurs factices. */
 export async function setupTestContext(
   start = new Date('2026-10-15T08:00:00Z'),
-  { rateLimit = false } = {},
+  { rateLimit = false, routing }: { rateLimit?: boolean; routing?: RoutingProvider } = {},
 ): Promise<TestContext> {
   const url = testDatabaseUrl();
   await prepareTestDatabase(url);
   await runMigrations(url);
   const database = createDatabase(url);
+  // Scénarios écrits avec le détour estimé à vol d'oiseau seul : pas de temps fixe par arrêt
+  // (couvert par les tests unitaires du matching).
+  await database.pool.query(`UPDATE app_settings SET value = '0' WHERE key = 'matching.stopPenaltySeconds'`);
   const mail = new MemoryMailProvider();
   const geocoding = new FakeGeocodingProvider();
+  const places = new FakePlacesProvider();
   const payments = new FakePaymentProvider();
   const notifier = new MemoryNotifier();
   const push = new MemoryPushProvider();
@@ -68,11 +76,13 @@ export async function setupTestContext(
       },
       mail,
       geocoding,
+      places,
       payments,
       notifier,
       push,
       clock: () => clock.now,
       rateLimit,
+      ...(routing ? { routing } : {}),
     },
   });
   return {
@@ -80,6 +90,7 @@ export async function setupTestContext(
     database,
     mail,
     geocoding,
+    places,
     payments,
     notifier,
     push,

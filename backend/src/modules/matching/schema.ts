@@ -27,6 +27,8 @@ export const proposal = z.strictObject({
   seatsTotal: z.number().int(),
   seatsTaken: z.number().int(),
   detourMinutes: z.number().int(),
+  /** Prix indicatif : ce que je paie (passager) ou reçois (conducteur) ; null s'il est inconnu. */
+  priceCents: z.number().int().nullable(),
   driver: publicPerson.nullable(),
   passengers: z.array(publicPerson),
 });
@@ -37,6 +39,8 @@ export const joinableRide = z.strictObject({
   direction,
   time: z.date(),
   seatsLeft: z.number().int(),
+  /** Ce que je paierais en montant dans cette voiture (estimation). */
+  priceCents: z.number().int().nullable(),
   driver: publicPerson,
 });
 
@@ -72,3 +76,9 @@ export const inviteParams = z.object({ id: z.uuid(), userId: z.uuid() });
 const cancelTier = z.enum(['early', 'medium', 'late']);
 export const cancellationResponse = z.strictObject({ role: z.enum(['driver', 'passenger']), tier: cancelTier });
 export const cancelResponse = z.strictObject({ tier: cancelTier });
+
+export const createRideBody = z.object({
+  day: z.iso.date(),
+  direction,
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+});
