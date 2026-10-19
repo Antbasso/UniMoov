@@ -120,4 +120,6 @@ export const previewResponse = z.strictObject({
   estimated: z.boolean(),
   campus: point.extend({ name: z.string() }),
   me: point.nullable(),
+  /** Mon temps de trajet en secondes (voir `myDurationS`) ; null sans itinéraire. */
+  durationS: z.number().int().nullable(),
 });

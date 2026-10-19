@@ -1558,7 +1558,7 @@
       }
     }
   },
-  "mapFocusVehicle": "Voir le véhicule",
+  "mapFocusVehicle": "Suivre le véhicule",
   "calcStepFuel": "Le carburant du trajet",
   "calcTripCost": "Coût du trajet",
   "calcStepShare": "Le partage, tronçon par tronçon",
@@ -1683,7 +1683,7 @@
   },
   "chatRideInfo": "Infos du trajet",
   "chatDirectInfo": "Voir le profil",
-  "badgeSpinHint": "Fais glisser la médaille pour la faire tourner.",
+  "badgeSpinHint": "Touche la médaille pour un tour, ou lance-la du doigt.",
   "badgeWonTitle": "Nouveau badge !",
   "homeLeaderboardTitle": "Classement du campus",
   "homeLeaderboardRank": "Tu es {rank}e sur {total} ce mois-ci",
@@ -1699,5 +1699,47 @@
   },
   "homeLeaderboardNone": "Fais un trajet ce mois-ci pour entrer au classement.",
   "leaderboardSee": "Voir le classement",
-  "leaderboardPodium": "Podium du mois"
+  "leaderboardPodium": "Podium du mois",
+  "chatReply": "Répondre",
+  "chatReplyingTo": "Réponse à {name}",
+  "@chatReplyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReplyCancel": "Annuler la réponse",
+  "chatReplySemantic": "En réponse à {name} : {body}",
+  "@chatReplySemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "chatReplySwipeHint": "Glisse un message vers la droite pour y répondre.",
+  "tripDurationMinutes": "{minutes} min de trajet",
+  "@tripDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "tripDurationHours": "{hours} h {minutes} de trajet",
+  "@tripDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "mapFollowingVehicle": "La carte suit le véhicule. Touche la carte pour arrêter."
 }

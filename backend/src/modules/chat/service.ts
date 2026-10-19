@@ -20,6 +20,8 @@ export interface MessageView {
   reactions: { userId: string; emoji: string }[];
   /** Photo jointe, servie aux seuls membres ; `body` est alors sa légende (peut être vide). */
   photoUrl: string | null;
+  /** Message auquel celui-ci répond (début du texte), cité au-dessus de la réponse. */
+  replyTo: MessageRow['replyTo'];
 }
 
 /** Rejoindre une voiture par accord (matching) : passager accepté directement. */
@@ -56,6 +58,7 @@ const messageView = (m: MessageRow): MessageView => ({
   carpool: m.carpool,
   reactions: m.reactions,
   photoUrl: m.hasPhoto ? `/api/v1/conversations/${m.conversationId}/messages/${m.id}/photo` : null,
+  replyTo: m.replyTo,
 });
 
 /**
@@ -199,7 +202,7 @@ export class ChatService {
   }
 
   /** Message envoyé en direct aux membres connectés, et en push aux autres (préférence « chat »). */
-  async send(userId: string, conversationId: string, body: string): Promise<MessageView> {
+  async send(userId: string, conversationId: string, body: string, replyToId: string | null = null): Promise<MessageView> {
     const text = body.trim();
     if (!text) throw new AppError(400, 'validation_error', 'Requête invalide');
     const message = await this.repo.transaction(async (tx) => {
@@ -207,7 +210,8 @@ export class ChatService {
       const c = await this.repo.conversation(conversationId, tx, true);
       if (!c || !(await this.repo.isMember(conversationId, userId, tx))) throw new AppError(404, 'not_found', 'Ressource introuvable');
       if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
-      return this.repo.insertMessage(conversationId, userId, text, this.clock(), tx);
+      await this.assertReplyable(conversationId, replyToId, tx);
+      return this.repo.insertMessage(conversationId, userId, text, this.clock(), tx, null, null, replyToId);
     });
     return this.publish(userId, conversationId, message);
   }
@@ -216,16 +220,31 @@ export class ChatService {
    * Photo dans une conversation (JPEG ou PNG, 600 Ko au plus, réduite par l'app), avec une
    * légende facultative. Gardée en base et supprimée avec le message (rétention).
    */
-  async sendPhoto(userId: string, conversationId: string, contentType: string, data: Buffer, caption: string): Promise<MessageView> {
+  async sendPhoto(
+    userId: string,
+    conversationId: string,
+    contentType: string,
+    data: Buffer,
+    caption: string,
+    replyToId: string | null = null,
+  ): Promise<MessageView> {
     const type = imageTypeOf(data);
     if (!type || type !== contentType) throw new AppError(400, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
     const message = await this.repo.transaction(async (tx) => {
       const c = await this.repo.conversation(conversationId, tx, true);
       if (!c || !(await this.repo.isMember(conversationId, userId, tx))) throw new AppError(404, 'not_found', 'Ressource introuvable');
       if (this.archived(c)) throw new AppError(409, 'conversation_archived', 'Cette conversation est archivée');
-      return this.repo.insertMessage(conversationId, userId, caption.trim(), this.clock(), tx, null, { contentType: type, data });
+      await this.assertReplyable(conversationId, replyToId, tx);
+      return this.repo.insertMessage(conversationId, userId, caption.trim(), this.clock(), tx, null, { contentType: type, data }, replyToId);
     });
     return this.publish(userId, conversationId, message);
+  }
+
+  /** On ne cite qu'un message de la même conversation. */
+  private async assertReplyable(conversationId: string, replyToId: string | null, tx: DbOrTx): Promise<void> {
+    if (replyToId && !(await this.repo.message(conversationId, replyToId, tx))) {
+      throw new AppError(404, 'not_found', 'Ressource introuvable');
+    }
   }
 
   /** Photo d'un message, pour les membres seulement (404 sinon). */

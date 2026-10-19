@@ -4387,7 +4387,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapFocusVehicle.
   ///
   /// In fr, this message translates to:
-  /// **'Voir le véhicule'**
+  /// **'Suivre le véhicule'**
   String get mapFocusVehicle;
 
   /// No description provided for @calcStepFuel.
@@ -4771,7 +4771,7 @@ abstract class AppLocalizations {
   /// No description provided for @badgeSpinHint.
   ///
   /// In fr, this message translates to:
-  /// **'Fais glisser la médaille pour la faire tourner.'**
+  /// **'Touche la médaille pour un tour, ou lance-la du doigt.'**
   String get badgeSpinHint;
 
   /// No description provided for @badgeWonTitle.
@@ -4809,6 +4809,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Podium du mois'**
   String get leaderboardPodium;
+
+  /// No description provided for @chatReply.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondre'**
+  String get chatReply;
+
+  /// No description provided for @chatReplyingTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réponse à {name}'**
+  String chatReplyingTo(String name);
+
+  /// No description provided for @chatReplyCancel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la réponse'**
+  String get chatReplyCancel;
+
+  /// No description provided for @chatReplySemantic.
+  ///
+  /// In fr, this message translates to:
+  /// **'En réponse à {name} : {body}'**
+  String chatReplySemantic(String name, String body);
+
+  /// No description provided for @chatReplySwipeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Glisse un message vers la droite pour y répondre.'**
+  String get chatReplySwipeHint;
+
+  /// No description provided for @tripDurationMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{minutes} min de trajet'**
+  String tripDurationMinutes(int minutes);
+
+  /// No description provided for @tripDurationHours.
+  ///
+  /// In fr, this message translates to:
+  /// **'{hours} h {minutes} de trajet'**
+  String tripDurationHours(int hours, String minutes);
+
+  /// No description provided for @mapFollowingVehicle.
+  ///
+  /// In fr, this message translates to:
+  /// **'La carte suit le véhicule. Touche la carte pour arrêter.'**
+  String get mapFollowingVehicle;
 }
 
 class _AppLocalizationsDelegate

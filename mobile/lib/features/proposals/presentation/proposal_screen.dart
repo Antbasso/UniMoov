@@ -50,7 +50,6 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
     final router = GoRouter.of(context);
     final done = await showCancelSheet(context, id);
     if (done == null) return;
-    ref.invalidate(weekProposalsProvider);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     if (router.canPop()) router.pop();
   }
@@ -197,6 +196,11 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                         status,
                       ],
                     ),
+                    if (ref.watch(ridePreviewProvider(proposal.id)).value?.durationS
+                        case final seconds?) ...[
+                      const SizedBox(height: UmSpace.s1),
+                      TripDuration(duration: Duration(seconds: seconds)),
+                    ],
                     if (proposal.priceCents case final cents?) ...[
                       const SizedBox(height: UmSpace.s1),
                       Text(

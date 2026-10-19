@@ -24,6 +24,8 @@ export const message = z.strictObject({
     .nullable(),
   reactions: z.array(z.strictObject({ userId: z.uuid(), emoji: z.string() })),
   photoUrl: z.string().nullable(),
+  /** Message auquel celui-ci répond (début du texte), cité en petit au-dessus. */
+  replyTo: z.strictObject({ id: z.uuid(), senderId: z.uuid(), body: z.string(), hasPhoto: z.boolean() }).nullable(),
 });
 
 /** Un emoji, quel qu'il soit (teintes de peau, drapeaux, séquences ZWJ compris), rien d'autre. */
@@ -32,7 +34,7 @@ export const reactionBody = z.object({ emoji: z.string().min(1).max(16).regex(EM
 export const renameBody = z.object({ title: z.string().trim().min(1).max(60) });
 export const addMembersBody = z.object({ memberIds: z.array(z.uuid()).min(1).max(49) });
 export const memberParams = z.object({ id: z.uuid(), userId: z.uuid() });
-export const photoQuery = z.object({ caption: z.string().max(1000).default('') });
+export const photoQuery = z.object({ caption: z.string().max(1000).default(''), replyToId: z.uuid().optional() });
 
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
@@ -72,4 +74,4 @@ export const messagesQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export const messagesResponse = z.strictObject({ messages: z.array(message) });
-export const sendBody = z.object({ body: z.string().trim().min(1).max(2000) });
+export const sendBody = z.object({ body: z.string().trim().min(1).max(2000), replyToId: z.uuid().optional() });

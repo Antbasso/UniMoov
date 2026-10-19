@@ -248,6 +248,29 @@ describe('réactions et photos', () => {
   });
 });
 
+describe('réponses', () => {
+  it('répondre cite le message d’origine ; seulement un message de la même conversation', async () => {
+    const original = (await call('Inès', 'POST', `/conversations/${chatId}/messages`, { body: 'Je serai devant la boulangerie' })).json<{
+      id: string;
+    }>();
+    const reply = await call('Hugo', 'POST', `/conversations/${chatId}/messages`, { body: 'Parfait', replyToId: original.id });
+    expect(reply.statusCode).toBe(201);
+    expect(reply.json<{ replyTo: unknown }>().replyTo).toEqual({
+      id: original.id,
+      senderId: user('Inès').id,
+      body: 'Je serai devant la boulangerie',
+      hasPhoto: false,
+    });
+    const listed = (await call('Inès', 'GET', `/conversations/${chatId}/messages`)).json<{
+      messages: { id: string; replyTo: { id: string } | null }[];
+    }>().messages;
+    const replyId = reply.json<{ id: string }>().id;
+    expect(listed.find((m) => m.id === replyId)?.replyTo?.id).toBe(original.id);
+    const unknown = await call('Hugo', 'POST', `/conversations/${chatId}/messages`, { body: 'Hein ?', replyToId: crypto.randomUUID() });
+    expect(unknown.statusCode).toBe(404);
+  });
+});
+
 describe('messages privés et groupes', () => {
   it('seulement avec des personnes croisées sur un trajet ; une conversation privée par paire', async () => {
     const contacts = (await call('Hugo', 'GET', '/contacts')).json<{ contacts: { firstName: string }[] }>().contacts;

@@ -46,6 +46,8 @@ export interface MessageRow {
   /** Une réaction par personne. */
   reactions: { userId: string; emoji: string }[];
   hasPhoto: boolean;
+  /** Message cité par cette réponse (début du texte seulement). */
+  replyTo: { id: string; senderId: string; body: string; hasPhoto: boolean } | null;
 }
 
 /** Colonnes d'un message, avec sa proposition de covoiturage s'il en porte une. */
@@ -53,7 +55,9 @@ const MESSAGE_COLUMNS = sql`m.*, coalesce(cr.target_time, m.carpool_time) AS car
   (SELECT coalesce(json_agg(json_build_object('userId', u.id, 'firstName', u.first_name, 'rideId', j.ride_id) ORDER BY j.created_at), '[]'::json)
      FROM carpool_joins j JOIN users u ON u.id = j.user_id WHERE j.message_id = m.id) AS carpool_joined,
   (SELECT coalesce(json_agg(json_build_object('userId', r.user_id, 'emoji', r.emoji) ORDER BY r.created_at, r.user_id), '[]'::json)
-     FROM message_reactions r WHERE r.message_id = m.id) AS reactions`;
+     FROM message_reactions r WHERE r.message_id = m.id) AS reactions,
+  (SELECT json_build_object('id', q.id, 'senderId', q.sender_id, 'body', left(q.body, 200), 'hasPhoto', q.has_photo)
+     FROM messages q WHERE q.id = m.reply_to_id) AS reply_to`;
 
 const date = (v: unknown) => (v ? new Date(v as string) : null);
 const toConversation = (r: Record<string, unknown>): ConversationRow => ({
@@ -84,6 +88,7 @@ const toMessage = (r: Record<string, unknown>): MessageRow => ({
     : null,
   reactions: (r.reactions as MessageRow['reactions'] | undefined) ?? [],
   hasPhoto: r.has_photo === true,
+  replyTo: (r.reply_to as MessageRow['replyTo'] | undefined) ?? null,
 });
 
 /** Conversations, membres et messages (tables de `docs/data-model.sql`). */
@@ -141,6 +146,7 @@ export class ChatRepo {
             carpool: null,
             reactions: [],
             hasPhoto: r.l_photo === true,
+            replyTo: null,
           }
         : null,
     }));
@@ -215,11 +221,12 @@ export class ChatRepo {
     db: DbOrTx = this.db,
     carpool: { kind: 'offer' | 'request'; rideId: string | null; day: string; direction: string; time?: Date | null } | null = null,
     photo: { contentType: string; data: Buffer } | null = null,
+    replyToId: string | null = null,
   ): Promise<MessageRow> {
     const { rows } = await db.execute<{ id: string }>(sql`
-      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction, carpool_time, has_photo)
+      INSERT INTO messages (conversation_id, sender_id, body, created_at, carpool_kind, carpool_ride_id, carpool_day, carpool_direction, carpool_time, has_photo, reply_to_id)
       VALUES (${conversationId}, ${senderId}, ${body}, ${at}, ${carpool?.kind ?? null}, ${carpool?.rideId ?? null},
-              ${carpool?.day ?? null}, ${carpool?.direction ?? null}, ${carpool?.time ?? null}, ${photo !== null})
+              ${carpool?.day ?? null}, ${carpool?.direction ?? null}, ${carpool?.time ?? null}, ${photo !== null}, ${replyToId})
       RETURNING id`);
     if (photo) {
       await db.execute(sql`

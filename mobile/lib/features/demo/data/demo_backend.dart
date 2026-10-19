@@ -1205,6 +1205,13 @@ class DemoBackend
     if (r == null || !_involvesMe(r)) throw const ApiException('forbidden', '', statusCode: 403);
     final path = _path(r, all: true);
     final mine = path.where((p) => p.userId == demoMeId).firstOrNull;
+    // Mon temps de trajet à 35 km/h : tout le trajet en conduisant, sinon ma portion.
+    final at = r.driverIsMe ? -1 : path.indexWhere((p) => p.userId == demoMeId);
+    var metres = 0.0;
+    for (var i = 1; i < path.length; i++) {
+      final mineLeg = at < 0 || (r.direction == Direction.toCampus ? i > at : i <= at);
+      if (mineLeg) metres += _lineLength(_leg(path[i - 1], path[i]));
+    }
     return RidePreview(
       route: [
         for (final point in _road(path))
@@ -1221,6 +1228,7 @@ class DemoBackend
       campus: (demoCampus.lat, demoCampus.lon),
       campusName: demoCampus.label,
       me: mine == null ? null : (mine.lat, mine.lon),
+      durationS: (metres / (35 * 1000 / 3600)).round(),
     );
   }
 
@@ -1697,6 +1705,8 @@ class DemoBackend
       if (r.status == 'confirmed' && r.activeSeats.isEmpty) r.status = 'proposed';
     }
     _hidden.add(rideId);
+    // Comme sur le serveur : on quitte la conversation du trajet.
+    _conversations.removeWhere((_, c) => c.rideId == rideId);
     _cancellations++;
     _events.insert(
       0,
@@ -2214,10 +2224,12 @@ class DemoBackend
     Uint8List bytes,
     String contentType, {
     String caption = '',
+    String? replyToId,
   }) async {
     await _wait();
     final c = _conversations[id];
     if (c == null) throw const ApiException('not_found', '', statusCode: 404);
+    final quote = _quote(id, replyToId);
     final messageId = _id('msg');
     final url = 'demo://chat/$messageId';
     _chatPhotos[url] = bytes;
@@ -2228,10 +2240,19 @@ class DemoBackend
       body: caption,
       createdAt: _now.toUtc(),
       photoUrl: url,
+      replyTo: quote,
     );
     _messages.putIfAbsent(id, () => []).add(message);
     _conversations[id] = c.copyWith(lastMessage: message);
     return message;
+  }
+
+  /// Message cité, de la même conversation (comme le serveur, 404 sinon).
+  MessageQuote? _quote(String conversationId, String? replyToId) {
+    if (replyToId == null) return null;
+    final quoted = _messages[conversationId]?.where((m) => m.id == replyToId).firstOrNull;
+    if (quoted == null) throw const ApiException('not_found', '', statusCode: 404);
+    return MessageQuote.of(quoted);
   }
 
   @override
@@ -2251,7 +2272,7 @@ class DemoBackend
   }
 
   @override
-  Future<ChatMessage> send(String id, String body) async {
+  Future<ChatMessage> send(String id, String body, {String? replyToId}) async {
     await _wait();
     final c = _conversations[id];
     if (c == null) throw const ApiException('not_found', '', statusCode: 404);
@@ -2261,6 +2282,7 @@ class DemoBackend
       senderId: demoMeId,
       body: body,
       createdAt: _now.toUtc(),
+      replyTo: _quote(id, replyToId),
     );
     _messages.putIfAbsent(id, () => []).add(message);
     _conversations[id] = c.copyWith(lastMessage: message);

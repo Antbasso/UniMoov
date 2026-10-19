@@ -128,3 +128,19 @@ export function shiftedPassages(
   }
   return shifted;
 }
+
+/**
+ * Mon temps de trajet : tout l'itinéraire pour le conducteur ; pour un passager, de sa prise en
+ * charge au campus (aller) ou du campus à sa dépose (retour). `stopIndex` : rang de mon arrêt
+ * parmi les passagers ordonnés, -1 pour le conducteur.
+ */
+export function myDurationS(
+  route: { durationS: number; legs: readonly { durationS: number }[] },
+  stopIndex: number,
+  direction: Direction,
+): number {
+  if (stopIndex < 0 || route.legs.length === 0) return route.durationS;
+  const point = stopIndex + 1;
+  const legs = direction === 'to_campus' ? route.legs.slice(point) : route.legs.slice(0, point);
+  return legs.reduce((sum, leg) => sum + leg.durationS, 0);
+}

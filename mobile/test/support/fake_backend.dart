@@ -488,6 +488,7 @@ class FakeBackend
       campus: (45.9195, 6.158),
       campusName: "Campus d'Annecy",
       me: (45.8865, 6.089),
+      durationS: 1500,
     );
   }
 
@@ -952,16 +953,18 @@ class FakeBackend
   }
 
   @override
-  Future<ChatMessage> send(String id, String body) async {
+  Future<ChatMessage> send(String id, String body, {String? replyToId}) async {
     _maybeFail();
     final c = conversationsById[id]!;
     if (c.archived) throw const ApiException('conversation_archived', '', statusCode: 409);
+    final quoted = messagesById[id]?.where((m) => m.id == replyToId).firstOrNull;
     final message = ChatMessage(
       id: 'msg-${++_chatCounter}',
       conversationId: id,
       senderId: idOf(_me.email),
       body: body,
       createdAt: DateTime.utc(2026, 10, 15, 8, _chatCounter % 60),
+      replyTo: quoted == null ? null : MessageQuote.of(quoted),
     );
     messagesById.putIfAbsent(id, () => []).add(message);
     conversationsById[id] = c.copyWith(lastMessage: message);
@@ -1013,6 +1016,7 @@ class FakeBackend
     Uint8List bytes,
     String contentType, {
     String caption = '',
+    String? replyToId,
   }) async {
     _maybeFail();
     chatPhotos.add((id, caption, bytes));

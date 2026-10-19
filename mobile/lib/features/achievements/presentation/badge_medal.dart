@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -133,26 +134,59 @@ class _SpinningMedalState extends State<SpinningMedal> with SingleTickerProvider
   }
 
   void _drag(DragUpdateDetails details) {
-    _angle.stop();
     _angle.value += details.delta.dx / widget.size * math.pi;
   }
 
-  /// Lâchée : elle continue sur sa lancée puis se pose face visible.
+  /// Lâchée : elle continue sur sa lancée (lancer à la main), ralentit puis se pose face visible.
   void _release(DragEndDetails details) {
     if (_still) {
-      _angle.value = (_angle.value / (2 * math.pi)).round() * 2 * math.pi;
+      _settle(0);
       return;
     }
     final velocity = details.velocity.pixelsPerSecond.dx / widget.size * math.pi;
-    final friction = FrictionSimulation(0.15, _angle.value, velocity);
-    final rest = (friction.finalX / (2 * math.pi)).round() * 2 * math.pi;
+    if (velocity.abs() < 1) {
+      _settle(velocity);
+      return;
+    }
+    _angle
+        .animateWith(FrictionSimulation(0.35, _angle.value, velocity, tolerance: _slow))
+        .then((_) => _settle(_slow.velocity * velocity.sign));
+  }
+
+  static const _slow = Tolerance(velocity: 2);
+
+  /// Pose la médaille sur la face la plus proche dans le sens où elle tourne.
+  void _settle(double velocity) {
+    final turn = 2 * math.pi;
+    final rest = velocity == 0
+        ? (_angle.value / turn).round() * turn
+        : (velocity > 0 ? (_angle.value / turn).ceil() : (_angle.value / turn).floor()) * turn;
+    if (_still) {
+      _angle.value = rest;
+      return;
+    }
     _angle.animateWith(
       SpringSimulation(
-        SpringDescription.withDampingRatio(mass: 1, stiffness: 40, ratio: 0.8),
+        SpringDescription.withDampingRatio(mass: 1, stiffness: 60, ratio: 0.75),
         _angle.value,
         rest,
         velocity,
       ),
+    );
+  }
+
+  /// Toucher : un tour complet.
+  void _spinOnce() {
+    final turn = 2 * math.pi;
+    final target = ((_angle.value / turn).round() + 1) * turn;
+    if (_still) {
+      _angle.value = target;
+      return;
+    }
+    _angle.animateTo(
+      target,
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOutCubic,
     );
   }
 
@@ -166,6 +200,8 @@ class _SpinningMedalState extends State<SpinningMedal> with SingleTickerProvider
       label: badgeName(l10n, widget.badgeKey),
       hint: l10n.badgeSpinHint,
       child: GestureDetector(
+        onTap: _spinOnce,
+        onHorizontalDragStart: (_) => _angle.stop(),
         onHorizontalDragUpdate: _drag,
         onHorizontalDragEnd: _release,
         child: AnimatedBuilder(
@@ -229,16 +265,8 @@ Future<void> showBadgeViewer(
           ? Duration.zero
           : const Duration(milliseconds: 300),
       pageBuilder: (_, _, _) => _BadgeViewer(badge: badge, celebrate: celebrate),
-      transitionsBuilder: (_, animation, _, child) => FadeTransition(
-        opacity: animation,
-        child: ScaleTransition(
-          scale: Tween<double>(
-            begin: 0.8,
-            end: 1,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutBack)),
-          child: child,
-        ),
-      ),
+      transitionsBuilder: (_, animation, _, child) =>
+          FadeTransition(opacity: animation, child: child),
     ),
   );
 }
@@ -278,77 +306,115 @@ class _BadgeViewerState extends State<_BadgeViewer> with SingleTickerProviderSta
     final c = context.umColors;
     final b = widget.badge;
     final color = b.earned ? badgeColor(context, b.key) : c.inkMuted;
+    final route = ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation;
     return Material(
-      color: c.ink,
-      child: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(child: GestureDetector(onTap: () => Navigator.of(context).pop())),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(UmSpace.s6),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.celebrate) ...[
-                      Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          l10n.badgeWonTitle,
-                          textAlign: TextAlign.center,
-                          style: UmText.h1.copyWith(color: c.surface),
-                        ),
-                      ),
-                      const SizedBox(height: UmSpace.s5),
-                    ],
-                    // Halo qui pulse derrière la médaille.
-                    AnimatedBuilder(
-                      animation: _glow,
-                      builder: (context, child) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.25 + 0.3 * _glow.value),
-                              blurRadius: 30 + 20 * _glow.value,
-                              spreadRadius: 2 + 6 * _glow.value,
-                            ),
-                          ],
-                        ),
-                        child: child,
-                      ),
-                      child: SpinningMedal(badgeKey: b.key, earned: b.earned),
+      type: MaterialType.transparency,
+      child: Stack(
+        children: [
+          // Fond : l'écran derrière, flouté et adouci ; toucher ferme.
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: ColoredBox(color: c.surface.withValues(alpha: 0.6)),
+              ),
+            ),
+          ),
+          // Mise en avant : un halo de la couleur du badge qui respire.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _glow,
+                builder: (context, _) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.2),
+                      radius: 0.75 + 0.1 * _glow.value,
+                      colors: [
+                        color.withValues(alpha: 0.35 + 0.15 * _glow.value),
+                        color.withValues(alpha: 0),
+                      ],
                     ),
-                    const SizedBox(height: UmSpace.s6),
-                    Text(
-                      badgeName(l10n, b.key),
-                      textAlign: TextAlign.center,
-                      style: UmText.h2.copyWith(color: c.surface),
-                    ),
-                    const SizedBox(height: UmSpace.s2),
-                    Text(
-                      badgeGoal(l10n, b.key),
-                      textAlign: TextAlign.center,
-                      style: UmText.body.copyWith(color: c.surface),
-                    ),
-                    const SizedBox(height: UmSpace.s2),
-                    Text(
-                      b.earned ? l10n.badgeEarned : l10n.badgeProgress(b.progress, b.goal),
-                      style: UmText.label.copyWith(color: c.surface),
-                    ),
-                    const SizedBox(height: UmSpace.s5),
-                    Text(l10n.badgeSpinHint, style: UmText.caption.copyWith(color: c.surface)),
-                    const SizedBox(height: UmSpace.s4),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.close, style: UmText.button.copyWith(color: c.surface)),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          SafeArea(
+            child: Center(
+              child: ScaleTransition(
+                scale: Tween<double>(
+                  begin: 0.7,
+                  end: 1,
+                ).animate(CurvedAnimation(parent: route, curve: Curves.easeOutBack)),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(UmSpace.s6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.celebrate) ...[
+                        Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            l10n.badgeWonTitle,
+                            textAlign: TextAlign.center,
+                            style: UmText.h1.copyWith(color: c.ink),
+                          ),
+                        ),
+                        const SizedBox(height: UmSpace.s5),
+                      ],
+                      AnimatedBuilder(
+                        animation: _glow,
+                        builder: (context, child) => DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.3 + 0.3 * _glow.value),
+                                blurRadius: 30 + 20 * _glow.value,
+                                spreadRadius: 2 + 6 * _glow.value,
+                              ),
+                            ],
+                          ),
+                          child: child,
+                        ),
+                        child: SpinningMedal(badgeKey: b.key, earned: b.earned),
+                      ),
+                      const SizedBox(height: UmSpace.s6),
+                      Text(
+                        badgeName(l10n, b.key),
+                        textAlign: TextAlign.center,
+                        style: UmText.h2.copyWith(color: c.ink),
+                      ),
+                      const SizedBox(height: UmSpace.s2),
+                      Text(
+                        badgeGoal(l10n, b.key),
+                        textAlign: TextAlign.center,
+                        style: UmText.body.copyWith(color: c.ink),
+                      ),
+                      const SizedBox(height: UmSpace.s2),
+                      Text(
+                        b.earned ? l10n.badgeEarned : l10n.badgeProgress(b.progress, b.goal),
+                        style: UmText.label.copyWith(color: c.brandStrong),
+                      ),
+                      const SizedBox(height: UmSpace.s5),
+                      Text(l10n.badgeSpinHint, style: UmText.caption.copyWith(color: c.inkMuted)),
+                      const SizedBox(height: UmSpace.s4),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          l10n.close,
+                          style: UmText.button.copyWith(color: c.brandStrong),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

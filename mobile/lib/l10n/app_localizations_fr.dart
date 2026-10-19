@@ -2615,7 +2615,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get mapFocusVehicle => 'Voir le véhicule';
+  String get mapFocusVehicle => 'Suivre le véhicule';
 
   @override
   String get calcStepFuel => 'Le carburant du trajet';
@@ -2859,7 +2859,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatDirectInfo => 'Voir le profil';
 
   @override
-  String get badgeSpinHint => 'Fais glisser la médaille pour la faire tourner.';
+  String get badgeSpinHint =>
+      'Touche la médaille pour un tour, ou lance-la du doigt.';
 
   @override
   String get badgeWonTitle => 'Nouveau badge !';
@@ -2881,4 +2882,38 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get leaderboardPodium => 'Podium du mois';
+
+  @override
+  String get chatReply => 'Répondre';
+
+  @override
+  String chatReplyingTo(String name) {
+    return 'Réponse à $name';
+  }
+
+  @override
+  String get chatReplyCancel => 'Annuler la réponse';
+
+  @override
+  String chatReplySemantic(String name, String body) {
+    return 'En réponse à $name : $body';
+  }
+
+  @override
+  String get chatReplySwipeHint =>
+      'Glisse un message vers la droite pour y répondre.';
+
+  @override
+  String tripDurationMinutes(int minutes) {
+    return '$minutes min de trajet';
+  }
+
+  @override
+  String tripDurationHours(int hours, String minutes) {
+    return '$hours h $minutes de trajet';
+  }
+
+  @override
+  String get mapFollowingVehicle =>
+      'La carte suit le véhicule. Touche la carte pour arrêter.';
 }

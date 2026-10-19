@@ -113,7 +113,6 @@ class _RideContentState extends ConsumerState<_RideContent> {
     final router = GoRouter.of(context);
     final done = await showCancelSheet(context, widget.ride.id);
     if (done == null) return;
-    ref.invalidate(weekProposalsProvider);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     router.go(AppRoutes.home);
   }
@@ -304,6 +303,10 @@ class _RideContentState extends ConsumerState<_RideContent> {
           },
         ],
       ),
+      if (ride.myDuration(myId) case final duration?) ...[
+        const SizedBox(height: UmSpace.s1),
+        TripDuration(duration: duration),
+      ],
       if (live != null && !ride.isDriver) ...[
         const SizedBox(height: UmSpace.s3),
         _LiveBanner(

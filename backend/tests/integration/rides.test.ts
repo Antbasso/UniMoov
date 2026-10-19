@@ -98,8 +98,12 @@ describe('carte d’un trajet confirmé', () => {
   it('aperçu avant confirmation : tracé sans les abords des domiciles des autres, mon point exact', async () => {
     const response = await call('Hugo', 'GET', `/rides/${mondayId}/preview`);
     expect(response.statusCode).toBe(200);
-    const preview = response.json<{ route: [number, number][]; campus: { lat: number }; me: { lat: number; lon: number } }>();
+    const preview = response.json<{ route: [number, number][]; campus: { lat: number }; me: { lat: number; lon: number }; durationS: number }>();
     expect(preview.me).toEqual({ lat: user('Hugo').lat, lon: user('Hugo').lon });
+    // Mon temps de trajet : de ma prise en charge au campus, pas plus que tout l'itinéraire.
+    const driver = (await call('Léa', 'GET', `/rides/${mondayId}/preview`)).json<{ durationS: number }>();
+    expect(preview.durationS).toBeGreaterThan(0);
+    expect(preview.durationS).toBeLessThanOrEqual(driver.durationS);
     expect(preview.route.length).toBeGreaterThan(0);
     for (const [lat, lon] of preview.route) {
       for (const other of ['Léa', 'Chloé', 'Inès']) {

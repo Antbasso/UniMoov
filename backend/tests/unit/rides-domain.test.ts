@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from '../../src/modules/rides/domain.js';
+import { myDurationS, onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from '../../src/modules/rides/domain.js';
 
 const campus = { lat: 45.9195, lon: 6.158 };
 const seynod = { lat: 45.8865, lon: 6.089 };
@@ -133,5 +133,28 @@ describe('shiftedPassages', () => {
     expect(shiftedPassages(new Map([['a', at(40)]]), new Map([['a', at(39)]]))).toEqual([
       { userId: 'a', eta: at(39), earlier: true },
     ]);
+  });
+});
+
+describe('myDurationS', () => {
+  // Départ, passager A, passager B, arrivée : trois tronçons.
+  const route = { durationS: 1500, legs: [{ durationS: 300 }, { durationS: 400 }, { durationS: 800 }] };
+
+  it('conducteur : tout le trajet', () => {
+    expect(myDurationS(route, -1, 'to_campus')).toBe(1500);
+  });
+
+  it('aller : de ma prise en charge au campus', () => {
+    expect(myDurationS(route, 0, 'to_campus')).toBe(1200);
+    expect(myDurationS(route, 1, 'to_campus')).toBe(800);
+  });
+
+  it('retour : du campus à ma dépose', () => {
+    expect(myDurationS(route, 0, 'from_campus')).toBe(300);
+    expect(myDurationS(route, 1, 'from_campus')).toBe(700);
+  });
+
+  it('sans tronçons (itinéraire indisponible) : la durée totale', () => {
+    expect(myDurationS({ durationS: 600, legs: [] }, 0, 'to_campus')).toBe(600);
   });
 });

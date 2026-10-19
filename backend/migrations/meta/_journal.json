@@ -141,6 +141,13 @@
       "when": 1792351536204,
       "tag": "0019_reactions_any_emoji",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792394581609,
+      "tag": "0020_message_replies",
+      "breakpoints": true
     }
   ]
 }

@@ -121,10 +121,31 @@ class RideMap extends ConsumerStatefulWidget {
 class _RideMapState extends ConsumerState<RideMap> {
   final _map = MapController();
 
-  /// Trajet en cours : la carte se centre sur le véhicule (zoom de rue).
-  void _focusVehicle() {
+  /// Trajet en cours : la carte suit le véhicule jusqu'au prochain geste sur la carte.
+  bool _following = false;
+
+  void _followVehicle() {
     final live = widget.live;
-    if (live != null) _map.move(live, UmSize.mapMaxZoom);
+    if (live == null) return;
+    setState(() => _following = true);
+    _map.move(live, UmSize.mapMaxZoom);
+  }
+
+  @override
+  void didUpdateWidget(RideMap old) {
+    super.didUpdateWidget(old);
+    final live = widget.live;
+    if (live == null) {
+      _following = false;
+    } else if (_following && live != old.live) {
+      // Nouvelle position : la carte se recale sur le véhicule, au zoom choisi.
+      _map.move(live, _map.camera.zoom);
+    }
+  }
+
+  /// Un geste sur la carte (glisser, pincer, double toucher) arrête le suivi.
+  void _onMove(MapCamera _, bool hasGesture) {
+    if (hasGesture && _following) setState(() => _following = false);
   }
 
   @override
@@ -181,6 +202,7 @@ class _RideMapState extends ConsumerState<RideMap> {
             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
           ),
           onTap: onTap == null ? null : (_, point) => onTap(point),
+          onPositionChanged: live == null ? null : _onMove,
         ),
         children: [
           const BaseMapLayer(),
@@ -263,25 +285,33 @@ class _RideMapState extends ConsumerState<RideMap> {
       ),
     );
     if (live == null) return map;
-    // Petit bouton dans le coin bas gauche (l'attribution est à droite) : voir le véhicule.
+    // Petit bouton dans le coin bas gauche (l'attribution est à droite) : suivre le véhicule.
+    // Actif, il est plein, et la carte suit le véhicule tant qu'on ne la touche pas.
     return Stack(
       children: [
         Positioned.fill(child: map),
         Positioned(
           left: UmSpace.s3,
           bottom: UmSpace.s3,
-          child: Material(
-            color: c.surfaceRaised,
-            shape: const CircleBorder(),
-            elevation: 2,
-            child: IconButton(
-              tooltip: l10n.mapFocusVehicle,
-              constraints: const BoxConstraints(
-                minWidth: UmSize.tapTarget,
-                minHeight: UmSize.tapTarget,
+          child: Semantics(
+            toggled: _following,
+            liveRegion: _following,
+            hint: _following ? l10n.mapFollowingVehicle : null,
+            child: Material(
+              color: _following ? c.brandStrong : c.surfaceRaised,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: IconButton(
+                tooltip: l10n.mapFocusVehicle,
+                isSelected: _following,
+                constraints: const BoxConstraints(
+                  minWidth: UmSize.tapTarget,
+                  minHeight: UmSize.tapTarget,
+                ),
+                icon: Icon(Icons.my_location_rounded, color: c.brandStrong),
+                selectedIcon: Icon(Icons.navigation_rounded, color: c.onBrand),
+                onPressed: _followVehicle,
               ),
-              icon: Icon(Icons.my_location_rounded, color: c.brandStrong),
-              onPressed: _focusVehicle,
             ),
           ),
         ),

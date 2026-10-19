@@ -264,13 +264,24 @@ class ConversationController extends AsyncNotifier<ConversationState> {
     if (_onScreen) unawaited(_read());
   }
 
-  Future<void> send(String body) async {
-    final message = await _api.send(id, body);
+  Future<void> send(String body, {String? replyToId}) async {
+    final message = await _api.send(id, body, replyToId: replyToId);
     if (ref.mounted) _append(message);
   }
 
-  Future<void> sendPhoto(Uint8List bytes, String contentType, {String caption = ''}) async {
-    final message = await _api.sendPhoto(id, bytes, contentType, caption: caption);
+  Future<void> sendPhoto(
+    Uint8List bytes,
+    String contentType, {
+    String caption = '',
+    String? replyToId,
+  }) async {
+    final message = await _api.sendPhoto(
+      id,
+      bytes,
+      contentType,
+      caption: caption,
+      replyToId: replyToId,
+    );
     if (ref.mounted) _append(message);
   }
 

@@ -46,8 +46,13 @@ void main() {
       expect(find.text('Badges (4/8)'), findsOneWidget);
       // Toucher un badge : la médaille en grand, qui tourne.
       await tapText(tester, 'Premier trajet');
-      expect(find.text('Fais glisser la médaille pour la faire tourner.'), findsOneWidget);
-      await tester.drag(find.bySemanticsLabel('Premier trajet').last, const Offset(200, 0));
+      expect(find.text('Touche la médaille pour un tour, ou lance-la du doigt.'), findsOneWidget);
+      // Un toucher : un tour, la médaille reste ouverte.
+      await tester.tap(find.bySemanticsLabel('Premier trajet').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Fermer'), findsOneWidget);
+      // Lancée du doigt : elle tourne sur sa lancée puis se pose.
+      await tester.fling(find.bySemanticsLabel('Premier trajet').last, const Offset(300, 0), 3000);
       await tester.pumpAndSettle();
       await tapText(tester, 'Fermer');
       // Classement à part : podium, liste, apparaître sous son prénom.

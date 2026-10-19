@@ -6,7 +6,7 @@ import { estimatePrice, type PriceEstimate, proRataPrice } from '../pricing/doma
 import type { Notifier } from '../../shared/notifications/notifier.js';
 import { parisDateOf, parisTimeOf } from '../../shared/time.js';
 import type { SettingsService } from '../settings/service.js';
-import { type Direction, onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from './domain.js';
+import { type Direction, myDurationS, onboardDistances, orderStops, passageTimes, planKey, shiftedPassages } from './domain.js';
 import { type HistoryRow, isAccepted, type Member, pickupOf, type RideInfo, type RidesRepo } from './repo.js';
 
 const VISIBLE_STATUSES = new Set(['confirmed', 'in_progress', 'completed']);
@@ -64,6 +64,8 @@ export interface RidePreview {
   campus: LatLon & { name: string };
   /** Mon point de prise en charge (ou de dépose), le seul exact. */
   me: LatLon | null;
+  /** Mon temps de trajet, en secondes. */
+  durationS: number | null;
 }
 
 export interface RideView {
@@ -479,7 +481,7 @@ export class RidesService {
     const driver = members.find((m) => m.role === 'driver');
     const campus = { name: ride.campus.name, lat: ride.campus.lat, lon: ride.campus.lon };
     const mine = me.role === 'driver' ? me.home : (pickupOf(me)?.point ?? null);
-    if (!driver?.home) return { route: [], estimated: true, campus, me: mine };
+    if (!driver?.home) return { route: [], estimated: true, campus, me: mine, durationS: null };
 
     const stops = members
       .filter((m) => m.role === 'passenger')
@@ -492,9 +494,9 @@ export class RidesService {
         ? { start: driver.home, end: campus as LatLon, stops }
         : { start: campus as LatLon, end: driver.home, stops };
     const key = planKey(inputs);
+    const ordered = orderStops(inputs.start, inputs.end, inputs.stops);
     let route = this.previews.get(key);
     if (!route) {
-      const ordered = orderStops(inputs.start, inputs.end, inputs.stops);
       route = await this.routing.route([inputs.start, ...ordered.map((s) => s.point), inputs.end]);
       if (this.previews.size >= PREVIEW_CACHE_SIZE) this.previews.delete(this.previews.keys().next().value!);
       this.previews.set(key, route);
@@ -512,6 +514,7 @@ export class RidesService {
       estimated: route.estimated,
       campus,
       me: mine,
+      durationS: myDurationS(route, ordered.findIndex((o) => o.userId === userId), ride.direction),
     };
   }
 

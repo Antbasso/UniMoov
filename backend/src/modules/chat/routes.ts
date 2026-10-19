@@ -139,7 +139,7 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
       schema: { params: conversationParams, body: sendBody, response: { 201: message } },
       config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     },
-    async (request, reply) => reply.code(201).send(await service.send(request.userId, request.params.id, request.body.body)),
+    async (request, reply) => reply.code(201).send(await service.send(request.userId, request.params.id, request.body.body, request.body.replyToId ?? null)),
   );
 
   // Photo : corps brut JPEG ou PNG (réduite par l'app), légende facultative en paramètre.
@@ -159,7 +159,16 @@ export const chatRoutes: FastifyPluginAsyncZod<{ service: ChatService }> = (api,
       if (!Buffer.isBuffer(request.body)) throw new AppError(415, 'photo_invalid', 'Choisis une photo JPEG ou PNG');
       return reply
         .code(201)
-        .send(await service.sendPhoto(request.userId, request.params.id, contentType, request.body, request.query.caption));
+        .send(
+          await service.sendPhoto(
+            request.userId,
+            request.params.id,
+            contentType,
+            request.body,
+            request.query.caption,
+            request.query.replyToId ?? null,
+          ),
+        );
     },
   );
 

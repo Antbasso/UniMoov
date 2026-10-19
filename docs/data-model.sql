@@ -295,6 +295,7 @@ CREATE TABLE messages (
   sender_id uuid NOT NULL REFERENCES users(id),
   body text NOT NULL,                       -- vide seulement pour une photo sans légende
   has_photo boolean NOT NULL DEFAULT false,
+  reply_to_id uuid REFERENCES messages(id) ON DELETE SET NULL,  -- réponse à un message (citation)
   created_at timestamptz NOT NULL DEFAULT now(),
   -- proposition de covoiturage (groupe ou privé) : offre d'un trajet, ou demande jour + sens
   carpool_kind text CHECK (carpool_kind IN ('offer', 'request')),

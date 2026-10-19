@@ -235,6 +235,35 @@ void main() {
     expect(find.bySemanticsLabel(RegExp('^Photo')), findsOneWidget);
   });
 
+  testWidgets('répondre à un message : menu ou glisser, citation au-dessus de la réponse', (
+    tester,
+  ) async {
+    await open(tester, AppRoutes.conversation('conv-ride'));
+    // Appui long, « Répondre » : le message est cité au-dessus de la saisie.
+    await tester.longPress(find.text('Je pars à 7 h 40.'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Répondre');
+    expect(find.textContaining('Réponse à'), findsOneWidget);
+    await tester.tap(find.byTooltip('Annuler la réponse'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Réponse à'), findsNothing);
+
+    // Glisser vers la droite fait de même.
+    await tester.drag(find.text('Je pars à 7 h 40.'), const Offset(120, 0));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Réponse à'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Écris un message'), 'Ça marche');
+    await tester.pump();
+    await tester.tap(find.byTooltip('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Réponse à'), findsNothing);
+    final sent = backend.messagesById['conv-ride']!.last;
+    expect(sent.body, 'Ça marche');
+    expect(sent.replyTo?.body, 'Je pars à 7 h 40.');
+    // La citation est reprise en petit dans la bulle de la réponse.
+    expect(find.text('Je pars à 7 h 40.'), findsNWidgets(2));
+  });
+
   testWidgets('chat de trajet archivé : lecture seule', (tester) async {
     backend.conversationsById['conv-ride'] = const Conversation(
       id: 'conv-ride',

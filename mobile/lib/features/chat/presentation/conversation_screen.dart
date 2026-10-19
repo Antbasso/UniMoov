@@ -70,8 +70,17 @@ class _Conversation extends ConsumerStatefulWidget {
 
 class _ConversationState extends ConsumerState<_Conversation> {
   final _text = TextEditingController();
+  final _focus = FocusNode();
   bool _sending = false;
   String? _errorCode;
+
+  /// Message auquel je réponds, cité au-dessus de la saisie.
+  ChatMessage? _replyTo;
+
+  void _startReply(ChatMessage message) {
+    setState(() => _replyTo = message);
+    _focus.requestFocus();
+  }
 
   @override
   void initState() {
@@ -83,6 +92,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
   @override
   void dispose() {
     _text.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -96,8 +106,9 @@ class _ConversationState extends ConsumerState<_Conversation> {
       _errorCode = null;
     });
     try {
-      await ref.read(conversationProvider(_id).notifier).send(body);
+      await ref.read(conversationProvider(_id).notifier).send(body, replyToId: _replyTo?.id);
       _text.clear();
+      if (mounted) setState(() => _replyTo = null);
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
     } finally {
@@ -167,8 +178,9 @@ class _ConversationState extends ConsumerState<_Conversation> {
     try {
       await ref
           .read(conversationProvider(_id).notifier)
-          .sendPhoto(bytes, imageContentType(bytes), caption: caption);
+          .sendPhoto(bytes, imageContentType(bytes), caption: caption, replyToId: _replyTo?.id);
       _text.clear();
+      if (mounted) setState(() => _replyTo = null);
     } on ApiException catch (error) {
       if (mounted) setState(() => _errorCode = error.code);
     } finally {
@@ -197,6 +209,8 @@ class _ConversationState extends ConsumerState<_Conversation> {
     ChatMember? memberOf(String userId) =>
         conversation.members.where((m) => m.userId == userId).firstOrNull;
     String nameOf(String userId) => memberOf(userId)?.firstName ?? l10n.chatFormerMember;
+    // Auteur d'un message cité : « Toi » pour moi.
+    String quoteName(String userId) => userId == me ? l10n.chatGroupYou : nameOf(userId);
 
     return Scaffold(
       appBar: AppBar(
@@ -335,6 +349,14 @@ class _ConversationState extends ConsumerState<_Conversation> {
                                 myId: me,
                                 sender: sender,
                                 senderColor: context.umPersonColor(message.senderId),
+                                replyAuthor: message.replyTo == null
+                                    ? null
+                                    : quoteName(message.replyTo!.senderId),
+                                replyColor: message.replyTo == null
+                                    ? null
+                                    : context.umPersonColor(message.replyTo!.senderId),
+                                // Plus d'air entre deux séries qu'à l'intérieur d'une série.
+                                gapAfter: lastOfRun ? UmSpace.s4 : UmSpace.s2,
                                 avatarSlot: showSender,
                                 avatar: showSender && !mine && lastOfRun
                                     ? GestureDetector(
@@ -349,6 +371,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                                 onReact: conversation.archived || me == null
                                     ? null
                                     : (emoji) => _react(message.id, me, emoji),
+                                onReply: conversation.archived ? null : () => _startReply(message),
                                 onOpenPhoto: (url) => showChatPhoto(context, url),
                               );
                         // Liste inversée : le séparateur de jour vient au-dessus du premier message du jour.
@@ -390,7 +413,33 @@ class _ConversationState extends ConsumerState<_Conversation> {
                   ],
                 ),
               )
-            else
+            else ...[
+              if (_replyTo case final quoted?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(UmSpace.s4, UmSpace.s2, UmSpace.s1, 0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.reply_rounded, color: c.brandStrong),
+                      const SizedBox(width: UmSpace.s2),
+                      Expanded(
+                        child: Semantics(
+                          liveRegion: true,
+                          label: l10n.chatReplyingTo(quoteName(quoted.senderId)),
+                          child: QuoteBlock(
+                            quote: MessageQuote.of(quoted),
+                            author: l10n.chatReplyingTo(quoteName(quoted.senderId)),
+                            color: context.umPersonColor(quoted.senderId),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.chatReplyCancel,
+                        icon: Icon(Icons.close_rounded, color: c.inkMuted),
+                        onPressed: () => setState(() => _replyTo = null),
+                      ),
+                    ],
+                  ),
+                ),
               // Saisie compacte : « + » (photo, appareil, trajet), champ arrondi, envoi.
               Padding(
                 padding: const EdgeInsets.fromLTRB(UmSpace.s1, UmSpace.s2, UmSpace.s1, UmSpace.s3),
@@ -409,6 +458,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                     Expanded(
                       child: TextField(
                         controller: _text,
+                        focusNode: _focus,
                         minLines: 1,
                         maxLines: 5,
                         maxLength: 2000,
@@ -463,6 +513,7 @@ class _ConversationState extends ConsumerState<_Conversation> {
                   ],
                 ),
               ),
+            ],
           ],
         ),
       ),

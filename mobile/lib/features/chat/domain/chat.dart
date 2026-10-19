@@ -67,6 +67,36 @@ class Carpool {
   }
 }
 
+/// Message cité par une réponse : son auteur et le début de son texte.
+class MessageQuote {
+  const MessageQuote({
+    required this.id,
+    required this.senderId,
+    required this.body,
+    this.hasPhoto = false,
+  });
+
+  factory MessageQuote.fromJson(Map<String, dynamic> json) => MessageQuote(
+    id: json['id'] as String,
+    senderId: json['senderId'] as String,
+    body: json['body'] as String,
+    hasPhoto: json['hasPhoto'] as bool? ?? false,
+  );
+
+  /// Citation d'un message (comme le serveur : 200 premiers caractères).
+  factory MessageQuote.of(ChatMessage m) => MessageQuote(
+    id: m.id,
+    senderId: m.senderId,
+    body: m.body.length > 200 ? m.body.substring(0, 200) : m.body,
+    hasPhoto: m.photoUrl != null,
+  );
+
+  final String id;
+  final String senderId;
+  final String body;
+  final bool hasPhoto;
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -77,6 +107,7 @@ class ChatMessage {
     this.carpool,
     this.reactions = const [],
     this.photoUrl,
+    this.replyTo,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -93,6 +124,9 @@ class ChatMessage {
         (userId: (r as Map<String, dynamic>)['userId'] as String, emoji: r['emoji'] as String),
     ],
     photoUrl: json['photoUrl'] as String?,
+    replyTo: json['replyTo'] == null
+        ? null
+        : MessageQuote.fromJson(json['replyTo'] as Map<String, dynamic>),
   );
 
   final String id;
@@ -109,6 +143,9 @@ class ChatMessage {
 
   /// Photo jointe, chargée avec le jeton (membres seulement).
   final String? photoUrl;
+
+  /// Message auquel celui-ci répond, cité en petit au-dessus.
+  final MessageQuote? replyTo;
 
   /// Réactions regroupées : emoji et nombre, dans l'ordre d'arrivée.
   List<(String, int)> get reactionCounts {
@@ -131,6 +168,7 @@ class ChatMessage {
     carpool: carpool,
     reactions: reactions ?? this.reactions,
     photoUrl: photoUrl,
+    replyTo: replyTo,
   );
 }
 

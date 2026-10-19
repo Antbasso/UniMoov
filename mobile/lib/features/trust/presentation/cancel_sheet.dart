@@ -6,6 +6,9 @@ import '../../../core/api/error_messages.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../chat/presentation/chat_controller.dart';
+import '../../proposals/presentation/proposals_controller.dart';
+import '../../rides/presentation/active_ride.dart';
 import '../data/trust_api.dart';
 import '../domain/trust.dart';
 import 'trust_info.dart';
@@ -47,6 +50,11 @@ class _CancelSheetState extends ConsumerState<CancelSheet> {
     });
     try {
       final applied = await ref.read(trustApiProvider).cancel(widget.rideId);
+      // Le trajet quitte l'accueil, le bandeau « en cours » et les conversations.
+      ref
+        ..invalidate(weekProposalsProvider)
+        ..invalidate(activeRideProvider)
+        ..invalidate(conversationsProvider);
       // Seuil franchi pendant que la feuille était ouverte : on dit le palier vraiment appliqué.
       if (mounted) {
         Navigator.of(context)

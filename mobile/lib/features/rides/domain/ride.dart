@@ -233,6 +233,19 @@ class RideDetails {
   bool get completed => status == 'completed';
   bool get markedAbsent => myStatus == 'absent';
 
+  /// Mon temps de trajet : tout l'itinéraire pour le conducteur ; pour un passager, de sa prise
+  /// en charge au campus (aller) ou du campus à sa dépose (retour), d'après les heures de passage.
+  Duration? myDuration(String? userId) {
+    final mine = stopOf(userId);
+    if (isDriver || mine == null || mine.kind != StopKind.passenger) {
+      return durationS == null ? null : Duration(seconds: durationS!);
+    }
+    final campus = stops.where((s) => s.kind == StopKind.campus).firstOrNull?.eta;
+    final (from, to) = direction == Direction.toCampus ? (mine.eta, campus) : (campus, mine.eta);
+    if (from == null || to == null || to.isBefore(from)) return null;
+    return to.difference(from);
+  }
+
   /// Arrêt du conducteur (départ à l'aller, arrivée au retour).
   RideStop? get driverStop => stops.where((s) => s.kind == StopKind.driver).firstOrNull;
 }
@@ -502,6 +515,7 @@ class RidePreview {
     required this.campus,
     required this.campusName,
     this.me,
+    this.durationS,
   });
 
   factory RidePreview.fromJson(Map<String, dynamic> json) {
@@ -519,6 +533,7 @@ class RidePreview {
       campus: point(json['campus']),
       campusName: (json['campus'] as Map<String, dynamic>)['name'] as String,
       me: json['me'] == null ? null : point(json['me']),
+      durationS: json['durationS'] as int?,
     );
   }
 
@@ -527,4 +542,7 @@ class RidePreview {
   final (double, double) campus;
   final String campusName;
   final (double, double)? me;
+
+  /// Mon temps de trajet, en secondes (serveur).
+  final int? durationS;
 }

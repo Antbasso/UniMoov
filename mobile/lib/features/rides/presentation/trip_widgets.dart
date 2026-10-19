@@ -149,6 +149,31 @@ bool personVisible(PublicPerson p) => p.status != 'declined' && p.status != 'can
 
 /// Prix du trajet : le montant seul, et le calcul précis replié dessous (« Détail du
 /// calcul ») : kilomètres × consommation × prix du litre, puis les portions partagées.
+/// « 25 min de trajet » (ou « 1 h 05 de trajet »), sous l'heure d'un trajet.
+class TripDuration extends StatelessWidget {
+  const TripDuration({super.key, required this.duration});
+
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    // Arrondi à la minute, au moins une.
+    final minutes = (duration.inSeconds / 60).round().clamp(1, 24 * 60);
+    final text = minutes < 60
+        ? l10n.tripDurationMinutes(minutes)
+        : l10n.tripDurationHours(minutes ~/ 60, (minutes % 60).toString().padLeft(2, '0'));
+    return Row(
+      children: [
+        Icon(Icons.timelapse_rounded, size: UmSize.iconSm, color: c.inkMuted),
+        const SizedBox(width: UmSpace.s1),
+        Text(text, style: UmText.bodySm.copyWith(color: c.inkMuted)),
+      ],
+    );
+  }
+}
+
 class PriceBullets extends StatelessWidget {
   const PriceBullets({super.key, required this.price, required this.isDriver, this.distanceM});
 

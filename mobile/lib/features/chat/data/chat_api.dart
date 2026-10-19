@@ -23,10 +23,16 @@ abstract interface class ChatApi {
 
   /// Messages du plus récent au plus ancien ; `before` pour remonter.
   Future<List<ChatMessage>> messages(String id, {DateTime? before, String? beforeId});
-  Future<ChatMessage> send(String id, String body);
+  Future<ChatMessage> send(String id, String body, {String? replyToId});
 
   /// Photo (JPEG ou PNG réduite), avec une légende facultative.
-  Future<ChatMessage> sendPhoto(String id, Uint8List bytes, String contentType, {String caption});
+  Future<ChatMessage> sendPhoto(
+    String id,
+    Uint8List bytes,
+    String contentType, {
+    String caption,
+    String? replyToId,
+  });
 
   /// Ma réaction à un message ; `null` la retire.
   Future<ChatMessage> react(String id, String messageId, String? emoji);
@@ -124,10 +130,10 @@ class DioChatApi implements ChatApi {
       });
 
   @override
-  Future<ChatMessage> send(String id, String body) => guardApi(() async {
+  Future<ChatMessage> send(String id, String body, {String? replyToId}) => guardApi(() async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/conversations/$id/messages',
-      data: {'body': body},
+      data: {'body': body, 'replyToId': ?replyToId},
     );
     return ChatMessage.fromJson(response.data!);
   });
@@ -138,10 +144,11 @@ class DioChatApi implements ChatApi {
     Uint8List bytes,
     String contentType, {
     String caption = '',
+    String? replyToId,
   }) => guardApi(() async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/conversations/$id/photos',
-      queryParameters: {if (caption.isNotEmpty) 'caption': caption},
+      queryParameters: {if (caption.isNotEmpty) 'caption': caption, 'replyToId': ?replyToId},
       data: Stream.fromIterable([bytes]),
       options: Options(
         contentType: contentType,

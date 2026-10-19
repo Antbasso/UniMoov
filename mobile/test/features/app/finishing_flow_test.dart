@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -15,7 +16,7 @@ import 'package:unimoov/l10n/app_localizations.dart';
 import '../../support/app_harness.dart';
 import '../../support/fake_backend.dart';
 
-/// Finitions : lien d'agenda collé depuis le profil, charte, bouton « Voir le véhicule ».
+/// Finitions : lien d'agenda collé depuis le profil, charte, suivi du véhicule sur la carte.
 void main() {
   late FakeBackend backend;
   late MemoryTokenStorage storage;
@@ -65,9 +66,11 @@ void main() {
     expect(find.text('9. En cas de manquement'), findsOneWidget);
   });
 
-  testWidgets('carte d’un trajet en cours : bouton « Voir le véhicule » dans le coin', (
+  testWidgets('carte d’un trajet en cours : suivre le véhicule jusqu’à ce qu’on touche la carte', (
     tester,
   ) async {
+    var live = const LatLng(45.91, 6.12);
+    late StateSetter move;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [rasterTilesEnabledProvider.overrideWithValue(false)],
@@ -76,21 +79,43 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('fr'),
-          home: const Scaffold(
-            body: RideMap(
-              stops: [],
-              route: [(45.90, 6.10), (45.92, 6.16)],
-              semanticLabel: 'Carte',
-              live: LatLng(45.91, 6.12),
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                move = setState;
+                return RideMap(
+                  stops: const [],
+                  route: const [(45.90, 6.10), (45.92, 6.16)],
+                  semanticLabel: 'Carte',
+                  live: live,
+                );
+              },
             ),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Voir le véhicule'), findsOneWidget);
-    await tester.tap(find.byTooltip('Voir le véhicule'));
+    LatLng center() => MapCamera.of(tester.element(find.byType(MarkerLayer))).center;
+    Future<void> drive(LatLng to) async {
+      move(() => live = to);
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tap(find.byTooltip('Suivre le véhicule'));
     await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.navigation_rounded), findsWidgets);
+    // Le véhicule avance : la carte le suit.
+    await drive(const LatLng(45.915, 6.13));
+    expect(center().latitude, closeTo(45.915, 1e-6));
+    expect(center().longitude, closeTo(6.13, 1e-6));
+    // Un geste sur la carte arrête le suivi : elle ne bouge plus d'elle-même.
+    await tester.drag(find.byType(FlutterMap), const Offset(80, 60));
+    await tester.pumpAndSettle();
+    final moved = center();
+    await drive(const LatLng(45.918, 6.14));
+    expect(center(), moved);
+    expect(find.byIcon(Icons.my_location_rounded), findsOneWidget);
   });
 
   testWidgets('retour : l’arrivée du conducteur est un drapeau, son départ à l’aller une voiture', (
