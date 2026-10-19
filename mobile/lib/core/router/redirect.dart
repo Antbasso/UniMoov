@@ -25,7 +25,12 @@ abstract final class AppRoutes {
   static String proposal(String week, String id) => '/week/$week/proposals/$id';
   static String alternatives(String week, String id) => '/week/$week/proposals/$id/alternatives';
   static String ride(String id) => '/rides/$id';
-  static String rideMeetingPoint(String id) => '/rides/$id/meeting-point';
+
+  /// Choisir mon point de rencontre, ou (conducteur) en proposer un à `forUser`.
+  static String rideMeetingPoint(String id, {String? forUser, String? name}) => Uri(
+    path: '/meeting-point/$id',
+    queryParameters: forUser == null ? null : {'for': forUser, 'name': ?name},
+  ).toString();
   static String rideSuggestions(String id) => '/rides/$id/suggestions';
   static String rideDeparture(String id) => '/rides/$id/departure';
   static String rideLocation(String id) => '/rides/$id/location';

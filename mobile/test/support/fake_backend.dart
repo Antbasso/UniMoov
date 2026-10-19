@@ -482,21 +482,75 @@ class FakeBackend
   Future<RidePreview> preview(String id) async {
     _maybeFail();
     previews++;
-    return const RidePreview(
-      route: [(45.8865, 6.089), (45.905, 6.12), (45.9195, 6.158)],
+    return RidePreview(
+      route: const [(45.8865, 6.089), (45.905, 6.12), (45.9195, 6.158)],
       estimated: false,
       campus: (45.9195, 6.158),
       campusName: "Campus d'Annecy",
       me: (45.8865, 6.089),
       durationS: 1500,
+      meetingPoints: previewMeetingPoints,
     );
+  }
+
+  /// Points de rencontre renvoyés dans l'aperçu (choisis ou proposés).
+  List<MeetingPointEntry> previewMeetingPoints = const [];
+
+  /// Points proposés par le conducteur : (trajet, passager, point) ; réponses du passager.
+  final List<(String, String, MeetingPoint)> proposedPoints = [];
+  final List<bool> meetingAnswers = [];
+
+  @override
+  Future<void> proposeMeetingPoint(String id, String userId, MeetingPoint point) async {
+    _maybeFail();
+    proposedPoints.add((id, userId, point));
+  }
+
+  @override
+  Future<void> answerMeetingPoint(String id, {required bool accept}) async {
+    _maybeFail();
+    meetingAnswers.add(accept);
+    previewMeetingPoints = [
+      for (final m in previewMeetingPoints)
+        if (!m.proposed)
+          m
+        else if (accept)
+          MeetingPointEntry(userId: m.userId, proposed: false, point: m.point),
+    ];
+  }
+
+  @override
+  Future<List<MeetingSpot>> meetingSpots(MapBounds bounds) async {
+    _maybeFail();
+    return const [
+      MeetingSpot(
+        kind: SpotKind.parking,
+        name: 'Parking des Marquisats',
+        lat: 45.8952,
+        lon: 6.1365,
+      ),
+      MeetingSpot(
+        kind: SpotKind.carpool,
+        name: 'Aire de covoiturage de Seynod',
+        lat: 45.8848,
+        lon: 6.0921,
+      ),
+    ];
   }
 
   @override
   Future<void> setMeetingPoint(String id, MeetingPoint? point) async {
     _maybeFail();
-    final ride = rides[id]!;
+    final ride = rides[id];
     final myId = idOf(_me.email);
+    // Comme le serveur : mon point choisi remplace aussi une proposition du conducteur.
+    previewMeetingPoints = [
+      for (final m in previewMeetingPoints)
+        if (m.userId != myId) m,
+      if (point != null) MeetingPointEntry(userId: myId, proposed: false, point: point),
+    ];
+    // Trajet pas encore confirmé : seul l'aperçu change.
+    if (ride == null) return;
     rides[id] = ride.copyWithStops([
       for (final s in ride.stops)
         s.userId != myId

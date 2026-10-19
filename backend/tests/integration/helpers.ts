@@ -5,6 +5,7 @@ import { buildApp } from '../../src/app.js';
 import { createDatabase, type Database } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { FakeGeocodingProvider } from '../../src/shared/geocoding/fake-geocoding-provider.js';
+import { FakePlacesProvider } from '../../src/shared/places/fake-places-provider.js';
 import { MemoryMailProvider } from '../../src/shared/mail/memory-mail-provider.js';
 import { MemoryNotifier } from '../../src/shared/notifications/notifier.js';
 import { MemoryPushProvider } from '../../src/shared/push/push-provider.js';
@@ -23,6 +24,8 @@ export interface TestContext {
   database: Database;
   mail: MemoryMailProvider;
   geocoding: FakeGeocodingProvider;
+  /** Parkings et aires de covoiturage d'Annecy, sans réseau. */
+  places: FakePlacesProvider;
   payments: FakePaymentProvider;
   notifier: MemoryNotifier;
   push: MemoryPushProvider;
@@ -47,6 +50,7 @@ export async function setupTestContext(
   await database.pool.query(`UPDATE app_settings SET value = '0' WHERE key = 'matching.stopPenaltySeconds'`);
   const mail = new MemoryMailProvider();
   const geocoding = new FakeGeocodingProvider();
+  const places = new FakePlacesProvider();
   const payments = new FakePaymentProvider();
   const notifier = new MemoryNotifier();
   const push = new MemoryPushProvider();
@@ -72,6 +76,7 @@ export async function setupTestContext(
       },
       mail,
       geocoding,
+      places,
       payments,
       notifier,
       push,
@@ -85,6 +90,7 @@ export async function setupTestContext(
     database,
     mail,
     geocoding,
+    places,
     payments,
     notifier,
     push,

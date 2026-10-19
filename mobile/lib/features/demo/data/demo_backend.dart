@@ -183,7 +183,8 @@ class DemoBackend
         time: _at(later, 8),
         driverId: 'lea',
         driverStatus: 'accepted',
-        seats: [DemoSeat(demoMeId, 'proposed', detourMinutes: 3)],
+        // Léa propose à Camille de la retrouver au parking le plus proche.
+        seats: [DemoSeat(demoMeId, 'proposed', detourMinutes: 3)..driverWillPropose = true],
       ),
     );
     // Demain soir : Camille conduit ; Hugo proposé, Manon demande une place.
@@ -1109,6 +1110,14 @@ class DemoBackend
           presenceValidated: seat?.presenceValidated ?? false,
           arrived: seat?.arrived ?? false,
           ended: seat?.ended ?? false,
+          proposedMeetingPoint: switch (seat?.proposedMeeting) {
+            final m? when r.driverIsMe || userId == demoMeId => MeetingPoint(
+              label: m.label,
+              lat: m.lat,
+              lon: m.lon,
+            ),
+            _ => null,
+          },
         ),
       );
     }
@@ -1203,6 +1212,7 @@ class DemoBackend
     await _wait();
     final r = _rides[id];
     if (r == null || !_involvesMe(r)) throw const ApiException('forbidden', '', statusCode: 403);
+    _driverProposals(r);
     final path = _path(r, all: true);
     final mine = path.where((p) => p.userId == demoMeId).firstOrNull;
     // Mon temps de trajet à 35 km/h : tout le trajet en conduisant, sinon ma portion.
@@ -1229,6 +1239,23 @@ class DemoBackend
       campusName: demoCampus.label,
       me: mine == null ? null : (mine.lat, mine.lon),
       durationS: (metres / (35 * 1000 / 3600)).round(),
+      meetingPoints: [
+        for (final seat in r.seats)
+          if (seat.status != 'declined' && (r.driverIsMe || seat.personId == demoMeId)) ...[
+            if (seat.meetingPoint case final m?)
+              MeetingPointEntry(
+                userId: seat.personId,
+                proposed: false,
+                point: MeetingPoint(label: m.label, lat: m.lat, lon: m.lon),
+              ),
+            if (seat.proposedMeeting case final m?)
+              MeetingPointEntry(
+                userId: seat.personId,
+                proposed: true,
+                point: MeetingPoint(label: m.label, lat: m.lat, lon: m.lon),
+              ),
+          ],
+      ],
     );
   }
 
@@ -1241,7 +1268,75 @@ class DemoBackend
     if (point != null && demoDistance(home.lat, home.lon, point.lat, point.lon) > 2000) {
       throw const ApiException('meeting_point_too_far', '', statusCode: 422);
     }
-    seat.meetingPoint = point == null ? null : (label: point.label, lat: point.lat, lon: point.lon);
+    seat
+      ..meetingPoint = point == null ? null : (label: point.label, lat: point.lat, lon: point.lon)
+      // Choisir son point répond aussi à une proposition du conducteur.
+      ..proposedMeeting = null
+      ..driverWillPropose = false;
+  }
+
+  /// Démo : le conducteur propose le lieu public le plus proche du passager.
+  void _driverProposals(DemoRide r) {
+    for (final seat in r.seats.where((s) => s.driverWillPropose)) {
+      seat.driverWillPropose = false;
+      final home = _pointOf(seat.personId);
+      final nearest = demoSpots.reduce(
+        (a, b) =>
+            demoDistance(home.lat, home.lon, a.lat, a.lon) <=
+                demoDistance(home.lat, home.lon, b.lat, b.lon)
+            ? a
+            : b,
+      );
+      if (demoDistance(home.lat, home.lon, nearest.lat, nearest.lon) <= 2000) {
+        seat.proposedMeeting = (label: nearest.name, lat: nearest.lat, lon: nearest.lon);
+      }
+    }
+  }
+
+  @override
+  Future<void> proposeMeetingPoint(String id, String userId, MeetingPoint point) async {
+    await _wait();
+    final r = _ride(id);
+    if (!r.driverIsMe) throw const ApiException('forbidden', '', statusCode: 403);
+    final seat = r.seatOf(userId);
+    if (seat == null || seat.status == 'declined') {
+      throw const ApiException('not_found', '', statusCode: 404);
+    }
+    seat.proposedMeeting = (label: point.label, lat: point.lat, lon: point.lon);
+  }
+
+  @override
+  Future<void> answerMeetingPoint(String id, {required bool accept}) async {
+    await _wait();
+    final seat = _ride(id).seatOf(demoMeId);
+    final proposal = seat?.proposedMeeting;
+    if (seat == null || proposal == null) {
+      throw const ApiException('not_found', '', statusCode: 404);
+    }
+    final home = _pointOf(demoMeId);
+    if (accept && demoDistance(home.lat, home.lon, proposal.lat, proposal.lon) > 2000) {
+      throw const ApiException('meeting_point_too_far', '', statusCode: 422);
+    }
+    if (accept) seat.meetingPoint = proposal;
+    seat.proposedMeeting = null;
+  }
+
+  @override
+  Future<List<MeetingSpot>> meetingSpots(MapBounds bounds) async {
+    await _wait();
+    return [
+      for (final spot in demoSpots)
+        if (spot.lat >= bounds.south &&
+            spot.lat <= bounds.north &&
+            spot.lon >= bounds.west &&
+            spot.lon <= bounds.east)
+          MeetingSpot(
+            kind: spot.kind == SpotKindName.carpool ? SpotKind.carpool : SpotKind.parking,
+            name: spot.name,
+            lat: spot.lat,
+            lon: spot.lon,
+          ),
+    ];
   }
 
   @override

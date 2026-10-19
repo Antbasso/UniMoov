@@ -20,6 +20,7 @@ const stop = z.strictObject({
   presenceValidated: z.boolean(),
   arrived: z.boolean(),
   ended: z.boolean(),
+  proposedMeetingPoint: z.strictObject({ label: z.string(), lat: z.number(), lon: z.number() }).nullable(),
 });
 
 export const price = z.strictObject({
@@ -122,4 +123,20 @@ export const previewResponse = z.strictObject({
   me: point.nullable(),
   /** Mon temps de trajet en secondes (voir `myDurationS`) ; null sans itinéraire. */
   durationS: z.number().int().nullable(),
+  meetingPoints: z.array(
+    z.strictObject({
+      userId: z.uuid(),
+      kind: z.enum(['chosen', 'proposed']),
+      label: z.string(),
+      lat: z.number(),
+      lon: z.number(),
+    }),
+  ),
 });
+
+export const pickupProposalBody = z.object({
+  label: z.string().trim().min(1).max(120),
+  lat: z.number().min(-85).max(85),
+  lon: z.number().min(-180).max(180),
+});
+export const pickupAnswerBody = z.object({ accept: z.boolean() });

@@ -29,6 +29,23 @@ void main() {
     },
   );
 
+  test(
+    'point de rencontre : Léa propose un parking, Camille l’accepte avant d’accepter le trajet',
+    () async {
+      final b = backend();
+      final preview = await b.preview('demo-offer');
+      final offer = preview.proposedTo(demoMeId);
+      expect(offer, isNotNull);
+      await b.answerMeetingPoint('demo-offer', accept: true);
+      final after = await b.preview('demo-offer');
+      expect(after.proposedTo(demoMeId), isNull);
+      expect(after.chosenBy(demoMeId)?.label, offer!.label);
+      // Parkings et aires de covoiturage d'Annecy, filtrés par zone.
+      final spots = await b.meetingSpots((south: 45.88, west: 6.08, north: 45.94, east: 6.16));
+      expect(spots.map((s) => s.kind).toSet(), {SpotKind.parking, SpotKind.carpool});
+    },
+  );
+
   test('solde insuffisant pour le trajet long, puis recharge', () async {
     final b = backend();
     await expectLater(

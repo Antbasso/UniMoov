@@ -1495,13 +1495,13 @@ abstract class AppLocalizations {
   /// No description provided for @meetingPointIntro.
   ///
   /// In fr, this message translates to:
-  /// **'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.'**
+  /// **'Touche la carte, ou un parking, pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.'**
   String get meetingPointIntro;
 
   /// No description provided for @meetingPointMapLabel.
   ///
   /// In fr, this message translates to:
-  /// **'Carte : touche pour placer le point de rendez-vous'**
+  /// **'Carte du trajet : touche un endroit ou un parking pour placer le point de rendez-vous'**
   String get meetingPointMapLabel;
 
   /// No description provided for @meetingPointLabel.
@@ -4857,6 +4857,108 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La carte suit le véhicule. Touche la carte pour arrêter.'**
   String get mapFollowingVehicle;
+
+  /// No description provided for @spotParking.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parking public'**
+  String get spotParking;
+
+  /// No description provided for @spotCarpool.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aire de covoiturage'**
+  String get spotCarpool;
+
+  /// No description provided for @meetingPointOnMap.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point choisi sur la carte'**
+  String get meetingPointOnMap;
+
+  /// No description provided for @meetingPointProposeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un point pour {name}'**
+  String meetingPointProposeTitle(String name);
+
+  /// No description provided for @meetingPointProposeIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche la carte, ou un parking sur ton chemin, pour proposer un point de rencontre. Ton passager l\'accepte ou garde le sien.'**
+  String get meetingPointProposeIntro;
+
+  /// No description provided for @meetingPointPropose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposer ce point'**
+  String get meetingPointPropose;
+
+  /// No description provided for @meetingPointProposed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Point proposé. Ton passager va répondre.'**
+  String get meetingPointProposed;
+
+  /// No description provided for @meetingPointChoose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir mon point de rencontre'**
+  String get meetingPointChoose;
+
+  /// No description provided for @meetingPointMine.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rendez-vous : {label}'**
+  String meetingPointMine(String label);
+
+  /// No description provided for @meetingPointAtHome.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le conducteur passe te prendre à ton adresse.'**
+  String get meetingPointAtHome;
+
+  /// No description provided for @meetingPointOffer.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} te propose de te retrouver ici : {label}'**
+  String meetingPointOffer(String name, String label);
+
+  /// No description provided for @meetingPointAccept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accepter ce point'**
+  String get meetingPointAccept;
+
+  /// No description provided for @meetingPointDecline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder le mien'**
+  String get meetingPointDecline;
+
+  /// No description provided for @meetingPointAccepted.
+  ///
+  /// In fr, this message translates to:
+  /// **'C\'est noté : rendez-vous à ce point.'**
+  String get meetingPointAccepted;
+
+  /// No description provided for @meetingPointDeclined.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu gardes ton point actuel.'**
+  String get meetingPointDeclined;
+
+  /// No description provided for @meetingPointProposeAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposer un point'**
+  String get meetingPointProposeAction;
+
+  /// No description provided for @meetingPointPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Proposé : {label}, en attente'**
+  String meetingPointPending(String label);
 }
 
 class _AppLocalizationsDelegate

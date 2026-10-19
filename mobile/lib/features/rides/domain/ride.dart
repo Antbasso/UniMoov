@@ -21,6 +21,7 @@ class RideStop {
     this.firstName,
     this.lastName,
     this.eta,
+    this.proposedMeetingPoint,
   });
 
   factory RideStop.fromJson(Map<String, dynamic> json) => RideStop(
@@ -39,6 +40,9 @@ class RideStop {
     presenceValidated: json['presenceValidated'] as bool? ?? false,
     arrived: json['arrived'] as bool? ?? false,
     ended: json['ended'] as bool? ?? false,
+    proposedMeetingPoint: json['proposedMeetingPoint'] == null
+        ? null
+        : MeetingPoint.fromJson(json['proposedMeetingPoint'] as Map<String, dynamic>),
   );
 
   final int order;
@@ -66,6 +70,10 @@ class RideStop {
   /// arrivé ou parti avant l'arrivée (il ne paie pas).
   final bool arrived;
   final bool ended;
+
+  /// Point de rencontre proposé par le conducteur, en attente de la réponse du passager (vu par
+  /// le conducteur et par ce passager).
+  final MeetingPoint? proposedMeetingPoint;
 
   bool get leftEarly => ended && !arrived;
 
@@ -297,10 +305,55 @@ class Suggestions {
 class MeetingPoint {
   const MeetingPoint({required this.label, required this.lat, required this.lon});
 
+  factory MeetingPoint.fromJson(Map<String, dynamic> json) => MeetingPoint(
+    label: json['label'] as String,
+    lat: (json['lat'] as num).toDouble(),
+    lon: (json['lon'] as num).toDouble(),
+  );
+
   final String label;
   final double lat;
   final double lon;
 }
+
+/// Point de rencontre d'un passager sur un trajet : choisi par lui, ou proposé par le conducteur.
+class MeetingPointEntry {
+  const MeetingPointEntry({required this.userId, required this.proposed, required this.point});
+
+  factory MeetingPointEntry.fromJson(Map<String, dynamic> json) => MeetingPointEntry(
+    userId: json['userId'] as String,
+    proposed: json['kind'] == 'proposed',
+    point: MeetingPoint.fromJson(json),
+  );
+
+  final String userId;
+
+  /// Proposé par le conducteur, en attente ; sinon choisi par le passager.
+  final bool proposed;
+  final MeetingPoint point;
+}
+
+enum SpotKind { parking, carpool }
+
+/// Lieu public où se retrouver (OpenStreetMap) : parking ouvert au public, aire de covoiturage.
+class MeetingSpot {
+  const MeetingSpot({required this.kind, required this.lat, required this.lon, this.name});
+
+  factory MeetingSpot.fromJson(Map<String, dynamic> json) => MeetingSpot(
+    kind: SpotKind.values.byName(json['kind'] as String),
+    name: json['name'] as String?,
+    lat: (json['lat'] as num).toDouble(),
+    lon: (json['lon'] as num).toDouble(),
+  );
+
+  final SpotKind kind;
+  final String? name;
+  final double lat;
+  final double lon;
+}
+
+/// Zone de la carte (sud, ouest, nord, est), pour demander les lieux visibles.
+typedef MapBounds = ({double south, double west, double north, double east});
 
 /// Applications GPS proposées au conducteur (cahier §15). `wire` : valeur de l'API.
 enum NavApp {
@@ -516,6 +569,7 @@ class RidePreview {
     required this.campusName,
     this.me,
     this.durationS,
+    this.meetingPoints = const [],
   });
 
   factory RidePreview.fromJson(Map<String, dynamic> json) {
@@ -534,6 +588,10 @@ class RidePreview {
       campusName: (json['campus'] as Map<String, dynamic>)['name'] as String,
       me: json['me'] == null ? null : point(json['me']),
       durationS: json['durationS'] as int?,
+      meetingPoints: [
+        for (final m in json['meetingPoints'] as List<dynamic>? ?? const [])
+          MeetingPointEntry.fromJson(m as Map<String, dynamic>),
+      ],
     );
   }
 
@@ -545,4 +603,15 @@ class RidePreview {
 
   /// Mon temps de trajet, en secondes (serveur).
   final int? durationS;
+
+  /// Conducteur : points de rencontre de ses passagers ; passager : les siens.
+  final List<MeetingPointEntry> meetingPoints;
+
+  /// Point choisi par ce passager, s'il en a un.
+  MeetingPoint? chosenBy(String? userId) =>
+      meetingPoints.where((m) => m.userId == userId && !m.proposed).firstOrNull?.point;
+
+  /// Point proposé par le conducteur à ce passager, en attente.
+  MeetingPoint? proposedTo(String? userId) =>
+      meetingPoints.where((m) => m.userId == userId && m.proposed).firstOrNull?.point;
 }

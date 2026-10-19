@@ -170,6 +170,8 @@ CREATE TABLE ride_participants (
   status participant_status NOT NULL DEFAULT 'proposed',
   pickup_label text,                      -- adresse ou point de rendez-vous
   pickup_location geography(Point,4326),
+  proposed_pickup_label text,             -- point de rencontre proposé par le conducteur
+  proposed_pickup_location geography(Point,4326),
   use_meeting_point boolean NOT NULL DEFAULT false,
   stop_order smallint,
   eta timestamptz,

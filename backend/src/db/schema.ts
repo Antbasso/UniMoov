@@ -210,6 +210,7 @@ export const rideParticipants = pgTable(
     detourS: integer('detour_s'),
     onboardM: integer('onboard_m'),
     pickupLabel: text('pickup_label'),
+    proposedPickupLabel: text('proposed_pickup_label'),
     useMeetingPoint: boolean('use_meeting_point').notNull().default(false),
     stopOrder: smallint('stop_order'),
     eta: timestamp('eta', { withTimezone: true }),

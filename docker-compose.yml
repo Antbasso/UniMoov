@@ -28,6 +28,8 @@ services:
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-ban}
+      PLACES_PROVIDER: ${PLACES_PROVIDER:-overpass}
+      OVERPASS_URL: ${OVERPASS_URL:-https://overpass-api.de/api/interpreter}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-estimate}
       ORS_API_KEY: ${ORS_API_KEY:-}
       OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}

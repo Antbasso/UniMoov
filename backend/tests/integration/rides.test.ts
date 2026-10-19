@@ -273,16 +273,86 @@ describe('point de rendez-vous', () => {
     expect((await call('Hugo', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: true })).statusCode).toBe(400);
   });
 
-  it('réservé aux passagers acceptés de ce trajet', async () => {
-    for (const name of ['Léa', 'Nathan', 'Chloé']) {
+  it('réservé aux passagers de ce trajet (avant d’accepter aussi), pas au conducteur', async () => {
+    for (const name of ['Léa', 'Nathan']) {
       expect((await call(name, 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: false })).statusCode).toBe(403);
     }
+    // Chloé n'a pas encore accepté : elle peut déjà choisir où être prise.
+    expect((await call('Chloé', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: false })).statusCode).toBe(204);
   });
 
   it('revenir à son adresse', async () => {
     expect((await call('Hugo', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: false })).statusCode).toBe(204);
     const hugo = (await ride('Léa', mondayId)).stops.find((s) => s.firstName === 'Hugo')!;
     expect(hugo).toMatchObject({ label: user('Hugo').homeAddress, isMeetingPoint: false });
+  });
+});
+
+describe('point de rencontre avant acceptation, ou proposé par le conducteur', () => {
+  type Preview = { meetingPoints: { userId: string; kind: string; label: string; lat: number; lon: number }[] };
+  const near = (name: string, label: string) => ({ label, lat: user(name).lat + 0.002, lon: user(name).lon });
+
+  it('le passager choisit son point avant d’accepter ; le conducteur le voit, pas les autres passagers', async () => {
+    const point = near('Chloé', 'Parking de la piscine');
+    expect((await call('Chloé', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: true, ...point })).statusCode).toBe(204);
+    const driver = (await call('Léa', 'GET', `/rides/${mondayId}/preview`)).json<Preview>();
+    expect(driver.meetingPoints).toContainEqual({ userId: user('Chloé').id, kind: 'chosen', ...point });
+    const other = (await call('Inès', 'GET', `/rides/${mondayId}/preview`)).json<Preview>();
+    expect(other.meetingPoints.filter((m) => m.userId !== user('Inès').id)).toEqual([]);
+    await call('Chloé', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: false });
+  });
+
+  it('le conducteur propose, le passager refuse : rien ne change, le conducteur est prévenu', async () => {
+    const point = near('Inès', 'Aire de covoiturage');
+    const response = await call('Léa', 'PUT', `/rides/${mondayId}/participants/${user('Inès').id}/pickup-proposal`, point);
+    expect(response.statusCode).toBe(204);
+    expect(ctx.notifier.sent.some((n) => n.userIds.includes(user('Inès').id) && n.event.type === 'meeting_point_proposed')).toBe(true);
+    const ines = (await call('Inès', 'GET', `/rides/${mondayId}/preview`)).json<Preview>();
+    expect(ines.meetingPoints).toEqual([{ userId: user('Inès').id, kind: 'proposed', ...point }]);
+    expect((await call('Inès', 'POST', `/rides/${mondayId}/me/pickup-proposal`, { accept: false })).statusCode).toBe(204);
+    expect((await call('Inès', 'GET', `/rides/${mondayId}/preview`)).json<Preview>().meetingPoints).toEqual([]);
+    expect(
+      ctx.notifier.sent.some(
+        (n) => n.userIds.includes(user('Léa').id) && n.event.type === 'meeting_point_answered' && !n.event.accepted,
+      ),
+    ).toBe(true);
+    // Plus rien à refuser.
+    expect((await call('Inès', 'POST', `/rides/${mondayId}/me/pickup-proposal`, { accept: false })).statusCode).toBe(404);
+  });
+
+  it('seul le conducteur propose, et seulement à un passager de son trajet', async () => {
+    const point = near('Hugo', 'Parking');
+    expect((await call('Hugo', 'PUT', `/rides/${mondayId}/participants/${user('Inès').id}/pickup-proposal`, point)).statusCode).toBe(403);
+    expect((await call('Léa', 'PUT', `/rides/${mondayId}/participants/${user('Nathan').id}/pickup-proposal`, point)).statusCode).toBe(404);
+  });
+
+  it('le passager accepte : le point devient son point de rendez-vous ; trop loin de chez lui, refusé', async () => {
+    const far = { label: 'Campus', lat: 45.9195, lon: 6.158 };
+    await call('Léa', 'PUT', `/rides/${mondayId}/participants/${user('Hugo').id}/pickup-proposal`, far);
+    const tooFar = await call('Hugo', 'POST', `/rides/${mondayId}/me/pickup-proposal`, { accept: true });
+    expect(tooFar.statusCode).toBe(422);
+    expect(tooFar.json<{ error: { code: string } }>().error.code).toBe('meeting_point_too_far');
+
+    const point = near('Hugo', 'Parking du Brassilly');
+    await call('Léa', 'PUT', `/rides/${mondayId}/participants/${user('Hugo').id}/pickup-proposal`, point);
+    const before = (await ride('Hugo', mondayId)).stops.find((s) => s.firstName === 'Hugo') as unknown as { proposedMeetingPoint: unknown };
+    expect(before.proposedMeetingPoint).toEqual(point);
+    expect((await call('Hugo', 'POST', `/rides/${mondayId}/me/pickup-proposal`, { accept: true })).statusCode).toBe(204);
+    const hugo = (await ride('Léa', mondayId)).stops.find((s) => s.firstName === 'Hugo')!;
+    expect(hugo).toMatchObject({ ...point, isMeetingPoint: true, proposedMeetingPoint: null });
+    await call('Hugo', 'PUT', `/rides/${mondayId}/me/pickup`, { useMeetingPoint: false });
+  });
+});
+
+describe('lieux pour se retrouver', () => {
+  it('parkings publics et aires de covoiturage de la zone visible ; zone bornée', async () => {
+    const zone = 'south=45.88&west=6.08&north=45.91&east=6.14';
+    const response = await call('Hugo', 'GET', `/places/meeting-spots?${zone}`);
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{ spots: { kind: string; name: string | null }[]; available: boolean }>();
+    expect(body.available).toBe(true);
+    expect(body.spots.map((s) => s.kind).sort()).toEqual(['carpool', 'parking', 'parking']);
+    expect((await call('Hugo', 'GET', '/places/meeting-spots?south=45&west=5&north=46&east=7')).statusCode).toBe(400);
   });
 });
 

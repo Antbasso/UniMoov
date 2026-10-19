@@ -9,23 +9,19 @@ import '../../../core/router/redirect.dart';
 import '../../../core/theme/um_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../profile/presentation/me_controller.dart';
 import '../../profile/presentation/person_avatar.dart';
-import '../../rides/data/rides_api.dart';
 import '../../rides/domain/ride.dart';
+import '../../rides/presentation/meeting_point_panel.dart';
 import '../../rides/presentation/ride_map.dart';
 import '../../rides/presentation/ride_screen.dart';
+import '../../rides/presentation/rides_controller.dart';
 import '../../rides/presentation/trip_widgets.dart';
 import '../../trust/presentation/cancel_sheet.dart';
 import '../../wallet/presentation/insufficient_funds_dialog.dart';
 import '../domain/proposal.dart';
 import 'formatting.dart';
 import 'proposals_controller.dart';
-
-/// Tracé d'un trajet proposé (avant confirmation).
-final ridePreviewProvider = FutureProvider.autoDispose.family<RidePreview, String>(
-  (ref, id) => ref.watch(ridesApiProvider).preview(id),
-  retry: (retryCount, error) => null,
-);
 
 /// Un trajet de la semaine, en un seul écran. Confirmé : l'écran du trajet (carte, arrêts,
 /// prix, chat). Sinon : la carte du trajet proposé tout de suite, les personnes dessous (et sur
@@ -119,6 +115,8 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
     final people = proposal.isDriver
         ? proposal.passengers.where(personVisible).toList()
         : [?proposal.driver];
+    final preview = ref.watch(ridePreviewProvider(proposal.id)).value;
+    final myId = ref.watch(meProvider.select((me) => me.value?.id));
 
     final footer = <Widget>[
       if (proposal.canAnswer) ...[
@@ -226,7 +224,12 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                         onTap: () => context.push(AppRoutes.person(person.userId)),
                         stats: personStats(l10n, person, isDriver: !proposal.isDriver),
                         status: personStatusChip(l10n, person.status),
-                        // Conducteur : une demande de place attend sa réponse.
+                        // Conducteur : où il retrouvera ce passager.
+                        subtitle: proposal.isDriver
+                            ? driverMeetingText(l10n, preview, person.userId)
+                            : null,
+                        // Conducteur : une demande de place attend sa réponse ; il peut aussi
+                        // proposer un point de rencontre.
                         actions: proposal.isDriver && person.isRequest
                             ? [
                                 UmButton(
@@ -254,8 +257,33 @@ class _ProposalScreenState extends ConsumerState<ProposalScreen> {
                                         ),
                                 ),
                               ]
-                            : const [],
+                            : [
+                                if (proposal.isDriver && open && person.status != 'declined')
+                                  UmButton(
+                                    label: l10n.meetingPointProposeAction,
+                                    icon: Icons.where_to_vote_outlined,
+                                    variant: UmButtonVariant.ghost,
+                                    onPressed: () => context.push(
+                                      AppRoutes.rideMeetingPoint(
+                                        proposal.id,
+                                        forUser: person.userId,
+                                        name: person.firstName,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                       ),
+                    // Passager : son point de rencontre, à choisir avant même d'accepter.
+                    if (!proposal.isDriver &&
+                        open &&
+                        proposal.state != ProposalState.cancelled) ...[
+                      const SizedBox(height: UmSpace.s3),
+                      PassengerMeetingSection(
+                        rideId: proposal.id,
+                        myId: myId,
+                        driverName: proposal.driver?.firstName ?? '',
+                      ),
+                    ],
                     // Le conducteur engagé peut proposer des places, même avant la confirmation.
                     if (proposal.isDriver && proposal.myStatus == 'accepted' && open)
                       Align(
@@ -360,6 +388,16 @@ class _PreviewMap extends ConsumerWidget {
           ),
       ],
       pin: me == null || proposal.isDriver ? null : LatLng(me.$1, me.$2),
+      // Conducteur : points de rencontre de ses passagers (choisis, ou proposés en attente).
+      meetingPins: [
+        if (proposal.isDriver)
+          for (final m in preview?.meetingPoints ?? const <MeetingPointEntry>[])
+            MeetingPin(
+              point: LatLng(m.point.lat, m.point.lon),
+              label: m.point.label,
+              proposed: m.proposed,
+            ),
+      ],
       areas: [
         for (final person in people)
           if (person.sector case (final lat, final lon))

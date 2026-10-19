@@ -97,6 +97,10 @@ class RideMap extends ConsumerStatefulWidget {
     this.onTap,
     this.live,
     this.areas = const [],
+    this.spots = const [],
+    this.onSpotTap,
+    this.meetingPins = const [],
+    this.fitPins = true,
   });
 
   final List<RideStop> stops;
@@ -113,6 +117,16 @@ class RideMap extends ConsumerStatefulWidget {
 
   /// Position du conducteur en direct (trajet en cours).
   final LatLng? live;
+
+  /// Parkings publics et aires de covoiturage, à toucher pour en faire le point de rencontre.
+  final List<MeetingSpot> spots;
+  final ValueChanged<MeetingSpot>? onSpotTap;
+
+  /// Points de rencontre des passagers (choisis, ou proposés en attente).
+  final List<MeetingPin> meetingPins;
+
+  /// Cadrer aussi sur le point choisi et les points de rencontre.
+  final bool fitPins;
 
   @override
   ConsumerState<RideMap> createState() => _RideMapState();
@@ -158,7 +172,19 @@ class _RideMapState extends ConsumerState<RideMap> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = context.umColors;
-    final RideMap(:stops, :route, :areas, :pin, :onTap, :live, :dashed, :semanticLabel) = widget;
+    final RideMap(
+      :stops,
+      :route,
+      :areas,
+      :pin,
+      :onTap,
+      :live,
+      :dashed,
+      :semanticLabel,
+      :spots,
+      :onSpotTap,
+      :meetingPins,
+    ) = widget;
     final line = [for (final (lat, lon) in route) LatLng(lat, lon)];
     final points = [
       ...line,
@@ -172,7 +198,9 @@ class _RideMapState extends ConsumerState<RideMap> {
           ),
         ))
           corner,
-      ?pin,
+      if (widget.fitPins) ?pin,
+      if (widget.fitPins)
+        for (final m in meetingPins) m.point,
     ];
     final exact = stops.where((s) => !s.approximate).toList();
     final zones = [
@@ -244,12 +272,38 @@ class _RideMapState extends ConsumerState<RideMap> {
                   height: UmSize.mapMarker,
                   child: AreaBadge(area: zone),
                 ),
+              // Lieux publics sous les arrêts : on voit d'abord le trajet.
+              for (final spot in spots)
+                Marker(
+                  point: LatLng(spot.lat, spot.lon),
+                  width: UmSize.tapTarget,
+                  height: UmSize.tapTarget,
+                  child: SpotBadge(
+                    spot: spot,
+                    onTap: onSpotTap == null ? null : () => onSpotTap(spot),
+                  ),
+                ),
               for (final stop in exact)
                 Marker(
                   point: LatLng(stop.lat, stop.lon),
                   width: UmSize.mapMarker,
                   height: UmSize.mapMarker,
                   child: StopBadge(stop: stop),
+                ),
+              for (final m in meetingPins)
+                Marker(
+                  point: m.point,
+                  width: UmSize.mapMarker,
+                  height: UmSize.mapMarker,
+                  alignment: Alignment.topCenter,
+                  child: Semantics(
+                    label: m.label,
+                    child: Icon(
+                      m.proposed ? Icons.where_to_vote_outlined : Icons.where_to_vote_rounded,
+                      size: UmSize.mapMarker,
+                      color: m.proposed ? c.inkMuted : c.success,
+                    ),
+                  ),
                 ),
               if (live != null)
                 Marker(
@@ -316,6 +370,60 @@ class _RideMapState extends ConsumerState<RideMap> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Point de rencontre d'un passager sur la carte du conducteur.
+class MeetingPin {
+  const MeetingPin({required this.point, required this.label, this.proposed = false});
+
+  final LatLng point;
+  final String label;
+
+  /// Proposé par le conducteur, pas encore accepté : creux.
+  final bool proposed;
+}
+
+/// Lieu public sur la carte : « P » pour un parking, deux personnes pour une aire de
+/// covoiturage. Zone tactile de 48 px autour de la pastille.
+class SpotBadge extends StatelessWidget {
+  const SpotBadge({super.key, required this.spot, this.onTap});
+
+  final MeetingSpot spot;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = context.umColors;
+    final carpool = spot.kind == SpotKind.carpool;
+    final kind = carpool ? l10n.spotCarpool : l10n.spotParking;
+    final size = UmSize.mapMarker * 0.8;
+    return Semantics(
+      button: onTap != null,
+      label: spot.name == null ? kind : '$kind : ${spot.name}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Center(
+          child: Container(
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: carpool ? c.success : c.brandStrong,
+              borderRadius: BorderRadius.circular(UmRadius.sm),
+              border: Border.all(color: c.onBrand, width: UmSize.routeRing),
+              boxShadow: context.umShadowSoft,
+            ),
+            child: carpool
+                ? Icon(Icons.people_alt_rounded, size: UmSize.iconSm, color: c.onBrand)
+                : Text('P', style: UmText.label.copyWith(color: c.onBrand)),
+          ),
+        ),
+      ),
     );
   }
 }

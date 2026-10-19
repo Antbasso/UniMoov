@@ -9,6 +9,7 @@ import 'package:unimoov/core/widgets/widgets.dart';
 import 'package:unimoov/features/auth/domain/auth_tokens.dart';
 import 'package:unimoov/features/profile/domain/me.dart';
 import 'package:unimoov/features/proposals/domain/proposal.dart';
+import 'package:unimoov/features/rides/domain/ride.dart';
 import 'package:unimoov/features/schedule/domain/schedule.dart';
 
 import '../../support/app_harness.dart';
@@ -100,6 +101,60 @@ void main() {
     await tester.pumpAndSettle();
     await tapText(tester, 'Accepter');
     expect(find.text('Accepter'), findsNothing);
+  });
+
+  testWidgets('passager, avant d’accepter : point proposé par le conducteur, puis le mien sur la '
+      'carte (parkings mis en évidence)', (tester) async {
+    final myId = backend.idOf(backend.me.email);
+    backend.previewMeetingPoints = [
+      MeetingPointEntry(
+        userId: myId,
+        proposed: true,
+        point: const MeetingPoint(label: 'Parking du Brassilly', lat: 45.887, lon: 6.09),
+      ),
+    ];
+    await launchApp(tester, backend: backend, storage: storage);
+    await openTrip(tester, index: 0);
+    await tester.scrollUntilVisible(find.text('Accepter ce point'), 200);
+    expect(
+      find.text('Nathan te propose de te retrouver ici : Parking du Brassilly'),
+      findsOneWidget,
+    );
+    await tapText(tester, 'Accepter ce point');
+    expect(backend.meetingAnswers, [true]);
+    expect(find.text('Rendez-vous : Parking du Brassilly'), findsOneWidget);
+
+    // Un autre point : la carte garde le tracé, les parkings et aires de covoiturage se touchent.
+    await tapText(tester, 'Modifier le rendez-vous');
+    expect(find.byType(PolylineLayer), findsOneWidget);
+    expect(find.bySemanticsLabel('Parking public : Parking des Marquisats'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Aire de covoiturage : Aire de covoiturage de Seynod'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Enregistrer ce point');
+    expect(find.text('Rendez-vous : Aire de covoiturage de Seynod'), findsOneWidget);
+    // Toujours pas accepté : le choix se fait avant.
+    expect(find.text('Accepter'), findsOneWidget);
+  });
+
+  testWidgets('conducteur : proposer un point de rencontre en touchant la carte', (tester) async {
+    await launchApp(tester, backend: backend, storage: storage);
+    await openTrip(tester, index: -1);
+    await tapText(tester, 'Proposer un point');
+    expect(find.text('Un point pour Hugo'), findsOneWidget);
+    // Pas encore de point : rien à proposer.
+    expect(
+      tester.widget<UmButton>(find.widgetWithText(UmButton, 'Proposer ce point')).onPressed,
+      isNull,
+    );
+    await tester.tap(find.byType(FlutterMap));
+    // Le toucher simple attend la fin du délai de double toucher (zoom).
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('Point choisi sur la carte'), findsOneWidget);
+    await tapText(tester, 'Proposer ce point');
+    expect(backend.proposedPoints.single.$2, 'p1');
+    expect(backend.proposedPoints.single.$3.label, 'Point choisi sur la carte');
+    expect(find.text('Point proposé. Ton passager va répondre.'), findsOneWidget);
   });
 
   testWidgets('conducteur : voit ses passagers, sans « voir d’autres »', (tester) async {
@@ -240,5 +295,18 @@ void main() {
     await launchApp(tester, backend: backend, storage: storage);
     await openTrip(tester, index: 0);
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/proposal_light.png'));
+  });
+
+  testWidgets('golden choix du point de rencontre', (tester) async {
+    await launchApp(tester, backend: backend, storage: storage);
+    await openTrip(tester, index: 0);
+    await tester.scrollUntilVisible(find.text('Choisir mon point de rencontre'), 200);
+    await tapText(tester, 'Choisir mon point de rencontre');
+    await tester.tap(find.bySemanticsLabel('Parking public : Parking des Marquisats'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/meeting_point_light.png'),
+    );
   });
 }

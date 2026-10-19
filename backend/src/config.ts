@@ -31,6 +31,9 @@ const envSchema = z
   CALENDAR_ENCRYPTION_KEY: z
     .base64()
     .refine((value) => Buffer.from(value, 'base64').length === 32, '32 octets attendus'),
+  /** Lieux de rendez-vous : `overpass` (OpenStreetMap, gratuit, mis en cache), `none` : aucun. */
+  PLACES_PROVIDER: z.enum(['overpass', 'none']).default('overpass'),
+  OVERPASS_URL: z.url().default('https://overpass-api.de/api/interpreter'),
   /** `ors` : OpenRouteService (clé requise) ; `estimate` : lignes droites, sans appel externe. */
   ROUTING_PROVIDER: z.enum(['osrm', 'ors', 'estimate']).default('estimate'),
   /** OSRM : instance auto-hébergée en production ; le serveur de démonstration public sinon. */

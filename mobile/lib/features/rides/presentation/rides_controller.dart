@@ -36,6 +36,59 @@ class RideController extends AsyncNotifier<RideDetails> {
   }
 }
 
+/// Tracé d'un trajet proposé ou confirmé (avant confirmation aussi), avec mon temps de trajet
+/// et les points de rencontre.
+final ridePreviewProvider = FutureProvider.autoDispose.family<RidePreview, String>(
+  (ref, id) => ref.watch(ridesApiProvider).preview(id),
+  retry: (retryCount, error) => null,
+);
+
+/// Parkings publics et aires de covoiturage d'une zone ; vide si le service ne répond pas (la
+/// carte reste utilisable : on touche n'importe où).
+final meetingSpotsProvider = FutureProvider.autoDispose.family<List<MeetingSpot>, MapBounds>((
+  ref,
+  bounds,
+) async {
+  try {
+    return await ref.watch(ridesApiProvider).meetingSpots(bounds);
+  } on Object {
+    return const [];
+  }
+}, retry: (retryCount, error) => null);
+
+/// Point de rencontre : le passager choisit le sien (avant ou après avoir accepté), le
+/// conducteur en propose un, le passager répond. L'aperçu et le trajet sont relus ensuite.
+class MeetingPointActions {
+  const MeetingPointActions(this._ref);
+
+  final Ref _ref;
+
+  RidesApi get _api => _ref.read(ridesApiProvider);
+
+  Future<void> choose(String rideId, MeetingPoint? point) async {
+    await _api.setMeetingPoint(rideId, point);
+    _refresh(rideId);
+  }
+
+  Future<void> propose(String rideId, String userId, MeetingPoint point) async {
+    await _api.proposeMeetingPoint(rideId, userId, point);
+    _refresh(rideId);
+  }
+
+  Future<void> answer(String rideId, {required bool accept}) async {
+    await _api.answerMeetingPoint(rideId, accept: accept);
+    _refresh(rideId);
+  }
+
+  void _refresh(String rideId) {
+    _ref
+      ..invalidate(ridePreviewProvider(rideId))
+      ..invalidate(rideProvider(rideId));
+  }
+}
+
+final meetingPointActionsProvider = Provider<MeetingPointActions>(MeetingPointActions.new);
+
 /// Arrêts restants et liens GPS (conducteur).
 final navigationProvider = FutureProvider.autoDispose.family<NavigationPlan, String>(
   (ref, id) => ref.watch(ridesApiProvider).navigation(id),

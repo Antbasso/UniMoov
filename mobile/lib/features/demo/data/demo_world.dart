@@ -130,6 +130,12 @@ class DemoSeat {
   bool ended = false;
   ({String label, double lat, double lon})? meetingPoint;
 
+  /// Point proposé par le conducteur, en attente de la réponse du passager.
+  ({String label, double lat, double lon})? proposedMeeting;
+
+  /// Démo : le conducteur proposera le parking le plus proche du passager à la première lecture.
+  bool driverWillPropose = false;
+
   /// Réponse automatique du conducteur ou du passager après ce moment (démo).
   DateTime? autoAcceptAt;
 
@@ -295,3 +301,18 @@ List<({double distance, List<int> riders})> demoPortions(double distanceM, List<
   if (distanceM - cuts.last > 0) portions.add((distance: distanceM - cuts.last, riders: const []));
   return portions;
 }
+
+/// Lieux publics de la démo (parkings, aires de covoiturage) autour d'Annecy.
+const demoSpots = <({SpotKindName kind, String name, double lat, double lon})>[
+  (kind: SpotKindName.parking, name: 'Parking des Marquisats', lat: 45.8952, lon: 6.1365),
+  (kind: SpotKindName.parking, name: 'Parking Bonlieu', lat: 45.9007, lon: 6.1291),
+  (kind: SpotKindName.parking, name: 'Parking Courier', lat: 45.9025, lon: 6.1235),
+  (kind: SpotKindName.parking, name: 'Parking de la gare', lat: 45.9016, lon: 6.1206),
+  (kind: SpotKindName.parking, name: 'Parking relais de Vovray', lat: 45.8890, lon: 6.1180),
+  (kind: SpotKindName.parking, name: 'Parking de la mairie de Seynod', lat: 45.8873, lon: 6.0962),
+  (kind: SpotKindName.carpool, name: 'Aire de covoiturage de Seynod', lat: 45.8848, lon: 6.0921),
+  (kind: SpotKindName.carpool, name: "Aire de covoiturage d'Épagny", lat: 45.9380, lon: 6.0890),
+  (kind: SpotKindName.carpool, name: 'Aire de covoiturage des Glaisins', lat: 45.9240, lon: 6.1520),
+];
+
+enum SpotKindName { parking, carpool }

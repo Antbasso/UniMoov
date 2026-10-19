@@ -6,7 +6,9 @@ import {
   navigationResponse,
   previewResponse,
   participantParams,
+  pickupAnswerBody,
   pickupBody,
+  pickupProposalBody,
   presenceResponse,
   priceResponse,
   ride,
@@ -47,6 +49,31 @@ export const ridesRoutes: FastifyPluginAsyncZod<{ service: RidesService; lifecyc
     { schema: { params: rideParams, body: pickupBody, response: { 204: z.null() } }, config: { rateLimit: { max: 10, timeWindow: '1 hour' } } },
     async (request, reply) => {
       await service.setPickup(request.userId, request.params.id, request.body);
+      return reply.code(204).send(null);
+    },
+  );
+
+  // Le conducteur propose un point de rencontre à un passager ; le passager répond.
+  app.put(
+    '/rides/:id/participants/:userId/pickup-proposal',
+    {
+      schema: { params: participantParams, body: pickupProposalBody, response: { 204: z.null() } },
+      config: { rateLimit: { max: 20, timeWindow: '1 hour' } },
+    },
+    async (request, reply) => {
+      await service.proposePickup(request.userId, request.params.id, request.params.userId, request.body);
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
+    '/rides/:id/me/pickup-proposal',
+    {
+      schema: { params: rideParams, body: pickupAnswerBody, response: { 204: z.null() } },
+      config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
+    },
+    async (request, reply) => {
+      await service.answerPickupProposal(request.userId, request.params.id, request.body.accept);
       return reply.code(204).send(null);
     },
   );

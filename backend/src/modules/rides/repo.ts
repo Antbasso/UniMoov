@@ -39,6 +39,8 @@ export interface Member {
   useMeetingPoint: boolean;
   meetingPoint: LatLon | null;
   meetingLabel: string | null;
+  /** Point de rencontre proposé par le conducteur, en attente de la réponse du passager. */
+  proposedMeeting: { label: string; point: LatLon } | null;
   stopOrder: number | null;
   eta: Date | null;
   presenceValidatedAt: Date | null;
@@ -134,6 +136,9 @@ export class RidesRepo {
       meet_lat: number | null;
       meet_lon: number | null;
       pickup_label: string | null;
+      prop_lat: number | null;
+      prop_lon: number | null;
+      proposed_pickup_label: string | null;
       stop_order: number | null;
       eta: Date | null;
       presence_validated_at: Date | null;
@@ -146,7 +151,8 @@ export class RidesRepo {
              ST_Y(u.home_location::geometry) AS home_lat, ST_X(u.home_location::geometry) AS home_lon,
              u.home_address, p.use_meeting_point,
              ST_Y(p.pickup_location::geometry) AS meet_lat, ST_X(p.pickup_location::geometry) AS meet_lon,
-             p.pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s, p.onboard_m
+             p.pickup_label, ST_Y(p.proposed_pickup_location::geometry) AS prop_lat,
+             ST_X(p.proposed_pickup_location::geometry) AS prop_lon, p.proposed_pickup_label, p.stop_order, p.eta, p.presence_validated_at, p.arrived_at, p.ended_at, p.detour_s, p.onboard_m
       FROM ride_participants p JOIN users u ON u.id = p.user_id
       WHERE p.ride_id = ${rideId}
       ORDER BY p.role, p.stop_order NULLS LAST, p.user_id`);
@@ -162,6 +168,10 @@ export class RidesRepo {
       useMeetingPoint: r.use_meeting_point,
       meetingPoint: r.meet_lat === null || r.meet_lon === null ? null : { lat: Number(r.meet_lat), lon: Number(r.meet_lon) },
       meetingLabel: r.pickup_label,
+      proposedMeeting:
+        r.prop_lat === null || r.prop_lon === null
+          ? null
+          : { label: r.proposed_pickup_label ?? '', point: { lat: Number(r.prop_lat), lon: Number(r.prop_lon) } },
       stopOrder: r.stop_order,
       eta: r.eta ? new Date(r.eta) : null,
       presenceValidatedAt: r.presence_validated_at ? new Date(r.presence_validated_at) : null,
@@ -231,7 +241,19 @@ export class RidesRepo {
       UPDATE ride_participants SET
         use_meeting_point = ${pickup !== null},
         pickup_label = ${pickup?.label ?? null},
-        pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null}
+        pickup_location = ${pickup ? sql`ST_SetSRID(ST_MakePoint(${pickup.point.lon}, ${pickup.point.lat}), 4326)::geography` : null},
+        -- Choisir son point répond aussi à une proposition du conducteur.
+        proposed_pickup_label = NULL,
+        proposed_pickup_location = NULL
+      WHERE ride_id = ${rideId} AND user_id = ${userId}`);
+  }
+
+  /** Point de rencontre proposé par le conducteur (`null` : proposition retirée ou refusée). */
+  async setPickupProposal(rideId: string, userId: string, proposal: { label: string; point: LatLon } | null, db: DbOrTx = this.db): Promise<void> {
+    await db.execute(sql`
+      UPDATE ride_participants SET
+        proposed_pickup_label = ${proposal?.label ?? null},
+        proposed_pickup_location = ${proposal ? sql`ST_SetSRID(ST_MakePoint(${proposal.point.lon}, ${proposal.point.lat}), 4326)::geography` : null}
       WHERE ride_id = ${rideId} AND user_id = ${userId}`);
   }
 

@@ -842,11 +842,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get meetingPointIntro =>
-      'Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
+      'Touche la carte, ou un parking, pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.';
 
   @override
   String get meetingPointMapLabel =>
-      'Carte : touche pour placer le point de rendez-vous';
+      'Carte du trajet : touche un endroit ou un parking pour placer le point de rendez-vous';
 
   @override
   String get meetingPointLabel => 'Nom du point';
@@ -2916,4 +2916,65 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mapFollowingVehicle =>
       'La carte suit le véhicule. Touche la carte pour arrêter.';
+
+  @override
+  String get spotParking => 'Parking public';
+
+  @override
+  String get spotCarpool => 'Aire de covoiturage';
+
+  @override
+  String get meetingPointOnMap => 'Point choisi sur la carte';
+
+  @override
+  String meetingPointProposeTitle(String name) {
+    return 'Un point pour $name';
+  }
+
+  @override
+  String get meetingPointProposeIntro =>
+      'Touche la carte, ou un parking sur ton chemin, pour proposer un point de rencontre. Ton passager l\'accepte ou garde le sien.';
+
+  @override
+  String get meetingPointPropose => 'Proposer ce point';
+
+  @override
+  String get meetingPointProposed => 'Point proposé. Ton passager va répondre.';
+
+  @override
+  String get meetingPointChoose => 'Choisir mon point de rencontre';
+
+  @override
+  String meetingPointMine(String label) {
+    return 'Rendez-vous : $label';
+  }
+
+  @override
+  String get meetingPointAtHome =>
+      'Le conducteur passe te prendre à ton adresse.';
+
+  @override
+  String meetingPointOffer(String name, String label) {
+    return '$name te propose de te retrouver ici : $label';
+  }
+
+  @override
+  String get meetingPointAccept => 'Accepter ce point';
+
+  @override
+  String get meetingPointDecline => 'Garder le mien';
+
+  @override
+  String get meetingPointAccepted => 'C\'est noté : rendez-vous à ce point.';
+
+  @override
+  String get meetingPointDeclined => 'Tu gardes ton point actuel.';
+
+  @override
+  String get meetingPointProposeAction => 'Proposer un point';
+
+  @override
+  String meetingPointPending(String label) {
+    return 'Proposé : $label, en attente';
+  }
 }

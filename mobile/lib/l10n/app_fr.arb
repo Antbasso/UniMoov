@@ -482,8 +482,8 @@
   "rideChooseMeetingPoint": "Fixer un rendez-vous",
   "rideChangeMeetingPoint": "Modifier le rendez-vous",
   "meetingPointTitle": "Point de rendez-vous",
-  "meetingPointIntro": "Touche la carte pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
-  "meetingPointMapLabel": "Carte : touche pour placer le point de rendez-vous",
+  "meetingPointIntro": "Touche la carte, ou un parking, pour placer le point où le conducteur te prendra. Il remplace ton adresse et doit rester près de chez toi.",
+  "meetingPointMapLabel": "Carte du trajet : touche un endroit ou un parking pour placer le point de rendez-vous",
   "meetingPointLabel": "Nom du point",
   "meetingPointHint": "Ex. arrêt de bus Mairie",
   "meetingPointSave": "Enregistrer ce point",
@@ -1741,5 +1741,53 @@
       }
     }
   },
-  "mapFollowingVehicle": "La carte suit le véhicule. Touche la carte pour arrêter."
+  "mapFollowingVehicle": "La carte suit le véhicule. Touche la carte pour arrêter.",
+  "spotParking": "Parking public",
+  "spotCarpool": "Aire de covoiturage",
+  "meetingPointOnMap": "Point choisi sur la carte",
+  "meetingPointProposeTitle": "Un point pour {name}",
+  "@meetingPointProposeTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointProposeIntro": "Touche la carte, ou un parking sur ton chemin, pour proposer un point de rencontre. Ton passager l'accepte ou garde le sien.",
+  "meetingPointPropose": "Proposer ce point",
+  "meetingPointProposed": "Point proposé. Ton passager va répondre.",
+  "meetingPointChoose": "Choisir mon point de rencontre",
+  "meetingPointMine": "Rendez-vous : {label}",
+  "@meetingPointMine": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointAtHome": "Le conducteur passe te prendre à ton adresse.",
+  "meetingPointOffer": "{name} te propose de te retrouver ici : {label}",
+  "@meetingPointOffer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPointAccept": "Accepter ce point",
+  "meetingPointDecline": "Garder le mien",
+  "meetingPointAccepted": "C'est noté : rendez-vous à ce point.",
+  "meetingPointDeclined": "Tu gardes ton point actuel.",
+  "meetingPointProposeAction": "Proposer un point",
+  "meetingPointPending": "Proposé : {label}, en attente",
+  "@meetingPointPending": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  }
 }

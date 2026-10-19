@@ -212,14 +212,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Hors de /rides/:id : le point se choisit aussi avant la confirmation du trajet.
+      GoRoute(
+        path: '/meeting-point/:id',
+        builder: (_, state) => MeetingPointScreen(
+          id: state.pathParameters['id']!,
+          forUserId: state.uri.queryParameters['for'],
+          forName: state.uri.queryParameters['name'],
+        ),
+      ),
       GoRoute(
         path: '/rides/:id',
         builder: (_, state) => RideScreen(id: state.pathParameters['id']!),
         routes: [
-          GoRoute(
-            path: 'meeting-point',
-            builder: (_, state) => MeetingPointScreen(id: state.pathParameters['id']!),
-          ),
           GoRoute(
             path: 'suggestions',
             builder: (_, state) => SuggestionsScreen(id: state.pathParameters['id']!),

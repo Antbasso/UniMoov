@@ -27,6 +27,7 @@ import 'live_actions.dart';
 import '../../chat/presentation/open_ride_chat.dart';
 import 'live_controller.dart';
 import 'ride_map.dart';
+import 'meeting_point_panel.dart';
 import 'trip_widgets.dart';
 import 'rides_controller.dart';
 
@@ -224,6 +225,15 @@ class _RideContentState extends ConsumerState<_RideContent> {
     );
 
     final people = <Widget>[
+      // Passager : le point proposé par le conducteur, à accepter ou refuser.
+      if (myStop?.proposedMeetingPoint case final offer? when !ride.isDriver && ride.editable) ...[
+        MeetingOfferCard(
+          rideId: ride.id,
+          driverName: ride.driverStop?.firstName ?? '',
+          point: offer,
+        ),
+        const SizedBox(height: UmSpace.s2),
+      ],
       for (final stop in ride.stops)
         _StopRow(
           stop: stop,
@@ -243,6 +253,22 @@ class _RideContentState extends ConsumerState<_RideContent> {
                 variant: UmButtonVariant.ghost,
                 onPressed: () => context.push(AppRoutes.rideMeetingPoint(ride.id)),
               ),
+            // Conducteur : proposer un point de rencontre à ce passager (un parking sur sa route).
+            if (ride.isDriver && ride.editable && stop.kind == StopKind.passenger) ...[
+              if (stop.proposedMeetingPoint case final pending?)
+                Text(
+                  l10n.meetingPointPending(pending.label),
+                  style: UmText.bodySm.copyWith(color: c.inkMuted),
+                ),
+              UmButton(
+                label: l10n.meetingPointProposeAction,
+                icon: Icons.where_to_vote_outlined,
+                variant: UmButtonVariant.ghost,
+                onPressed: () => context.push(
+                  AppRoutes.rideMeetingPoint(ride.id, forUser: stop.userId, name: stop.firstName),
+                ),
+              ),
+            ],
           ],
         ),
       for (final person in pending)

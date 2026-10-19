@@ -6,6 +6,8 @@ import { startJobs } from './jobs.js';
 import { BanGeocodingProvider } from './shared/geocoding/ban-geocoding-provider.js';
 import { CachedGeocodingProvider } from './shared/geocoding/cached-geocoding-provider.js';
 import { FakeGeocodingProvider } from './shared/geocoding/fake-geocoding-provider.js';
+import { CachedPlacesProvider } from './shared/places/cached-places-provider.js';
+import { OverpassPlacesProvider } from './shared/places/overpass-places-provider.js';
 import { OrsRoutingProvider } from './shared/routing/ors-routing-provider.js';
 import { OsrmRoutingProvider } from './shared/routing/osrm-routing-provider.js';
 import { FakePaymentProvider } from './shared/payments/payment-provider.js';
@@ -45,6 +47,9 @@ const app = await buildApp({
         ? new BrevoMailProvider(config.BREVO_API_KEY, { email: config.MAIL_FROM, name: 'Uni-Moov' })
         : new ConsoleMailProvider((line) => process.stdout.write(`${line}\n`)),
     geocoding,
+    ...(config.PLACES_PROVIDER === 'overpass'
+      ? { places: new CachedPlacesProvider(new OverpassPlacesProvider(config.OVERPASS_URL)) }
+      : {}),
     // Développement uniquement (refusé en production par la config) ; prestataire réel en M4b.
     payments: new FakePaymentProvider(),
     ...(push ? { push } : {}),

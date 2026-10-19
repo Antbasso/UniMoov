@@ -61,6 +61,9 @@ import { SecretBox } from './shared/crypto.js';
 import { AppError, errorBody } from './shared/errors.js';
 import { fetchPublicText } from './shared/safe-fetch.js';
 import type { GeocodingProvider } from './shared/geocoding/geocoding-provider.js';
+import type { PlacesProvider } from './shared/places/places-provider.js';
+import { placesRoutes } from './modules/places/routes.js';
+import { PlacesService } from './modules/places/service.js';
 import type { MailProvider } from './shared/mail/mail-provider.js';
 import { EstimateRoutingProvider } from './shared/routing/estimate.js';
 import { GuardedRoutingProvider } from './shared/routing/guarded-routing-provider.js';
@@ -89,6 +92,8 @@ export interface AppModules {
   jwtSecret: string;
   mail: MailProvider;
   geocoding: GeocodingProvider;
+  /** Parkings publics et aires de covoiturage (OpenStreetMap) ; absent : aucun lieu montré. */
+  places?: PlacesProvider;
   /** Clé AES-256 (base64) des liens d'agenda. */
   calendarKey: string;
   /** Fournisseur d'itinéraires (OpenRouteService) ; absent : estimation locale seulement. */
@@ -325,6 +330,7 @@ export async function buildApp({ config, pingDb, logStream, modules }: AppDeps):
         await api.register(walletRoutes, { service: wallet, clock });
         await api.register(trustRoutes, { service: trust });
         await api.register(chatRoutes, { service: chat });
+        await api.register(placesRoutes, { service: new PlacesService(modules.places ?? null) });
         await api.register(notificationRoutes, { service: notifications });
         await api.register(userSocketRoutes, { hub: userHub, isActiveUser: (userId) => authRepo.isActiveUser(userId) });
         await api.register(trackingRoutes, {

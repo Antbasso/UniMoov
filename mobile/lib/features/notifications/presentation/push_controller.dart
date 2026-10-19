@@ -31,7 +31,10 @@ String? routeForPush(Map<String, String> data) {
     'replacement_proposed' ||
     'proposals_ready' ||
     'ride_requested' ||
-    'request_answered' => AppRoutes.home,
+    'request_answered' ||
+    // Point de rencontre : souvent avant la confirmation, le trajet se retrouve dans « Ta semaine ».
+    'meeting_point_proposed' ||
+    'meeting_point_answered' => AppRoutes.home,
     _ => null,
   };
 }

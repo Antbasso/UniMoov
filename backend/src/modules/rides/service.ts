@@ -36,6 +36,20 @@ export interface StopView {
   arrived: boolean;
   /** Passager qui a terminé son trajet, arrivé ou parti avant (clôture de sa part). */
   ended: boolean;
+  /** Point de rencontre proposé par le conducteur, en attente (vu du conducteur et du passager concerné). */
+  proposedMeetingPoint: MeetingPointView | null;
+}
+
+export interface MeetingPointView {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
+/** Points de rencontre d'un trajet proposé : choisis par un passager, ou proposés par le conducteur. */
+export interface MeetingPointEntry extends MeetingPointView {
+  userId: string;
+  kind: 'chosen' | 'proposed';
 }
 
 export interface PriceView extends PriceEstimate {
@@ -66,6 +80,8 @@ export interface RidePreview {
   me: LatLon | null;
   /** Mon temps de trajet, en secondes. */
   durationS: number | null;
+  /** Conducteur : ceux de chaque passager ; passager : les siens. */
+  meetingPoints: MeetingPointEntry[];
 }
 
 export interface RideView {
@@ -408,6 +424,7 @@ export class RidesService {
       presenceValidated: false,
       arrived: false,
       ended: false,
+      proposedMeetingPoint: null,
     };
     // Entre passagers, pas d'acceptation mutuelle (cahier §4, §14) : le domicile d'un autre
     // passager n'est montré qu'au secteur près ; son point de rendez-vous, lieu public, l'est.
@@ -434,6 +451,10 @@ export class RidesService {
         presenceValidated: m.presenceValidatedAt !== null,
         arrived: m.arrivedAt !== null,
         ended: m.endedAt !== null,
+        proposedMeetingPoint:
+          m.proposedMeeting && (me.role === 'driver' || m.userId === me.userId)
+            ? { label: m.proposedMeeting.label, ...m.proposedMeeting.point }
+            : null,
       };
     };
     const driverStop = driver ? person(driver, 'driver') : null;
@@ -481,7 +502,17 @@ export class RidesService {
     const driver = members.find((m) => m.role === 'driver');
     const campus = { name: ride.campus.name, lat: ride.campus.lat, lon: ride.campus.lon };
     const mine = me.role === 'driver' ? me.home : (pickupOf(me)?.point ?? null);
-    if (!driver?.home) return { route: [], estimated: true, campus, me: mine, durationS: null };
+    const meetingPoints = members
+      .filter((m) => m.role === 'passenger' && (me.role === 'driver' || m.userId === userId))
+      .flatMap((m): MeetingPointEntry[] => [
+        ...(m.useMeetingPoint && m.meetingPoint
+          ? [{ userId: m.userId, kind: 'chosen' as const, label: m.meetingLabel ?? '', ...m.meetingPoint }]
+          : []),
+        ...(m.proposedMeeting
+          ? [{ userId: m.userId, kind: 'proposed' as const, label: m.proposedMeeting.label, ...m.proposedMeeting.point }]
+          : []),
+      ]);
+    if (!driver?.home) return { route: [], estimated: true, campus, me: mine, durationS: null, meetingPoints };
 
     const stops = members
       .filter((m) => m.role === 'passenger')
@@ -515,6 +546,7 @@ export class RidesService {
       campus,
       me: mine,
       durationS: myDurationS(route, ordered.findIndex((o) => o.userId === userId), ride.direction),
+      meetingPoints,
     };
   }
 
@@ -541,7 +573,8 @@ export class RidesService {
     await this.repo.transaction(async (tx) => {
       const ride = await this.repo.ride(rideId, tx, true);
       if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
-      const me = (await this.repo.members(rideId, tx)).find((m) => m.userId === userId && isAccepted(m));
+      // Avant d'accepter aussi : le passager choisit où il veut être pris.
+      const me = (await this.repo.members(rideId, tx)).find((m) => m.userId === userId && PREVIEW_STATUSES.has(m.status));
       if (!me || me.role !== 'passenger') throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
       if (LOCKED_STATUSES.has(ride.status)) throw new AppError(409, 'ride_locked', 'Ce trajet ne peut plus être modifié');
 
@@ -559,6 +592,53 @@ export class RidesService {
       await this.repo.setPickup(rideId, userId, pickup, tx);
     });
     await this.onRideChanged(rideId);
+  }
+
+  /**
+   * Le conducteur propose un point de rencontre à un passager (proposé, en demande ou accepté),
+   * par exemple un parking sur son chemin. Le passager l'accepte ou le refuse ; rien ne change
+   * avant sa réponse. Pas de contrôle de distance ici : il se fait à l'acceptation, côté passager,
+   * pour ne rien révéler de son domicile au conducteur.
+   */
+  async proposePickup(driverId: string, rideId: string, passengerId: string, input: { label: string; lat: number; lon: number }): Promise<void> {
+    await this.repo.transaction(async (tx) => {
+      const ride = await this.repo.ride(rideId, tx, true);
+      if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      const members = await this.repo.members(rideId, tx);
+      const driver = members.find((m) => m.userId === driverId && m.role === 'driver' && PREVIEW_STATUSES.has(m.status));
+      if (!driver) throw new AppError(403, 'forbidden', 'Seul le conducteur propose un point de rencontre');
+      const passenger = members.find((m) => m.userId === passengerId && m.role === 'passenger' && PREVIEW_STATUSES.has(m.status));
+      if (!passenger) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      if (LOCKED_STATUSES.has(ride.status)) throw new AppError(409, 'ride_locked', 'Ce trajet ne peut plus être modifié');
+      await this.repo.setPickupProposal(rideId, passengerId, { label: input.label.trim(), point: { lat: input.lat, lon: input.lon } }, tx);
+    });
+    await this.notifier?.notify([passengerId], { type: 'meeting_point_proposed', rideId });
+  }
+
+  /** Le passager accepte le point proposé (il devient son point de rendez-vous) ou le refuse. */
+  async answerPickupProposal(userId: string, rideId: string, accept: boolean): Promise<void> {
+    const max = await this.settings.get('rides.meetingPointMaxMeters');
+    const driverId = await this.repo.transaction(async (tx) => {
+      const ride = await this.repo.ride(rideId, tx, true);
+      if (!ride) throw new AppError(404, 'not_found', 'Ressource introuvable');
+      const members = await this.repo.members(rideId, tx);
+      const me = members.find((m) => m.userId === userId && m.role === 'passenger' && PREVIEW_STATUSES.has(m.status));
+      if (!me) throw new AppError(403, 'forbidden', "Tu ne fais pas partie de ce trajet");
+      const proposal = me.proposedMeeting;
+      if (!proposal) throw new AppError(404, 'not_found', 'Aucun point de rencontre proposé');
+      if (LOCKED_STATUSES.has(ride.status)) throw new AppError(409, 'ride_locked', 'Ce trajet ne peut plus être modifié');
+      if (accept) {
+        if (!me.home || distanceMeters(me.home, proposal.point) > max) {
+          throw new AppError(422, 'meeting_point_too_far', 'Ce point est trop loin de chez toi');
+        }
+        await this.repo.setPickup(rideId, userId, proposal, tx);
+      } else {
+        await this.repo.setPickupProposal(rideId, userId, null, tx);
+      }
+      return ride.driverId;
+    });
+    if (accept) await this.onRideChanged(rideId);
+    await this.notifier?.notify([driverId], { type: 'meeting_point_answered', rideId, accepted: accept });
   }
 }
 

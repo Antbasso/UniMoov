@@ -13,8 +13,17 @@ abstract interface class RidesApi {
   /// Avant confirmation : tracé approximatif du trajet proposé.
   Future<RidePreview> preview(String id);
 
-  /// `null` : revenir à son adresse.
+  /// `null` : revenir à son adresse. Passager, avant ou après avoir accepté.
   Future<void> setMeetingPoint(String id, MeetingPoint? point);
+
+  /// Conducteur : proposer un point de rencontre à un passager.
+  Future<void> proposeMeetingPoint(String id, String userId, MeetingPoint point);
+
+  /// Passager : accepter ou refuser le point proposé par le conducteur.
+  Future<void> answerMeetingPoint(String id, {required bool accept});
+
+  /// Parkings publics et aires de covoiturage de la zone (vide si le service ne répond pas).
+  Future<List<MeetingSpot>> meetingSpots(MapBounds bounds);
   Future<Suggestions> suggestions(String id);
   Future<Proposal> invite(String id, String userId);
 
@@ -57,6 +66,36 @@ class DioRidesApi implements RidesApi {
           : {'useMeetingPoint': true, 'label': point.label, 'lat': point.lat, 'lon': point.lon},
     ),
   );
+
+  @override
+  Future<void> proposeMeetingPoint(String id, String userId, MeetingPoint point) => guardApi(
+    () => _dio.put<void>(
+      '/api/v1/rides/$id/participants/$userId/pickup-proposal',
+      data: {'label': point.label, 'lat': point.lat, 'lon': point.lon},
+    ),
+  );
+
+  @override
+  Future<void> answerMeetingPoint(String id, {required bool accept}) => guardApi(
+    () => _dio.post<void>('/api/v1/rides/$id/me/pickup-proposal', data: {'accept': accept}),
+  );
+
+  @override
+  Future<List<MeetingSpot>> meetingSpots(MapBounds bounds) => guardApi(() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/places/meeting-spots',
+      queryParameters: {
+        'south': bounds.south,
+        'west': bounds.west,
+        'north': bounds.north,
+        'east': bounds.east,
+      },
+    );
+    return [
+      for (final s in response.data!['spots'] as List<dynamic>)
+        MeetingSpot.fromJson(s as Map<String, dynamic>),
+    ];
+  });
 
   @override
   Future<Suggestions> suggestions(String id) => guardApi(() async {
