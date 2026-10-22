@@ -60,7 +60,7 @@ Avant de déclarer un travail terminé, lance lint, typecheck et tests des parti
 **Confidentialité et RGPD**
 - Avant acceptation mutuelle, n'expose jamais le nom complet ni l'adresse exacte : uniquement prénom, photo, secteur approximatif, horaire, score, détour, et le profil facultatif que la personne a choisi de montrer (formation, âge, centres d'intérêt). C'est le serveur qui filtre (les champs sensibles ne quittent pas l'API), jamais le client.
 - La position en direct n'est collectée et diffusée que pendant un trajet confirmé, uniquement aux participants de ce trajet, et supprimée à la clôture (garde au plus la trace nécessaire aux litiges, durée dans `docs/decisions.md`).
-- Consentement explicite avant connexion d'un agenda ; ne stocke que les créneaux utiles (début/fin de journée, lieu), pas les titres ni descriptions d'événements.
+- Consentement explicite avant connexion d'un agenda ; ne stocke que les créneaux utiles (début/fin de journée), pas les titres, descriptions ni lieux d'événements ; le campus vient du profil.
 - Aucune donnée personnelle dans les logs, aucune clé ou secret dans le code.
 - Prévois export et suppression de compte.
 

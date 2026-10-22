@@ -25,6 +25,7 @@
 - Même rôle à l'aller et au retour d'une journée : venu en voiture, on repart conducteur ; venu en passager, on repart passager (on n'a pas sa voiture).
 - Chaque semaine, l'appli propose automatiquement un trajet par créneau à partir de l'emploi du temps synchronisé ; l'utilisateur accepte ou refuse, avec un bouton pour voir d'autres propositions compatibles.
 - Si l'agenda synchronisé modifie l'heure de début/fin d'une journée, le système relance automatiquement une nouvelle recherche de matching pour ce créneau.
+- Campus : on ne lit jamais le lieu des cours dans l'agenda. Le pilote ne couvre que le campus d'Annecy ; quand il y aura plusieurs campus, l'étudiant choisira le site de son campus dans son profil et pourra le changer au cas par cas pour un trajet (décision de l'équipe du 22/10/2026).
 
 ## 4. Matching et recherche manuelle
 

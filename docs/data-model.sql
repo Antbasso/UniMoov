@@ -134,7 +134,7 @@ CREATE TABLE schedule_slots (             -- uniquement début/fin utiles, pas d
   day date NOT NULL,
   start_at timestamptz NOT NULL,
   end_at timestamptz NOT NULL,
-  place_location geography(Point,4326),
+  place_location geography(Point,4326),   -- inutilisé : jamais lu dans l'agenda, le campus vient du profil
   source text NOT NULL,                   -- 'calendar' | 'manual'
   UNIQUE (user_id, day, source)
 );
